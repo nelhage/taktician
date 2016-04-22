@@ -73,6 +73,13 @@ func (p Piece) String() string {
 	return c
 }
 
+func flip(c Color) Color {
+	if c == White {
+		return Black
+	}
+	return White
+}
+
 func isRoad(p Piece) bool {
 	return pieceKind(p) == Flat || pieceKind(p) == Capstone
 }

@@ -161,5 +161,4 @@ func TestMove(t *testing.T) {
 			makePiece(Black, Flat)}) {
 		t.Fatalf("stack wrong: %v", sq)
 	}
-
 }

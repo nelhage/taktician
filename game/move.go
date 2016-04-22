@@ -26,9 +26,10 @@ type Move struct {
 }
 
 var (
-	ErrOccupied     = errors.New("position is occupied")
-	ErrIllegalSlide = errors.New("illegal slide")
-	ErrNoCapstone   = errors.New("capstone has already been played")
+	ErrOccupied       = errors.New("position is occupied")
+	ErrIllegalSlide   = errors.New("illegal slide")
+	ErrNoCapstone     = errors.New("capstone has already been played")
+	ErrIllegalOpening = errors.New("illegal opening move")
 )
 
 func (p *Position) Move(m Move) (*Position, error) {
@@ -52,6 +53,12 @@ func (p *Position) Move(m Move) (*Position, error) {
 	}
 	next := *p
 	next.move++
+	if p.move < 2 {
+		if pieceKind(place) != Flat {
+			return nil, ErrIllegalOpening
+		}
+		place = makePiece(flip(pieceColor(place)), pieceKind(place))
+	}
 	if place != 0 {
 		if len(p.At(m.X, m.Y)) != 0 {
 			return nil, ErrOccupied
@@ -132,4 +139,83 @@ func (p *Position) Move(m Move) (*Position, error) {
 	}
 
 	return &next, nil
+}
+
+var slides [][][]byte
+
+func init() {
+	slides = make([][][]byte, 10)
+	for s := 1; s <= 8; s++ {
+		slides[s] = calculateSlides(s)
+	}
+}
+
+func calculateSlides(stack int) [][]byte {
+	out := make([][]byte, len(slides[stack-1]))
+	copy(out, slides[stack-1])
+	for i := byte(1); i < byte(stack); i++ {
+		for _, sub := range slides[stack-int(i)] {
+			t := make([]byte, len(sub)+1)
+			t[0] = i
+			copy(t[1:], sub)
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+func (p *Position) AllMoves() []Move {
+	moves := make([]Move, 0, len(p.board))
+	next := p.ToMove()
+	cap := false
+	if next == White {
+		cap = p.whiteCaps > 0
+	} else {
+		cap = p.blackCaps > 0
+	}
+	for x := 0; x < p.game.Size; x++ {
+		for y := 0; y < p.game.Size; y++ {
+			stack := p.At(x, y)
+			if len(stack) == 0 {
+				moves = append(moves, Move{x, y, PlaceFlat, nil})
+				if p.move >= 2 {
+					moves = append(moves, Move{x, y, PlaceStanding, nil})
+					if cap {
+						moves = append(moves, Move{x, y, PlaceCapstone, nil})
+					}
+				}
+				continue
+			}
+			if p.move < 2 {
+				continue
+			}
+			if pieceColor(stack[0]) != next {
+				continue
+			}
+			dirs := make([]MoveType, 0, 4)
+			if x > 0 {
+				dirs = append(dirs, SlideLeft)
+			}
+			if x < p.game.Size-1 {
+				dirs = append(dirs, SlideRight)
+			}
+			if y > 0 {
+				dirs = append(dirs, SlideUp)
+			}
+			if y < p.game.Size-1 {
+				dirs = append(dirs, SlideDown)
+			}
+			for _, d := range dirs {
+				h := len(stack)
+				if h > p.game.Size {
+					h = p.game.Size
+				}
+				for _, s := range slides[h] {
+					moves = append(moves, Move{x, y, d, s})
+				}
+			}
+		}
+	}
+
+	return moves
 }
