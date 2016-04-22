@@ -73,3 +73,37 @@ func ParseMove(move string) (*game.Move, error) {
 
 	return m, nil
 }
+
+func FormatMove(m *game.Move) string {
+	var out []byte
+	if len(m.Slides) > 0 {
+		stack := 0
+		for _, c := range m.Slides {
+			stack += int(c)
+		}
+		out = append(out, byte('0'+stack))
+	}
+	switch m.Type {
+	case game.PlaceFlat:
+	case game.PlaceCapstone:
+		out = append(out, 'C')
+	case game.PlaceStanding:
+		out = append(out, 'S')
+	}
+	out = append(out, byte('a'+m.X))
+	out = append(out, byte('1'+m.Y))
+	switch m.Type {
+	case game.SlideLeft:
+		out = append(out, '<')
+	case game.SlideRight:
+		out = append(out, '>')
+	case game.SlideUp:
+		out = append(out, '+')
+	case game.SlideDown:
+		out = append(out, '-')
+	}
+	for _, s := range m.Slides {
+		out = append(out, byte('0'+s))
+	}
+	return string(out)
+}

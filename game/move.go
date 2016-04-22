@@ -107,8 +107,8 @@ func (p *Position) Move(m Move) (*Position, error) {
 	for _, c := range m.Slides {
 		m.X += dx
 		m.Y += dy
-		if m.X < 0 || m.X > next.cfg.Size ||
-			m.Y < 0 || m.Y > next.cfg.Size {
+		if m.X < 0 || m.X >= next.cfg.Size ||
+			m.Y < 0 || m.Y >= next.cfg.Size {
 			log.Printf("slide off edge")
 			return nil, ErrIllegalSlide
 		}
@@ -151,9 +151,9 @@ func init() {
 }
 
 func calculateSlides(stack int) [][]byte {
-	out := make([][]byte, len(slides[stack-1]))
-	copy(out, slides[stack-1])
-	for i := byte(1); i < byte(stack); i++ {
+	var out [][]byte
+	for i := byte(1); i <= byte(stack); i++ {
+		out = append(out, []byte{i})
 		for _, sub := range slides[stack-int(i)] {
 			t := make([]byte, len(sub)+1)
 			t[0] = i
