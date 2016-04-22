@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"flag"
 	"log"
-	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 
+	"nelhage.com/tak/ai"
 	"nelhage.com/tak/game"
 )
 
@@ -24,18 +24,14 @@ func parsePlayer(in *bufio.Reader, s string) Player {
 		}
 	}
 	if s == "rand" {
-		return &randomAI{
-			r: rand.New(rand.NewSource(0)),
-		}
+		return ai.NewRandom(0)
 	}
 	if strings.HasPrefix(s, "rand:") {
 		i, err := strconv.Atoi(s[len("rand:"):])
 		if err != nil {
 			log.Fatal(err)
 		}
-		return &randomAI{
-			r: rand.New(rand.NewSource(int64(i))),
-		}
+		return ai.NewRandom(int64(i))
 	}
 	log.Fatalf("unparseable player: %s", s)
 	return nil
