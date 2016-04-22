@@ -28,69 +28,6 @@ func New(g Config) *Position {
 	return p
 }
 
-type Color byte
-type Kind byte
-type Piece byte
-
-const (
-	White Color = 1 << 7
-	Black Color = 0 << 7
-
-	colorMask byte = 1 << 7
-
-	Flat     Kind = 1
-	Standing Kind = 2
-	Capstone Kind = 3
-
-	typeMask byte = 1<<2 - 1
-)
-
-func makePiece(color Color, kind Kind) Piece {
-	return Piece(byte(color) | byte(kind))
-}
-
-func pieceColor(p Piece) Color {
-	return Color(byte(p) & colorMask)
-}
-
-func pieceKind(p Piece) Kind {
-	return Kind(byte(p) & typeMask)
-}
-
-func (p Piece) String() string {
-	c := ""
-	if pieceColor(p) == White {
-		c = "W"
-	} else {
-		c = "B"
-	}
-	switch pieceKind(p) {
-	case Capstone:
-		c += "C"
-	case Standing:
-		c += "S"
-	}
-	return c
-}
-
-func (c Color) String() string {
-	if c == White {
-		return "white"
-	}
-	return "black"
-}
-
-func flip(c Color) Color {
-	if c == White {
-		return Black
-	}
-	return White
-}
-
-func isRoad(p Piece) bool {
-	return pieceKind(p) == Flat || pieceKind(p) == Capstone
-}
-
 type Square []Piece
 
 type Position struct {
@@ -140,7 +77,7 @@ func (p *Position) roadAt(x, y int) (Color, bool) {
 	if len(sq) == 0 {
 		return White, false
 	}
-	return pieceColor(sq[0]), isRoad(sq[0])
+	return sq[0].Color(), sq[0].IsRoad()
 }
 
 func (p *Position) hasRoad() (Color, bool) {
@@ -149,7 +86,7 @@ func (p *Position) hasRoad() (Color, bool) {
 	reachable := make([]Piece, s*s)
 	for x := 0; x < s; x++ {
 		if c, ok := p.roadAt(x, 0); ok {
-			reachable[x] = makePiece(c, Flat)
+			reachable[x] = MakePiece(c, Flat)
 		}
 	}
 	for y := 1; y < s; y++ {
@@ -158,8 +95,8 @@ func (p *Position) hasRoad() (Color, bool) {
 			if !ok {
 				continue
 			}
-			if reachable[x+(y-1)*s] == makePiece(c, Flat) {
-				reachable[x+y*s] = makePiece(c, Flat)
+			if reachable[x+(y-1)*s] == MakePiece(c, Flat) {
+				reachable[x+y*s] = MakePiece(c, Flat)
 			}
 		}
 		for x := 0; x < s; x++ {
@@ -167,21 +104,21 @@ func (p *Position) hasRoad() (Color, bool) {
 			if !ok {
 				continue
 			}
-			if x > 0 && reachable[x-1+y*s] == makePiece(c, Flat) {
-				reachable[x+y*s] = makePiece(c, Flat)
+			if x > 0 && reachable[x-1+y*s] == MakePiece(c, Flat) {
+				reachable[x+y*s] = MakePiece(c, Flat)
 			}
-			if x < s-1 && reachable[x+1+y*s] == makePiece(c, Flat) {
-				reachable[x+y*s] = makePiece(c, Flat)
+			if x < s-1 && reachable[x+1+y*s] == MakePiece(c, Flat) {
+				reachable[x+y*s] = MakePiece(c, Flat)
 			}
 		}
 	}
 
 	for x := 0; x < s; x++ {
 		r := reachable[x+(s-1)*s]
-		if r == makePiece(White, Flat) {
+		if r == MakePiece(White, Flat) {
 			white = true
 		}
-		if r == makePiece(Black, Flat) {
+		if r == MakePiece(Black, Flat) {
 			black = true
 		}
 	}
@@ -191,7 +128,7 @@ func (p *Position) hasRoad() (Color, bool) {
 	}
 	for y := 0; y < s; y++ {
 		if c, ok := p.roadAt(0, y); ok {
-			reachable[y*s] = makePiece(c, Flat)
+			reachable[y*s] = MakePiece(c, Flat)
 		}
 	}
 	for x := 1; x < s; x++ {
@@ -200,8 +137,8 @@ func (p *Position) hasRoad() (Color, bool) {
 			if !ok {
 				continue
 			}
-			if reachable[x-1+y*s] == makePiece(c, Flat) {
-				reachable[x+y*s] = makePiece(c, Flat)
+			if reachable[x-1+y*s] == MakePiece(c, Flat) {
+				reachable[x+y*s] = MakePiece(c, Flat)
 			}
 		}
 		for y := 0; y < s; y++ {
@@ -209,20 +146,20 @@ func (p *Position) hasRoad() (Color, bool) {
 			if !ok {
 				continue
 			}
-			if y > 0 && reachable[x+(y-1)*s] == makePiece(c, Flat) {
-				reachable[x+y*s] = makePiece(c, Flat)
+			if y > 0 && reachable[x+(y-1)*s] == MakePiece(c, Flat) {
+				reachable[x+y*s] = MakePiece(c, Flat)
 			}
-			if y < s-1 && reachable[x+(y+1)*s] == makePiece(c, Flat) {
-				reachable[x+y*s] = makePiece(c, Flat)
+			if y < s-1 && reachable[x+(y+1)*s] == MakePiece(c, Flat) {
+				reachable[x+y*s] = MakePiece(c, Flat)
 			}
 		}
 	}
 	for y := 0; y < s; y++ {
 		r := reachable[y*s+s-1]
-		if r == makePiece(White, Flat) {
+		if r == MakePiece(White, Flat) {
 			white = true
 		}
-		if r == makePiece(Black, Flat) {
+		if r == MakePiece(Black, Flat) {
 			black = true
 		}
 	}
@@ -247,8 +184,8 @@ func (p *Position) flatsWinner() Color {
 	for i := 0; i < p.cfg.Size*p.cfg.Size; i++ {
 		stack := p.board[i]
 		if len(stack) > 0 {
-			if pieceKind(stack[0]) == Flat {
-				if pieceColor(stack[0]) == White {
+			if stack[0].Kind() == Flat {
+				if stack[0].Color() == White {
 					cw++
 				} else {
 					cb++

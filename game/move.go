@@ -37,11 +37,11 @@ func (p *Position) Move(m Move) (*Position, error) {
 	dx, dy := 0, 0
 	switch m.Type {
 	case PlaceFlat:
-		place = makePiece(p.ToMove(), Flat)
+		place = MakePiece(p.ToMove(), Flat)
 	case PlaceStanding:
-		place = makePiece(p.ToMove(), Standing)
+		place = MakePiece(p.ToMove(), Standing)
 	case PlaceCapstone:
-		place = makePiece(p.ToMove(), Capstone)
+		place = MakePiece(p.ToMove(), Capstone)
 	case SlideLeft:
 		dx = -1
 	case SlideRight:
@@ -54,10 +54,10 @@ func (p *Position) Move(m Move) (*Position, error) {
 	next := *p
 	next.move++
 	if p.move < 2 {
-		if pieceKind(place) != Flat {
+		if place.Kind() != Flat {
 			return nil, ErrIllegalOpening
 		}
-		place = makePiece(flip(pieceColor(place)), pieceKind(place))
+		place = MakePiece(place.Color().Flip(), place.Kind())
 	}
 	if place != 0 {
 		if len(p.At(m.X, m.Y)) != 0 {
@@ -66,7 +66,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 		next.board = make([]Square, len(p.board))
 		copy(next.board, p.board)
 		var stones *byte
-		if pieceKind(place) == Capstone {
+		if place.Kind() == Capstone {
 			if p.ToMove() == Black {
 				stones = &next.blackCaps
 			} else {
@@ -96,7 +96,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 		log.Printf("illegal size %d", ct)
 		return nil, ErrIllegalSlide
 	}
-	if pieceColor(stack[0]) != p.ToMove() {
+	if stack[0].Color() != p.ToMove() {
 		log.Printf("stack not owned")
 		return nil, ErrIllegalSlide
 	}
@@ -118,12 +118,12 @@ func (p *Position) Move(m Move) (*Position, error) {
 		}
 		base := next.At(m.X, m.Y)
 		if len(base) > 0 {
-			switch pieceKind(base[0]) {
+			switch base[0].Kind() {
 			case Flat:
 			case Capstone:
 				return nil, ErrIllegalSlide
 			case Standing:
-				if len(stack) != 1 || pieceKind(stack[0]) != Capstone {
+				if len(stack) != 1 || stack[0].Kind() != Capstone {
 					return nil, ErrIllegalSlide
 				}
 			}
@@ -132,7 +132,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 		copy(tmp[:c], stack[len(stack)-int(c):])
 		copy(tmp[c:], base)
 		if len(tmp) > int(c) {
-			tmp[c] = makePiece(pieceColor(tmp[c]), Flat)
+			tmp[c] = MakePiece(tmp[c].Color(), Flat)
 		}
 		next.set(m.X, m.Y, tmp)
 		stack = stack[:len(stack)-int(c)]
@@ -189,7 +189,7 @@ func (p *Position) AllMoves() []Move {
 			if p.move < 2 {
 				continue
 			}
-			if pieceColor(stack[0]) != next {
+			if stack[0].Color() != next {
 				continue
 			}
 			type dircnt struct {

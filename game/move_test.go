@@ -22,7 +22,7 @@ func TestMove(t *testing.T) {
 	if e != nil {
 		t.Fatalf("place: %v", e)
 	}
-	if sq := n.At(3, 3); len(sq) != 1 || sq[0] != makePiece(White, Flat) {
+	if sq := n.At(3, 3); len(sq) != 1 || sq[0] != MakePiece(White, Flat) {
 		t.Fatalf("place failed: %v", sq)
 	}
 	if sq := p.At(3, 3); len(sq) != 0 {
@@ -40,7 +40,7 @@ func TestMove(t *testing.T) {
 	if e != nil {
 		t.Fatalf("move 2: %v", e)
 	}
-	if sq := n.At(3, 4); len(sq) != 1 || sq[0] != makePiece(Black, Standing) {
+	if sq := n.At(3, 4); len(sq) != 1 || sq[0] != MakePiece(Black, Standing) {
 		t.Fatalf("place failed: %v", sq)
 	}
 
@@ -58,10 +58,10 @@ func TestMove(t *testing.T) {
 	if sq := nn.At(3, 3); len(sq) != 0 {
 		t.Fatalf("slide did not clear src: %v", sq)
 	}
-	if sq := nn.At(3, 2); len(sq) != 1 || sq[0] != makePiece(White, Flat) {
+	if sq := nn.At(3, 2); len(sq) != 1 || sq[0] != MakePiece(White, Flat) {
 		t.Fatalf("slide did not move: %v", sq)
 	}
-	if sq := n.At(3, 3); len(sq) != 1 || sq[0] != makePiece(White, Flat) {
+	if sq := n.At(3, 3); len(sq) != 1 || sq[0] != MakePiece(White, Flat) {
 		t.Fatalf("slide mutated src")
 	}
 	if sq := n.At(3, 2); len(sq) != 0 {
@@ -73,7 +73,7 @@ func TestMove(t *testing.T) {
 	if e != nil {
 		t.Fatalf("place cap: %v", e)
 	}
-	if sq := n.At(3, 3); len(sq) != 1 || sq[0] != makePiece(Black, Capstone) {
+	if sq := n.At(3, 3); len(sq) != 1 || sq[0] != MakePiece(Black, Capstone) {
 		t.Fatalf("place failed: %v", sq)
 	}
 	if n.blackStones != 4 {
@@ -104,8 +104,8 @@ func TestMove(t *testing.T) {
 		t.Fatalf("cap onto flat: %v", e)
 	}
 	if sq := n.At(3, 4); !reflect.DeepEqual(sq,
-		Square{makePiece(Black, Capstone),
-			makePiece(Black, Flat)}) {
+		Square{MakePiece(Black, Capstone),
+			MakePiece(Black, Flat)}) {
 		t.Fatalf("stack wrong: %v", sq)
 	}
 }
