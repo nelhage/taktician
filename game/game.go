@@ -1,4 +1,4 @@
-package tak
+package game
 
 type Game struct {
 	size           int
@@ -15,9 +15,9 @@ const (
 
 	colorMask byte = 1 << 7
 
-	Flat     Kind = 0
-	Standing Kind = 1
-	Capstone Kind = 2
+	Flat     Kind = 1
+	Standing Kind = 2
+	Capstone Kind = 3
 
 	typeMask byte = 1<<2 - 1
 )
@@ -111,8 +111,50 @@ func (p *Position) hasRoad() (Color, bool) {
 			}
 		}
 	}
+
 	for x := 0; x < s; x++ {
 		r := reachable[x+(s-1)*s]
+		if r == makePiece(White, Flat) {
+			white = true
+		}
+		if r == makePiece(Black, Flat) {
+			black = true
+		}
+	}
+
+	for i := range reachable {
+		reachable[i] = Piece(0)
+	}
+	for y := 0; y < s; y++ {
+		if c, ok := p.roadAt(0, y); ok {
+			reachable[y*s] = makePiece(c, Flat)
+		}
+	}
+	for x := 1; x < s; x++ {
+		for y := 0; y < s; y++ {
+			c, ok := p.roadAt(x, y)
+			if !ok {
+				continue
+			}
+			if reachable[x-1+y*s] == makePiece(c, Flat) {
+				reachable[x+y*s] = makePiece(c, Flat)
+			}
+		}
+		for y := 0; y < s; y++ {
+			c, ok := p.roadAt(x, y)
+			if !ok {
+				continue
+			}
+			if y > 0 && reachable[x+(y-1)*s] == makePiece(c, Flat) {
+				reachable[x+y*s] = makePiece(c, Flat)
+			}
+			if y < s-1 && reachable[x+(y+1)*s] == makePiece(c, Flat) {
+				reachable[x+y*s] = makePiece(c, Flat)
+			}
+		}
+	}
+	for y := 0; y < s; y++ {
+		r := reachable[y*s+s-1]
 		if r == makePiece(White, Flat) {
 			white = true
 		}
