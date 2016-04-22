@@ -30,6 +30,13 @@ func playTak(st *state) {
 	var moves []*game.Move
 	for {
 		drawGame(st)
+		if len(moves) > 0 && len(moves)%2 == 0 {
+			fmt.Fprintf(st.out,
+				"%d. %s  %s\n",
+				len(moves)/2,
+				ptn.FormatMove(moves[len(moves)-2]),
+				ptn.FormatMove(moves[len(moves)-1]))
+		}
 		if ok, c := st.p.GameOver(); ok {
 			fmt.Fprintln(st.out, "Game over! Winner:", c)
 			return
@@ -47,19 +54,13 @@ func playTak(st *state) {
 			st.p = p
 			moves = append(moves, m)
 		}
-		if len(moves)%2 == 0 {
-			fmt.Fprintf(st.out,
-				"%d. %s  %s\n",
-				len(moves)/2,
-				ptn.FormatMove(moves[len(moves)-2]),
-				ptn.FormatMove(moves[len(moves)-1]))
-		}
 	}
 
 }
 
 func drawGame(st *state) {
 	fmt.Fprintln(st.out)
+	fmt.Fprintf(st.out, "[%s to play]\n", st.p.ToMove())
 	w := tabwriter.NewWriter(st.out, 4, 8, 1, '\t', 0)
 	for y := st.p.Size() - 1; y >= 0; y-- {
 		fmt.Fprintf(w, "%c.\t", '1'+y)

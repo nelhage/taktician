@@ -1,9 +1,6 @@
 package game
 
-import (
-	"errors"
-	"log"
-)
+import "errors"
 
 type MoveType byte
 
@@ -93,11 +90,9 @@ func (p *Position) Move(m Move) (*Position, error) {
 		ct += int(c)
 	}
 	if ct > p.cfg.Size || ct < 1 || ct > len(stack) {
-		log.Printf("illegal size %d", ct)
 		return nil, ErrIllegalSlide
 	}
 	if stack[0].Color() != p.ToMove() {
-		log.Printf("stack not owned")
 		return nil, ErrIllegalSlide
 	}
 	next.board = make([]Square, len(p.board))
@@ -109,11 +104,9 @@ func (p *Position) Move(m Move) (*Position, error) {
 		m.Y += dy
 		if m.X < 0 || m.X >= next.cfg.Size ||
 			m.Y < 0 || m.Y >= next.cfg.Size {
-			log.Printf("slide off edge")
 			return nil, ErrIllegalSlide
 		}
 		if int(c) < 1 || int(c) > len(stack) {
-			log.Printf("slide empty stack")
 			return nil, ErrIllegalSlide
 		}
 		base := next.At(m.X, m.Y)
