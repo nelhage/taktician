@@ -40,16 +40,22 @@ func isRoad(p Piece) bool {
 
 type Square []Piece
 
+const hasCap = 1 << 16
+
 type Position struct {
-	game       *Game
-	whiteFlats int
-	blackFlats int
-	move       int
-	board      []Square
+	game        *Game
+	whiteStones int
+	blackStones int
+	move        int
+	board       []Square
 }
 
 func (p *Position) At(x, y int) Square {
 	return p.board[y*p.game.size+x]
+}
+
+func (p *Position) set(x, y int, s Square) {
+	p.board[y*p.game.size+x] = s
 }
 
 func (p *Position) ToMove() Color {
@@ -64,7 +70,7 @@ func (p *Position) GameOver() (over bool, winner Color) {
 		return true, p
 	}
 
-	if p.whiteFlats != 0 && p.blackFlats != 0 {
+	if p.whiteStones&^hasCap != 0 && p.blackStones&^hasCap != 0 {
 		return false, White
 	}
 
