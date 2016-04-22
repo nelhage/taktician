@@ -47,9 +47,9 @@ func (p *Position) Move(m Move) (*Position, error) {
 	case SlideRight:
 		dx = 1
 	case SlideUp:
-		dy = -1
-	case SlideDown:
 		dy = 1
+	case SlideDown:
+		dy = -1
 	}
 	next := *p
 	next.move++

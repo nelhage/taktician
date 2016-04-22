@@ -73,6 +73,13 @@ func (p Piece) String() string {
 	return c
 }
 
+func (c Color) String() string {
+	if c == White {
+		return "white"
+	}
+	return "black"
+}
+
 func flip(c Color) Color {
 	if c == White {
 		return Black
@@ -95,6 +102,10 @@ type Position struct {
 
 	move  int
 	board []Square
+}
+
+func (p *Position) Size() int {
+	return p.cfg.Size
 }
 
 func (p *Position) At(x, y int) Square {
