@@ -92,7 +92,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 	for _, c := range m.Slides {
 		ct += int(c)
 	}
-	if ct > p.game.Size || ct < 1 || ct > len(stack) {
+	if ct > p.cfg.Size || ct < 1 || ct > len(stack) {
 		log.Printf("illegal size %d", ct)
 		return nil, ErrIllegalSlide
 	}
@@ -107,8 +107,8 @@ func (p *Position) Move(m Move) (*Position, error) {
 	for _, c := range m.Slides {
 		m.X += dx
 		m.Y += dy
-		if m.X < 0 || m.X > next.game.Size ||
-			m.Y < 0 || m.Y > next.game.Size {
+		if m.X < 0 || m.X > next.cfg.Size ||
+			m.Y < 0 || m.Y > next.cfg.Size {
 			log.Printf("slide off edge")
 			return nil, ErrIllegalSlide
 		}
@@ -173,8 +173,8 @@ func (p *Position) AllMoves() []Move {
 	} else {
 		cap = p.blackCaps > 0
 	}
-	for x := 0; x < p.game.Size; x++ {
-		for y := 0; y < p.game.Size; y++ {
+	for x := 0; x < p.cfg.Size; x++ {
+		for y := 0; y < p.cfg.Size; y++ {
 			stack := p.At(x, y)
 			if len(stack) == 0 {
 				moves = append(moves, Move{x, y, PlaceFlat, nil})
@@ -196,19 +196,19 @@ func (p *Position) AllMoves() []Move {
 			if x > 0 {
 				dirs = append(dirs, SlideLeft)
 			}
-			if x < p.game.Size-1 {
+			if x < p.cfg.Size-1 {
 				dirs = append(dirs, SlideRight)
 			}
 			if y > 0 {
 				dirs = append(dirs, SlideUp)
 			}
-			if y < p.game.Size-1 {
+			if y < p.cfg.Size-1 {
 				dirs = append(dirs, SlideDown)
 			}
 			for _, d := range dirs {
 				h := len(stack)
-				if h > p.game.Size {
-					h = p.game.Size
+				if h > p.cfg.Size {
+					h = p.cfg.Size
 				}
 				for _, s := range slides[h] {
 					moves = append(moves, Move{x, y, d, s})

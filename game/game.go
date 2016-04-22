@@ -1,6 +1,6 @@
 package game
 
-type Game struct {
+type Config struct {
 	Size      int
 	Pieces    int
 	Capstones int
@@ -9,7 +9,7 @@ type Game struct {
 var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
 var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
 
-func New(g Game) *Position {
+func New(g Config) *Position {
 	if g.Pieces == 0 {
 		g.Pieces = defaultPieces[g.Size]
 	}
@@ -17,7 +17,7 @@ func New(g Game) *Position {
 		g.Capstones = defaultCaps[g.Size]
 	}
 	p := &Position{
-		game:        &g,
+		cfg:         &g,
 		whiteStones: byte(g.Pieces),
 		whiteCaps:   byte(g.Capstones),
 		blackStones: byte(g.Pieces),
@@ -87,7 +87,7 @@ func isRoad(p Piece) bool {
 type Square []Piece
 
 type Position struct {
-	game        *Game
+	cfg         *Config
 	whiteStones byte
 	whiteCaps   byte
 	blackStones byte
@@ -98,11 +98,11 @@ type Position struct {
 }
 
 func (p *Position) At(x, y int) Square {
-	return p.board[y*p.game.Size+x]
+	return p.board[y*p.cfg.Size+x]
 }
 
 func (p *Position) set(x, y int, s Square) {
-	p.board[y*p.game.Size+x] = s
+	p.board[y*p.cfg.Size+x] = s
 }
 
 func (p *Position) ToMove() Color {
@@ -133,7 +133,7 @@ func (p *Position) roadAt(x, y int) (Color, bool) {
 }
 
 func (p *Position) hasRoad() (Color, bool) {
-	s := p.game.Size
+	s := p.cfg.Size
 	white, black := false, false
 	reachable := make([]Piece, s*s)
 	for x := 0; x < s; x++ {
@@ -233,7 +233,7 @@ func (p *Position) hasRoad() (Color, bool) {
 
 func (p *Position) flatsWinner() Color {
 	cw, cb := 0, 0
-	for i := 0; i < p.game.Size*p.game.Size; i++ {
+	for i := 0; i < p.cfg.Size*p.cfg.Size; i++ {
 		stack := p.board[i]
 		if len(stack) > 0 {
 			if pieceKind(stack[0]) == Flat {

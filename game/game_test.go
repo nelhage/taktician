@@ -6,9 +6,9 @@ import (
 )
 
 func TestHasRoad(t *testing.T) {
-	g := &Game{Size: 5}
+	g := &Config{Size: 5}
 	p := &Position{
-		game:        g,
+		cfg:         g,
 		whiteStones: 5,
 		blackStones: 5,
 		move:        2,
@@ -59,9 +59,9 @@ func TestHasRoad(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	g := &Game{Size: 5}
+	g := &Config{Size: 5}
 	p := &Position{
-		game:        g,
+		cfg:         g,
 		whiteStones: 5,
 		whiteCaps:   1,
 		blackStones: 5,
