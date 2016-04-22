@@ -15,6 +15,7 @@ import (
 var (
 	white = flag.String("white", "human", "white player")
 	black = flag.String("black", "human", "white player")
+	size  = flag.Int("size", 5, "game size")
 )
 
 func parsePlayer(in *bufio.Reader, s string) Player {
@@ -56,7 +57,7 @@ func main() {
 	flag.Parse()
 	in := bufio.NewReader(os.Stdin)
 	st := &state{
-		p:   game.New(game.Config{Size: 5}),
+		p:   game.New(game.Config{Size: *size}),
 		out: os.Stdout,
 	}
 	st.white = parsePlayer(in, *white)
