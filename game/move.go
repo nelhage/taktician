@@ -192,18 +192,22 @@ func (p *Position) AllMoves() []Move {
 			if pieceColor(stack[0]) != next {
 				continue
 			}
-			dirs := make([]MoveType, 0, 4)
+			type dircnt struct {
+				d MoveType
+				c int
+			}
+			dirs := make([]dircnt, 0, 4)
 			if x > 0 {
-				dirs = append(dirs, SlideLeft)
+				dirs = append(dirs, dircnt{SlideLeft, x})
 			}
 			if x < p.cfg.Size-1 {
-				dirs = append(dirs, SlideRight)
+				dirs = append(dirs, dircnt{SlideRight, p.cfg.Size - x - 1})
 			}
 			if y > 0 {
-				dirs = append(dirs, SlideUp)
+				dirs = append(dirs, dircnt{SlideUp, y})
 			}
 			if y < p.cfg.Size-1 {
-				dirs = append(dirs, SlideDown)
+				dirs = append(dirs, dircnt{SlideDown, p.cfg.Size - y - 1})
 			}
 			for _, d := range dirs {
 				h := len(stack)
@@ -211,7 +215,9 @@ func (p *Position) AllMoves() []Move {
 					h = p.cfg.Size
 				}
 				for _, s := range slides[h] {
-					moves = append(moves, Move{x, y, d, s})
+					if len(s) < d.c {
+						moves = append(moves, Move{x, y, d.d, s})
+					}
 				}
 			}
 		}
