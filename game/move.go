@@ -10,7 +10,7 @@ type MoveType byte
 const (
 	PlaceFlat MoveType = 1 + iota
 	PlaceStanding
-	PlaceCap
+	PlaceCapstone
 	SlideLeft
 	SlideRight
 	SlideUp
@@ -39,7 +39,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 		place = makePiece(p.ToMove(), Flat)
 	case PlaceStanding:
 		place = makePiece(p.ToMove(), Standing)
-	case PlaceCap:
+	case PlaceCapstone:
 		place = makePiece(p.ToMove(), Capstone)
 	case SlideLeft:
 		dx = -1
@@ -58,20 +58,24 @@ func (p *Position) Move(m Move) (*Position, error) {
 		}
 		next.board = make([]Square, len(p.board))
 		copy(next.board, p.board)
-		var stones *int
-		if p.ToMove() == Black {
-			stones = &next.blackStones
-		} else {
-			stones = &next.whiteStones
-		}
+		var stones *byte
 		if pieceKind(place) == Capstone {
-			if *stones^hasCap == 0 {
-				return nil, ErrNoCapstone
+			if p.ToMove() == Black {
+				stones = &next.blackCaps
+			} else {
+				stones = &next.whiteCaps
 			}
-			*stones &= ^hasCap
 		} else {
-			*stones--
+			if p.ToMove() == Black {
+				stones = &next.blackStones
+			} else {
+				stones = &next.whiteStones
+			}
 		}
+		if *stones == 0 {
+			return nil, ErrNoCapstone
+		}
+		*stones--
 		next.set(m.X, m.Y, []Piece{place})
 		return &next, nil
 	}
@@ -81,7 +85,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 	for _, c := range m.Slides {
 		ct += int(c)
 	}
-	if ct > p.game.size || ct < 1 || ct > len(stack) {
+	if ct > p.game.Size || ct < 1 || ct > len(stack) {
 		log.Printf("illegal size %d", ct)
 		return nil, ErrIllegalSlide
 	}
@@ -96,8 +100,8 @@ func (p *Position) Move(m Move) (*Position, error) {
 	for _, c := range m.Slides {
 		m.X += dx
 		m.Y += dy
-		if m.X < 0 || m.X > next.game.size ||
-			m.Y < 0 || m.Y > next.game.size {
+		if m.X < 0 || m.X > next.game.Size ||
+			m.Y < 0 || m.Y > next.game.Size {
 			log.Printf("slide off edge")
 			return nil, ErrIllegalSlide
 		}

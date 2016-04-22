@@ -6,7 +6,7 @@ import (
 )
 
 func TestHasRoad(t *testing.T) {
-	g := &Game{size: 5}
+	g := &Game{Size: 5}
 	p := &Position{
 		game:        g,
 		whiteStones: 5,
@@ -59,11 +59,13 @@ func TestHasRoad(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	g := &Game{size: 5}
+	g := &Game{Size: 5}
 	p := &Position{
 		game:        g,
-		whiteStones: 5 | hasCap,
-		blackStones: 5 | hasCap,
+		whiteStones: 5,
+		whiteCaps:   1,
+		blackStones: 5,
+		blackCaps:   1,
 		move:        2,
 		board:       make([]Square, 5*5),
 	}
@@ -82,7 +84,7 @@ func TestMove(t *testing.T) {
 	if n.move != 3 {
 		t.Fatalf("increment move: %v", n.move)
 	}
-	if n.whiteStones != 4|hasCap {
+	if n.whiteStones != 4 {
 		t.Fatalf("did not decrement white: %v", n.whiteStones)
 	}
 
@@ -120,7 +122,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Place a capstone")
-	n, e = nn.Move(Move{3, 3, PlaceCap, nil})
+	n, e = nn.Move(Move{3, 3, PlaceCapstone, nil})
 	if e != nil {
 		t.Fatalf("place cap: %v", e)
 	}
@@ -130,12 +132,20 @@ func TestMove(t *testing.T) {
 	if n.blackStones != 4 {
 		t.Fatalf("black stones: %d", n.blackStones)
 	}
+	if n.blackCaps != 0 {
+		t.Fatalf("black caps: %d", n.blackCaps)
+	}
 
 	n, e = n.Move(Move{2, 3, PlaceFlat, nil})
 	if e != nil {
 		t.Fatalf("move %v", e)
 	}
 
+	t.Log("Place too many capstones")
+	_, e = n.Move(Move{0, 0, PlaceCapstone, nil})
+	if e != ErrNoCapstone {
+		t.Fatalf("place capstone: %v", e)
+	}
 	t.Log("Slide onto a capstone")
 	_, e = n.Move(Move{3, 4, SlideUp, []byte{1}})
 	if e != ErrIllegalSlide {

@@ -1,8 +1,31 @@
 package game
 
 type Game struct {
-	size           int
-	startingPieces int
+	Size      int
+	Pieces    int
+	Capstones int
+}
+
+var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
+var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
+
+func New(g Game) *Position {
+	if g.Pieces == 0 {
+		g.Pieces = defaultPieces[g.Size]
+	}
+	if g.Capstones == 0 {
+		g.Capstones = defaultCaps[g.Size]
+	}
+	p := &Position{
+		game:        &g,
+		whiteStones: byte(g.Pieces),
+		whiteCaps:   byte(g.Capstones),
+		blackStones: byte(g.Pieces),
+		blackCaps:   byte(g.Capstones),
+		move:        0,
+		board:       make([]Square, g.Size*g.Size),
+	}
+	return p
 }
 
 type Color byte
@@ -34,28 +57,45 @@ func pieceKind(p Piece) Kind {
 	return Kind(byte(p) & typeMask)
 }
 
+func (p Piece) String() string {
+	c := ""
+	if pieceColor(p) == White {
+		c = "W"
+	} else {
+		c = "B"
+	}
+	switch pieceKind(p) {
+	case Capstone:
+		c += "C"
+	case Standing:
+		c += "S"
+	}
+	return c
+}
+
 func isRoad(p Piece) bool {
 	return pieceKind(p) == Flat || pieceKind(p) == Capstone
 }
 
 type Square []Piece
 
-const hasCap = 1 << 16
-
 type Position struct {
 	game        *Game
-	whiteStones int
-	blackStones int
-	move        int
-	board       []Square
+	whiteStones byte
+	whiteCaps   byte
+	blackStones byte
+	blackCaps   byte
+
+	move  int
+	board []Square
 }
 
 func (p *Position) At(x, y int) Square {
-	return p.board[y*p.game.size+x]
+	return p.board[y*p.game.Size+x]
 }
 
 func (p *Position) set(x, y int, s Square) {
-	p.board[y*p.game.size+x] = s
+	p.board[y*p.game.Size+x] = s
 }
 
 func (p *Position) ToMove() Color {
@@ -70,7 +110,7 @@ func (p *Position) GameOver() (over bool, winner Color) {
 		return true, p
 	}
 
-	if p.whiteStones&^hasCap != 0 && p.blackStones&^hasCap != 0 {
+	if p.whiteStones != 0 && p.blackStones != 0 {
 		return false, White
 	}
 
@@ -86,7 +126,7 @@ func (p *Position) roadAt(x, y int) (Color, bool) {
 }
 
 func (p *Position) hasRoad() (Color, bool) {
-	s := p.game.size
+	s := p.game.Size
 	white, black := false, false
 	reachable := make([]Piece, s*s)
 	for x := 0; x < s; x++ {
@@ -186,7 +226,7 @@ func (p *Position) hasRoad() (Color, bool) {
 
 func (p *Position) flatsWinner() Color {
 	cw, cb := 0, 0
-	for i := 0; i < p.game.size*p.game.size; i++ {
+	for i := 0; i < p.game.Size*p.game.Size; i++ {
 		stack := p.board[i]
 		if len(stack) > 0 {
 			if pieceKind(stack[0]) == Flat {
