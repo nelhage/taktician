@@ -12,27 +12,33 @@ type MinimaxAI struct {
 }
 
 func (m *MinimaxAI) GetMove(p *tak.Position) *tak.Move {
-	move, _ := m.minimax(p, m.depth)
+	move, _ := m.minimax(p, m.depth, minEval-1, maxEval+1)
 	return move
 }
 
-func (ai *MinimaxAI) minimax(p *tak.Position, depth int) (*tak.Move, int64) {
+func (ai *MinimaxAI) minimax(p *tak.Position, depth int, α, β int64) (*tak.Move, int64) {
 	if depth == 0 {
 		return nil, ai.evaluate(p)
 	}
 	var best tak.Move
-	var max int64 = minEval
+	var max int64 = minEval - 1
 	moves := p.AllMoves()
 	for _, m := range moves {
 		child, e := p.Move(m)
 		if e != nil {
 			continue
 		}
-		_, v := ai.minimax(child, depth-1)
+		_, v := ai.minimax(child, depth-1, -β, -α)
 		v = -v
 		if v > max {
 			max = v
 			best = m
+		}
+		if v > α {
+			α = v
+			if α > β {
+				break
+			}
 		}
 	}
 	return &best, max
