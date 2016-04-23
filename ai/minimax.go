@@ -38,6 +38,13 @@ func (ai *MinimaxAI) minimax(p *tak.Position, depth int) (*tak.Move, int64) {
 	return &best, max
 }
 
+func imin(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
 		if winner == p.ToMove() {
@@ -52,11 +59,14 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			if len(sq) == 0 {
 				continue
 			}
+			val := 0
+			val += imin(x, p.Size()-x-1)
+			val += imin(y, p.Size()-y-1)
 			if sq[0].Kind() == tak.Flat {
 				if sq[0].Color() == p.ToMove() {
-					me++
+					me += val
 				} else {
-					them++
+					them += val
 				}
 			}
 		}
