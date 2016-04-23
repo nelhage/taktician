@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"nelhage.com/tak/ai"
-	"nelhage.com/tak/game"
+	"nelhage.com/tak/tak"
 )
 
 var (
@@ -57,7 +57,7 @@ func main() {
 	flag.Parse()
 	in := bufio.NewReader(os.Stdin)
 	st := &state{
-		p:   game.New(game.Config{Size: *size}),
+		p:   tak.New(tak.Config{Size: *size}),
 		out: os.Stdout,
 	}
 	st.white = parsePlayer(in, *white)

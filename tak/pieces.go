@@ -1,4 +1,4 @@
-package game
+package tak
 
 type Color byte
 type Kind byte

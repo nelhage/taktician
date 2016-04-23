@@ -4,7 +4,7 @@ import (
 	"errors"
 	"regexp"
 
-	"nelhage.com/tak/game"
+	"nelhage.com/tak/tak"
 )
 
 var moveRE = regexp.MustCompile(
@@ -12,7 +12,7 @@ var moveRE = regexp.MustCompile(
 	`([CFS]?)([1-8]?)([a-h][1-9])([<>+-]?)([1-8]*)([CFS]?)`,
 )
 
-func ParseMove(move string) (*game.Move, error) {
+func ParseMove(move string) (*tak.Move, error) {
 	groups := moveRE.FindStringSubmatch(move)
 	if groups == nil {
 		return nil, errors.New("illegal move")
@@ -27,7 +27,7 @@ func ParseMove(move string) (*game.Move, error) {
 	x := position[0] - 'a'
 	y := position[1] - '1'
 
-	m := &game.Move{X: int(x), Y: int(y)}
+	m := &tak.Move{X: int(x), Y: int(y)}
 	if direction == "" {
 		// place a piece
 		if carry != "" || drops != "" {
@@ -35,11 +35,11 @@ func ParseMove(move string) (*game.Move, error) {
 		}
 		switch place {
 		case "F", "":
-			m.Type = game.PlaceFlat
+			m.Type = tak.PlaceFlat
 		case "S":
-			m.Type = game.PlaceStanding
+			m.Type = tak.PlaceStanding
 		case "C":
-			m.Type = game.PlaceCapstone
+			m.Type = tak.PlaceCapstone
 		default:
 			panic("parser error")
 		}
@@ -60,13 +60,13 @@ func ParseMove(move string) (*game.Move, error) {
 	}
 	switch direction {
 	case "<":
-		m.Type = game.SlideLeft
+		m.Type = tak.SlideLeft
 	case ">":
-		m.Type = game.SlideRight
+		m.Type = tak.SlideRight
 	case "+":
-		m.Type = game.SlideUp
+		m.Type = tak.SlideUp
 	case "-":
-		m.Type = game.SlideDown
+		m.Type = tak.SlideDown
 	default:
 		panic("parser error")
 	}
@@ -74,7 +74,7 @@ func ParseMove(move string) (*game.Move, error) {
 	return m, nil
 }
 
-func FormatMove(m *game.Move) string {
+func FormatMove(m *tak.Move) string {
 	var out []byte
 	if len(m.Slides) > 0 {
 		stack := 0
@@ -84,22 +84,22 @@ func FormatMove(m *game.Move) string {
 		out = append(out, byte('0'+stack))
 	}
 	switch m.Type {
-	case game.PlaceFlat:
-	case game.PlaceCapstone:
+	case tak.PlaceFlat:
+	case tak.PlaceCapstone:
 		out = append(out, 'C')
-	case game.PlaceStanding:
+	case tak.PlaceStanding:
 		out = append(out, 'S')
 	}
 	out = append(out, byte('a'+m.X))
 	out = append(out, byte('1'+m.Y))
 	switch m.Type {
-	case game.SlideLeft:
+	case tak.SlideLeft:
 		out = append(out, '<')
-	case game.SlideRight:
+	case tak.SlideRight:
 		out = append(out, '>')
-	case game.SlideUp:
+	case tak.SlideUp:
 		out = append(out, '+')
-	case game.SlideDown:
+	case tak.SlideDown:
 		out = append(out, '-')
 	}
 	for _, s := range m.Slides {

@@ -1,7 +1,7 @@
 package ai
 
-import "nelhage.com/tak/game"
+import "nelhage.com/tak/tak"
 
 type TakPlayer interface {
-	GetMove(p *game.Position) *game.Move
+	GetMove(p *tak.Position) *tak.Move
 }

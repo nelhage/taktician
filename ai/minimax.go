@@ -1,6 +1,6 @@
 package ai
 
-import "nelhage.com/tak/game"
+import "nelhage.com/tak/tak"
 
 const (
 	maxEval = 1 << 30
@@ -11,16 +11,16 @@ type MinimaxAI struct {
 	depth int
 }
 
-func (m *MinimaxAI) GetMove(p *game.Position) *game.Move {
+func (m *MinimaxAI) GetMove(p *tak.Position) *tak.Move {
 	move, _ := m.minimax(p, m.depth)
 	return move
 }
 
-func (ai *MinimaxAI) minimax(p *game.Position, depth int) (*game.Move, int64) {
+func (ai *MinimaxAI) minimax(p *tak.Position, depth int) (*tak.Move, int64) {
 	if depth == 0 {
 		return nil, ai.evaluate(p)
 	}
-	var best game.Move
+	var best tak.Move
 	var max int64 = minEval
 	moves := p.AllMoves()
 	for _, m := range moves {
@@ -38,7 +38,7 @@ func (ai *MinimaxAI) minimax(p *game.Position, depth int) (*game.Move, int64) {
 	return &best, max
 }
 
-func (m *MinimaxAI) evaluate(p *game.Position) int64 {
+func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
 		if winner == p.ToMove() {
 			return maxEval
@@ -52,7 +52,7 @@ func (m *MinimaxAI) evaluate(p *game.Position) int64 {
 			if len(sq) == 0 {
 				continue
 			}
-			if sq[0].Kind() == game.Flat {
+			if sq[0].Kind() == tak.Flat {
 				if sq[0].Color() == p.ToMove() {
 					me++
 				} else {

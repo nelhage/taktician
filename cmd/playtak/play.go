@@ -6,12 +6,12 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"nelhage.com/tak/game"
 	"nelhage.com/tak/ptn"
+	"nelhage.com/tak/tak"
 )
 
 type Player interface {
-	GetMove(p *game.Position) *game.Move
+	GetMove(p *tak.Position) *tak.Move
 }
 
 type cliPlayer struct {
@@ -20,14 +20,14 @@ type cliPlayer struct {
 }
 
 type state struct {
-	p     *game.Position
+	p     *tak.Position
 	out   io.Writer
 	white Player
 	black Player
 }
 
 func playTak(st *state) {
-	var moves []*game.Move
+	var moves []*tak.Move
 	for {
 		drawGame(st)
 		if len(moves) > 0 && len(moves)%2 == 0 {
@@ -41,8 +41,8 @@ func playTak(st *state) {
 			fmt.Fprintln(st.out, "Game over! Winner:", c)
 			return
 		}
-		var m *game.Move
-		if st.p.ToMove() == game.White {
+		var m *tak.Move
+		if st.p.ToMove() == tak.White {
 			m = st.white.GetMove(st.p)
 		} else {
 			m = st.black.GetMove(st.p)
@@ -77,7 +77,7 @@ func drawGame(st *state) {
 	w.Flush()
 }
 
-func (c *cliPlayer) GetMove(p *game.Position) *game.Move {
+func (c *cliPlayer) GetMove(p *tak.Position) *tak.Move {
 	for {
 		fmt.Fprintf(c.out, "%s> ", p.ToMove())
 		line, err := c.in.ReadString('\n')

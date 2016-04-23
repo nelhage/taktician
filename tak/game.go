@@ -1,4 +1,4 @@
-package game
+package tak
 
 type Config struct {
 	Size      int

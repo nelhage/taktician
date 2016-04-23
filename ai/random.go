@@ -3,14 +3,14 @@ package ai
 import (
 	"math/rand"
 
-	"nelhage.com/tak/game"
+	"nelhage.com/tak/tak"
 )
 
 type RandomAI struct {
 	r *rand.Rand
 }
 
-func (r *RandomAI) GetMove(p *game.Position) *game.Move {
+func (r *RandomAI) GetMove(p *tak.Position) *tak.Move {
 	moves := p.AllMoves()
 	i := r.r.Int31n(int32(len(moves)))
 	return &moves[i]
