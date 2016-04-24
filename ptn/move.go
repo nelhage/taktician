@@ -81,7 +81,9 @@ func FormatMove(m *tak.Move) string {
 		for _, c := range m.Slides {
 			stack += int(c)
 		}
-		out = append(out, byte('0'+stack))
+		if stack != 1 {
+			out = append(out, byte('0'+stack))
+		}
 	}
 	switch m.Type {
 	case tak.PlaceFlat:
@@ -102,8 +104,10 @@ func FormatMove(m *tak.Move) string {
 	case tak.SlideDown:
 		out = append(out, '-')
 	}
-	for _, s := range m.Slides {
-		out = append(out, byte('0'+s))
+	for i, s := range m.Slides {
+		if i < len(m.Slides)-1 {
+			out = append(out, byte('0'+s))
+		}
 	}
 	return string(out)
 }
