@@ -22,6 +22,27 @@ type Move struct {
 	Slides []byte
 }
 
+func (m *Move) Equal(rhs *Move) bool {
+	if m.X != rhs.X || m.Y != rhs.Y {
+		return false
+	}
+	if m.Type != rhs.Type {
+		return false
+	}
+	if m.Type >= SlideLeft {
+		return true
+	}
+	if len(m.Slides) != len(rhs.Slides) {
+		return false
+	}
+	for i, s := range m.Slides {
+		if rhs.Slides[i] != s {
+			return false
+		}
+	}
+	return true
+}
+
 var (
 	ErrOccupied       = errors.New("position is occupied")
 	ErrIllegalSlide   = errors.New("illegal slide")

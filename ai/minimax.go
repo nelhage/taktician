@@ -3,8 +3,8 @@ package ai
 import "nelhage.com/tak/tak"
 
 const (
-	maxEval = 1 << 30
-	minEval = -maxEval
+	maxEval int64 = 1 << 30
+	minEval       = -maxEval
 )
 
 type MinimaxAI struct {
@@ -12,23 +12,37 @@ type MinimaxAI struct {
 }
 
 func (m *MinimaxAI) GetMove(p *tak.Position) *tak.Move {
-	move, _ := m.minimax(p, m.depth, minEval-1, maxEval+1)
+	var move *tak.Move
+	for i := 1; i <= m.depth; i++ {
+		move, _ = m.minimax(p, i, move, minEval-1, maxEval+1)
+	}
 	return move
 }
 
-func (ai *MinimaxAI) minimax(p *tak.Position, depth int, α, β int64) (*tak.Move, int64) {
+func (ai *MinimaxAI) minimax(
+	p *tak.Position,
+	depth int,
+	pv *tak.Move,
+	α, β int64) (*tak.Move, int64) {
 	if depth == 0 {
 		return nil, ai.evaluate(p)
 	}
 	var best tak.Move
-	var max int64 = minEval - 1
+	max := minEval - 1
 	moves := p.AllMoves()
+	if pv != nil {
+		for i, m := range moves {
+			if m.Equal(pv) {
+				moves[0], moves[i] = moves[i], moves[0]
+			}
+		}
+	}
 	for _, m := range moves {
 		child, e := p.Move(m)
 		if e != nil {
 			continue
 		}
-		_, v := ai.minimax(child, depth-1, -β, -α)
+		_, v := ai.minimax(child, depth-1, nil, -β, -α)
 		v = -v
 		if v > max {
 			max = v
