@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"nelhage.com/tak/ai"
+	"nelhage.com/tak/cli"
 	"nelhage.com/tak/tak"
 )
 
@@ -18,11 +19,9 @@ var (
 	size  = flag.Int("size", 5, "game size")
 )
 
-func parsePlayer(in *bufio.Reader, s string) Player {
+func parsePlayer(in *bufio.Reader, s string) cli.Player {
 	if s == "human" {
-		return &cliPlayer{
-			out: os.Stdout, in: in,
-		}
+		return cli.NewCLIPlayer(os.Stdout, in)
 	}
 	if s == "rand" {
 		return ai.NewRandom(0)
@@ -56,11 +55,11 @@ func parsePlayer(in *bufio.Reader, s string) Player {
 func main() {
 	flag.Parse()
 	in := bufio.NewReader(os.Stdin)
-	st := &state{
-		p:   tak.New(tak.Config{Size: *size}),
-		out: os.Stdout,
+	st := &cli.CLI{
+		Config: tak.Config{Size: *size},
+		Out:    os.Stdout,
+		White:  parsePlayer(in, *white),
+		Black:  parsePlayer(in, *black),
 	}
-	st.white = parsePlayer(in, *white)
-	st.black = parsePlayer(in, *black)
-	playTak(st)
+	st.Play()
 }
