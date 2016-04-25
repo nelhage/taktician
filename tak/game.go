@@ -83,86 +83,28 @@ func (p *Position) roadAt(x, y int) (Color, bool) {
 func (p *Position) hasRoad() (Color, bool) {
 	s := p.cfg.Size
 	white, black := false, false
-	reachable := make([]Piece, s*s)
-	for x := 0; x < s; x++ {
-		if c, ok := p.roadAt(x, 0); ok {
-			reachable[x] = MakePiece(c, Flat)
-		}
-	}
-	for y := 1; y < s; y++ {
-		for x := 0; x < s; x++ {
-			c, ok := p.roadAt(x, y)
-			if !ok {
-				continue
-			}
-			if reachable[x+(y-1)*s] == MakePiece(c, Flat) {
-				reachable[x+y*s] = MakePiece(c, Flat)
-			}
-		}
-		for x := 0; x < s; x++ {
-			c, ok := p.roadAt(x, y)
-			if !ok {
-				continue
-			}
-			if x > 0 && reachable[x-1+y*s] == MakePiece(c, Flat) {
-				reachable[x+y*s] = MakePiece(c, Flat)
-			}
-			if x < s-1 && reachable[x+1+y*s] == MakePiece(c, Flat) {
-				reachable[x+y*s] = MakePiece(c, Flat)
-			}
-		}
-	}
+	var rwx uint64
+	var rbx uint64
+	var rwy uint64
+	var rby uint64
 
 	for x := 0; x < s; x++ {
-		r := reachable[x+(s-1)*s]
-		if r == MakePiece(White, Flat) {
-			white = true
-		}
-		if r == MakePiece(Black, Flat) {
-			black = true
-		}
-	}
-
-	for i := range reachable {
-		reachable[i] = Piece(0)
-	}
-	for y := 0; y < s; y++ {
-		if c, ok := p.roadAt(0, y); ok {
-			reachable[y*s] = MakePiece(c, Flat)
-		}
-	}
-	for x := 1; x < s; x++ {
 		for y := 0; y < s; y++ {
-			c, ok := p.roadAt(x, y)
-			if !ok {
-				continue
-			}
-			if reachable[x-1+y*s] == MakePiece(c, Flat) {
-				reachable[x+y*s] = MakePiece(c, Flat)
-			}
-		}
-		for y := 0; y < s; y++ {
-			c, ok := p.roadAt(x, y)
-			if !ok {
-				continue
-			}
-			if y > 0 && reachable[x+(y-1)*s] == MakePiece(c, Flat) {
-				reachable[x+y*s] = MakePiece(c, Flat)
-			}
-			if y < s-1 && reachable[x+(y+1)*s] == MakePiece(c, Flat) {
-				reachable[x+y*s] = MakePiece(c, Flat)
+			if c, ok := p.roadAt(x, y); ok {
+				by := uint64(1 << uint(y*s+x))
+				bx := uint64(1 << uint(x*s+y))
+				if c == White {
+					rwy |= by
+					rwx |= bx
+				} else {
+					rby |= by
+					rbx |= bx
+				}
 			}
 		}
 	}
-	for y := 0; y < s; y++ {
-		r := reachable[y*s+s-1]
-		if r == MakePiece(White, Flat) {
-			white = true
-		}
-		if r == MakePiece(Black, Flat) {
-			black = true
-		}
-	}
+	white = p.bitroad(rwx) || p.bitroad(rwy)
+	black = p.bitroad(rbx) || p.bitroad(rby)
 
 	switch {
 	case white && black:
@@ -177,6 +119,24 @@ func (p *Position) hasRoad() (Color, bool) {
 	default:
 		return White, false
 	}
+}
+
+func (p *Position) bitroad(bits uint64) bool {
+	s := uint(p.cfg.Size)
+	var mask uint64 = (1 << s) - 1
+	row := bits & mask
+	for i := uint(1); i < s; i++ {
+		if row == 0 {
+			return false
+		}
+		next := (bits >> (i * s)) & mask
+		row &= next
+		row |= ((row >> 1) & next) |
+			((row << 1) & next)
+		row &= mask
+	}
+	return row != 0
+
 }
 
 func (p *Position) flatsWinner() Color {
