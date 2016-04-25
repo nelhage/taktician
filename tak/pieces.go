@@ -1,14 +1,17 @@
 package tak
 
+import "fmt"
+
 type Color byte
 type Kind byte
 type Piece byte
 
 const (
-	White Color = 1 << 7
-	Black Color = 0 << 7
+	White   Color = 1 << 7
+	Black   Color = 1 << 6
+	NoColor Color = 0
 
-	colorMask byte = 1 << 7
+	colorMask byte = 3 << 6
 
 	Flat     Kind = 1
 	Standing Kind = 2
@@ -50,15 +53,27 @@ func (p Piece) String() string {
 }
 
 func (c Color) String() string {
-	if c == White {
+	switch c {
+	case White:
 		return "white"
+	case Black:
+		return "black"
+	case NoColor:
+		return "no color"
+	default:
+		panic(fmt.Sprintf("bad color: %x", int(c)))
 	}
-	return "black"
 }
 
 func (c Color) Flip() Color {
-	if c == White {
+	switch c {
+	case White:
 		return Black
+	case Black:
+		return White
+	case NoColor:
+		return NoColor
+	default:
+		panic(fmt.Sprintf("bad color: %x", int(c)))
 	}
-	return White
 }

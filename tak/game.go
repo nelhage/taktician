@@ -147,7 +147,7 @@ func (p *Position) bitroad(bits uint64) bool {
 
 }
 
-func (p *Position) flatsWinner() Color {
+func (p *Position) countFlats() (w int, b int) {
 	cw, cb := 0, 0
 	for i := 0; i < p.cfg.Size*p.cfg.Size; i++ {
 		stack := p.board[i]
@@ -161,8 +161,16 @@ func (p *Position) flatsWinner() Color {
 			}
 		}
 	}
+	return cw, cb
+}
+
+func (p *Position) flatsWinner() Color {
+	cw, cb := p.countFlats()
 	if cw > cb {
 		return White
 	}
-	return Black
+	if cb > cw {
+		return Black
+	}
+	return NoColor
 }

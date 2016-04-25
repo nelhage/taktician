@@ -55,6 +55,27 @@ func TestHasRoad(t *testing.T) {
 	}
 }
 
+func TestFlatsWinner(t *testing.T) {
+	p := New(Config{Size: 5})
+	p.set(0, 0, Square{MakePiece(White, Flat)})
+	w := p.flatsWinner()
+	if w != White {
+		t.Fatal("flats winner", p)
+	}
+	p.set(1, 1, Square{MakePiece(Black, Flat),
+		MakePiece(White, Flat)})
+	p.set(1, 2, Square{MakePiece(Black, Flat)})
+	w = p.flatsWinner()
+	if w != Black {
+		t.Fatal("flats winner", p)
+	}
+	p.set(1, 3, Square{MakePiece(White, Flat)})
+	w = p.flatsWinner()
+	if w != NoColor {
+		t.Fatal("flats winner", p)
+	}
+}
+
 func BenchmarkEmptyHasRoad(b *testing.B) {
 	p := New(Config{Size: 5})
 	for i := 0; i < b.N; i++ {

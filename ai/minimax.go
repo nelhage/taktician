@@ -67,10 +67,14 @@ func imin(a, b int) int {
 
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
-		if winner == p.ToMove() {
+		switch winner {
+		case tak.NoColor:
+			return 0
+		case p.ToMove():
 			return maxEval
+		default:
+			return minEval
 		}
-		return minEval
 	}
 	me, them := 0, 0
 	for x := 0; x < p.Size(); x++ {
