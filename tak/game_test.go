@@ -54,3 +54,29 @@ func TestHasRoad(t *testing.T) {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 }
+
+func BenchmarkEmptyHasRoad(b *testing.B) {
+	p := New(Config{Size: 5})
+	for i := 0; i < b.N; i++ {
+		p.hasRoad()
+	}
+}
+
+func BenchmarkFullHasRoad(b *testing.B) {
+	p := New(Config{Size: 5})
+	for i := 0; i < p.Size(); i++ {
+		for j := 0; j < p.Size(); j++ {
+			var piece Piece
+			if (i^j)&1 == 0 {
+				piece = MakePiece(White, Flat)
+			} else {
+				piece = MakePiece(Black, Flat)
+			}
+			p.set(i, j, Square{piece})
+		}
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p.hasRoad()
+	}
+}
