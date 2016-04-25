@@ -18,36 +18,36 @@ func TestHasRoad(t *testing.T) {
 	}
 
 	for y := 0; y < 5; y++ {
-		p.board[y*5+2] = []Piece{MakePiece(Black, Flat)}
+		p.board[y*5+2] = Square{MakePiece(Black, Flat)}
 	}
 	c, ok := p.hasRoad()
 	if !ok || c != Black {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
-	p.board[0*5+2] = nil
-	p.board[0*5+1] = []Piece{MakePiece(Black, Flat)}
-	p.board[1*5+1] = []Piece{MakePiece(Black, Flat)}
+	p.set(2, 0, nil)
+	p.set(1, 0, Square{MakePiece(Black, Flat)})
+	p.set(1, 1, Square{MakePiece(Black, Flat)})
 	c, ok = p.hasRoad()
 	if !ok || c != Black {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
-	p.board[1*5+1] = []Piece{MakePiece(Black, Standing)}
+	p.set(1, 1, Square{MakePiece(Black, Standing)})
 	c, ok = p.hasRoad()
 	if ok {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
 	p.board = make([]Square, 5*5)
-	p.board[1*5+0] = []Piece{MakePiece(White, Flat)}
-	p.board[1*5+1] = []Piece{MakePiece(White, Flat)}
-	p.board[2*5+1] = []Piece{MakePiece(White, Flat)}
-	p.board[2*5+2] = []Piece{MakePiece(White, Flat)}
-	p.board[3*5+2] = []Piece{MakePiece(White, Flat)}
-	p.board[3*5+3] = []Piece{MakePiece(White, Flat)}
-	p.board[4*5+3] = []Piece{MakePiece(White, Flat)}
-	p.board[4*5+4] = []Piece{MakePiece(White, Flat)}
+	p.set(0, 1, Square{MakePiece(White, Flat)})
+	p.set(1, 1, Square{MakePiece(White, Flat)})
+	p.set(1, 2, Square{MakePiece(White, Flat)})
+	p.set(2, 2, Square{MakePiece(White, Flat)})
+	p.set(2, 3, Square{MakePiece(White, Flat)})
+	p.set(3, 3, Square{MakePiece(White, Flat)})
+	p.set(3, 4, Square{MakePiece(White, Flat)})
+	p.set(4, 4, Square{MakePiece(White, Flat)})
 
 	c, ok = p.hasRoad()
 	if !ok || c != White {
