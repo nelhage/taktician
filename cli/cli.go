@@ -24,6 +24,7 @@ type CLI struct {
 }
 
 func (c *CLI) Play() *tak.Position {
+	c.moves = nil
 	c.p = tak.New(c.Config)
 	for {
 		c.render()
@@ -34,8 +35,23 @@ func (c *CLI) Play() *tak.Position {
 				ptn.FormatMove(&c.moves[len(c.moves)-2]),
 				ptn.FormatMove(&c.moves[len(c.moves)-1]))
 		}
-		if ok, w := c.p.GameOver(); ok {
-			fmt.Fprintln(c.Out, "Game over! Winner:", w)
+		if ok, _ := c.p.GameOver(); ok {
+			d := c.p.WinDetails()
+			fmt.Fprintf(c.Out, "Game Over! ")
+			if d.Winner == tak.NoColor {
+				fmt.Fprintf(c.Out, "Draw.")
+			} else {
+				fmt.Fprintf(c.Out, "%s wins by ", d.Winner)
+				switch d.Reason {
+				case tak.RoadWin:
+					fmt.Fprintf(c.Out, "building a road")
+				case tak.FlatsWin:
+					fmt.Fprintf(c.Out, "flats count")
+				}
+			}
+			fmt.Fprintf(c.Out, "\nflats count: white=%d black=%d\n",
+				d.WhiteFlats,
+				d.BlackFlats)
 			return c.p
 		}
 		var m *tak.Move

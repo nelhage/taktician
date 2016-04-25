@@ -174,3 +174,33 @@ func (p *Position) flatsWinner() Color {
 	}
 	return NoColor
 }
+
+type WinReason int
+
+const (
+	RoadWin WinReason = iota
+	FlatsWin
+)
+
+type WinDetails struct {
+	Reason     WinReason
+	Winner     Color
+	WhiteFlats int
+	BlackFlats int
+}
+
+func (p *Position) WinDetails() WinDetails {
+	over, c := p.GameOver()
+	if !over {
+		panic("WinDetails on a game not over")
+	}
+	var d WinDetails
+	d.Winner = c
+	d.WhiteFlats, d.BlackFlats = p.countFlats()
+	if _, ok := p.hasRoad(); ok {
+		d.Reason = RoadWin
+	} else {
+		d.Reason = FlatsWin
+	}
+	return d
+}
