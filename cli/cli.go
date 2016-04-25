@@ -75,4 +75,5 @@ func RenderBoard(out io.Writer, p *tak.Position) {
 	}
 	fmt.Fprintf(w, "\n")
 	w.Flush()
+	fmt.Fprintf(out, "stones: W:%d B:%d\n", p.WhiteStones(), p.BlackStones())
 }

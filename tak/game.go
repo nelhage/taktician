@@ -60,6 +60,14 @@ func (p *Position) ToMove() Color {
 	return Black
 }
 
+func (p *Position) WhiteStones() int {
+	return int(p.whiteStones)
+}
+
+func (p *Position) BlackStones() int {
+	return int(p.blackStones)
+}
+
 func (p *Position) GameOver() (over bool, winner Color) {
 	if p, ok := p.hasRoad(); ok {
 		return true, p
