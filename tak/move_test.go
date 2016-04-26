@@ -2,6 +2,7 @@ package tak
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -107,5 +108,79 @@ func TestMove(t *testing.T) {
 		Square{MakePiece(Black, Capstone),
 			MakePiece(Black, Flat)}) {
 		t.Fatalf("stack wrong: %v", sq)
+	}
+}
+
+func TestAllMovesEmptyBoard(t *testing.T) {
+	type coord struct{ x, y int }
+	p := New(Config{Size: 6})
+	moves := p.AllMoves()
+	lookup := make(map[coord]struct{}, 6*6)
+	for _, m := range moves {
+		if m.Type != PlaceFlat {
+			t.Errorf("bad initial move: %#v", m)
+			continue
+		}
+		c := coord{m.X, m.Y}
+		if _, ok := lookup[c]; ok {
+			t.Errorf("dup move %#v", c)
+		}
+		lookup[c] = struct{}{}
+	}
+	if len(lookup) != 6*6 {
+		t.Error("wrong number of moves:", len(lookup))
+	}
+	for i := 0; i < 6; i++ {
+		for j := 0; j < 6; j++ {
+			if _, ok := lookup[coord{i, j}]; !ok {
+				t.Errorf("missing move %d,%d", i, j)
+			}
+		}
+	}
+}
+
+type orderMoves []MoveType
+
+func (o orderMoves) Len() int {
+	return len(o)
+}
+func (o orderMoves) Less(i, j int) bool {
+	return o[i] < o[j]
+}
+func (o orderMoves) Swap(i, j int) {
+	o[i], o[j] = o[j], o[i]
+}
+
+func TestAllMovesBasicSlides(t *testing.T) {
+	cases := []struct {
+		x, y   int
+		slides []MoveType
+	}{
+		{0, 0, []MoveType{SlideRight, SlideUp}},
+		{0, 4, []MoveType{SlideRight, SlideDown}},
+		{4, 0, []MoveType{SlideLeft, SlideUp}},
+		{4, 4, []MoveType{SlideLeft, SlideDown}},
+		{2, 2, []MoveType{SlideLeft, SlideDown, SlideRight, SlideUp}},
+	}
+	for _, tc := range cases {
+		p := New(Config{Size: 5})
+		// fake skip the opening moves
+		p.move = 4
+		p.set(tc.x, tc.y, Square{MakePiece(White, Flat)})
+		var dirs []MoveType
+		for _, m := range p.AllMoves() {
+			if m.X != tc.x || m.Y != tc.y {
+				continue
+			}
+			dirs = append(dirs, m.Type)
+		}
+		sort.Sort(orderMoves(dirs))
+		sort.Sort(orderMoves(tc.slides))
+		if !reflect.DeepEqual(tc.slides, dirs) {
+			t.Errorf("At (%d,%d) slides=%#v want %#v",
+				tc.x, tc.y, dirs, tc.slides,
+			)
+		}
+
 	}
 }

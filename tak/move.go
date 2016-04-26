@@ -210,18 +210,11 @@ func (p *Position) AllMoves() []Move {
 				d MoveType
 				c int
 			}
-			dirs := make([]dircnt, 0, 4)
-			if x > 0 {
-				dirs = append(dirs, dircnt{SlideLeft, x})
-			}
-			if x < p.cfg.Size-1 {
-				dirs = append(dirs, dircnt{SlideRight, p.cfg.Size - x - 1})
-			}
-			if y > 0 {
-				dirs = append(dirs, dircnt{SlideUp, y})
-			}
-			if y < p.cfg.Size-1 {
-				dirs = append(dirs, dircnt{SlideDown, p.cfg.Size - y - 1})
+			dirs := [4]dircnt{
+				{SlideLeft, x},
+				{SlideRight, p.cfg.Size - x - 1},
+				{SlideDown, y},
+				{SlideUp, p.cfg.Size - y - 1},
 			}
 			for _, d := range dirs {
 				h := len(stack)
