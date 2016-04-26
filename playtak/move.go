@@ -11,7 +11,7 @@ import (
 
 func parseSquare(square string) (x, y int, err error) {
 	if len(square) != 2 {
-		return 0, 0, fmt.Errorf("bad coord %s", square)
+		return 0, 0, fmt.Errorf("bad coord `%s'", square)
 	}
 	if square[0] < 'A' || square[0] > 'H' {
 		return 0, 0, fmt.Errorf("bad rank %s", square)

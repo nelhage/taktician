@@ -7,15 +7,11 @@ import (
 	"log"
 	"net"
 	"strings"
-
-	"nelhage.com/tak/ai"
-	"nelhage.com/tak/tak"
+	"time"
 )
 
 type client struct {
-	ai   ai.TakPlayer
 	conn net.Conn
-	p    *tak.Position
 
 	debug bool
 
@@ -46,6 +42,8 @@ func (c *client) recvThread() {
 			close(c.recv)
 			panic(err)
 		}
+		// trim the newline
+		line = line[:len(line)-1]
 		if c.debug {
 			log.Printf("< %s", line)
 		}
@@ -58,6 +56,7 @@ func (c *client) recvThread() {
 }
 
 func (c *client) sendThread() {
+	ticker := time.NewTicker(30)
 	for {
 		select {
 		case line := <-c.send:
@@ -67,6 +66,11 @@ func (c *client) sendThread() {
 			fmt.Fprintf(c.conn, "%s\n", line)
 		case <-c.shutdown:
 			return
+		case <-ticker.C:
+			select {
+			case c.send <- "PING":
+			default:
+			}
 		}
 	}
 }
