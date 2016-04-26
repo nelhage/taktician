@@ -24,7 +24,8 @@ func (ai *MinimaxAI) minimax(
 	depth int,
 	pv *tak.Move,
 	α, β int64) (*tak.Move, int64) {
-	if depth == 0 {
+	over, _ := p.GameOver()
+	if depth == 0 || over {
 		return nil, ai.evaluate(p)
 	}
 	var best tak.Move
