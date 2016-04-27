@@ -1,5 +1,7 @@
 package tak
 
+import "errors"
+
 type Config struct {
 	Size      int
 	Pieces    int
@@ -41,6 +43,31 @@ type Position struct {
 	board []Square
 }
 
+func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
+	p := New(cfg)
+	p.move = move
+	for x := 0; x < p.Size(); x++ {
+		for y := 0; y < p.Size(); y++ {
+			p.set(x, y, board[y][x])
+			for _, piece := range board[y][x] {
+				switch piece {
+				case MakePiece(White, Capstone):
+					p.whiteCaps--
+				case MakePiece(Black, Capstone):
+					p.blackCaps--
+				case MakePiece(White, Flat), MakePiece(White, Standing):
+					p.whiteStones--
+				case MakePiece(Black, Flat), MakePiece(Black, Standing):
+					p.blackStones--
+				default:
+					return nil, errors.New("bad stone")
+				}
+			}
+		}
+	}
+	return p, nil
+}
+
 func (p *Position) Size() int {
 	return p.cfg.Size
 }
@@ -58,6 +85,10 @@ func (p *Position) ToMove() Color {
 		return White
 	}
 	return Black
+}
+
+func (p *Position) MoveNumber() int {
+	return p.move
 }
 
 func (p *Position) WhiteStones() int {
