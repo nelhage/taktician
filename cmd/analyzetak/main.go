@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +11,14 @@ import (
 	"nelhage.com/tak/ptn"
 )
 
+var (
+	depth = flag.Int("depth", 5, "minimax depth")
+	all   = flag.Bool("all", false, "show all possible moves")
+)
+
 func main() {
+	flag.Parse()
+
 	f, e := os.Open(os.Args[1])
 	if e != nil {
 		log.Fatal("open:", e)
@@ -35,7 +43,7 @@ func main() {
 			p = next
 		}
 	}
-	player := ai.NewMinimax(5)
+	player := ai.NewMinimax(*depth)
 	player.Debug = true
 	pv, val := player.Analyze(p)
 	cli.RenderBoard(os.Stdout, p)
@@ -46,4 +54,11 @@ func main() {
 	}
 	fmt.Printf("\n")
 	fmt.Printf(" value=%d\n", val)
+	if *all {
+		fmt.Printf(" all moves:")
+		for _, m := range p.AllMoves() {
+			fmt.Printf(" %s", ptn.FormatMove(&m))
+		}
+		fmt.Printf("\n")
+	}
 }
