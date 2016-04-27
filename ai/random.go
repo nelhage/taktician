@@ -10,10 +10,10 @@ type RandomAI struct {
 	r *rand.Rand
 }
 
-func (r *RandomAI) GetMove(p *tak.Position) *tak.Move {
+func (r *RandomAI) GetMove(p *tak.Position) tak.Move {
 	moves := p.AllMoves()
 	i := r.r.Int31n(int32(len(moves)))
-	return &moves[i]
+	return moves[i]
 }
 
 func NewRandom(seed int64) TakPlayer {

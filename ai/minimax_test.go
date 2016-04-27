@@ -4,6 +4,7 @@ import (
 	"flag"
 	"testing"
 
+	"nelhage.com/tak/ptn"
 	"nelhage.com/tak/tak"
 )
 
@@ -16,12 +17,28 @@ func BenchmarkMinimax(b *testing.B) {
 	ai := NewMinimax(*depth)
 	for i := 0; i < b.N; i++ {
 		var e error
-		p, e = p.Move(*ai.GetMove(p))
+		m := ai.GetMove(p)
+		p, e = p.Move(&m)
 		if e != nil {
 			b.Fatal("bad move", e)
 		}
 		if over, _ := p.GameOver(); over {
 			p = tak.New(cfg)
 		}
+	}
+}
+
+func TestRegression(t *testing.T) {
+	game, err := ptn.ParseTPS(
+		`2,x4/x2,2,x2/x,2,2,x2/x2,12,2,1/1,1,21,2,1 1 9`,
+	)
+	if err != nil {
+		panic(err)
+	}
+	ai := NewMinimax(3)
+	m := ai.GetMove(game)
+	_, e := game.Move(&m)
+	if e != nil {
+		t.Fatalf("ai returned illegal move: %s: %s", ptn.FormatMove(&m), e)
 	}
 }

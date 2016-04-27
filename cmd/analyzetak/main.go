@@ -33,7 +33,7 @@ func main() {
 	}
 	for _, op := range parsed.Ops {
 		if m, ok := op.(*ptn.Move); ok {
-			next, e := p.Move(m.Move)
+			next, e := p.Move(&m.Move)
 			if e != nil {
 				fmt.Printf("illegal move: %s\n", ptn.FormatMove(&m.Move))
 				fmt.Printf("move=%d\n", p.MoveNumber())

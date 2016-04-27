@@ -148,7 +148,7 @@ func readMoves(r *bufio.Reader, ptn *PTN) error {
 			if e != nil {
 				return e
 			}
-			ptn.Ops = append(ptn.Ops, &Move{common, *move, tok[len(trimmed):]})
+			ptn.Ops = append(ptn.Ops, &Move{common, move, tok[len(trimmed):]})
 		}
 	}
 	return s.Err()

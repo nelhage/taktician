@@ -32,9 +32,9 @@ func formatpv(ms []tak.Move) string {
 	return out.String()
 }
 
-func (m *MinimaxAI) GetMove(p *tak.Position) *tak.Move {
+func (m *MinimaxAI) GetMove(p *tak.Position) tak.Move {
 	ms, _ := m.Analyze(p)
-	return &ms[0]
+	return ms[0]
 }
 
 func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
@@ -64,14 +64,15 @@ func (ai *MinimaxAI) minimax(
 		for i, m := range moves {
 			if m.Equal(&pv[0]) {
 				moves[0], moves[i] = moves[i], moves[0]
+				break
 			}
 		}
 	}
 
-	best := make([]tak.Move, depth)
+	best := make([]tak.Move, 1, depth)
 	max := minEval - 1
 	for _, m := range moves {
-		child, e := p.Move(m)
+		child, e := p.Move(&m)
 		if e != nil {
 			continue
 		}

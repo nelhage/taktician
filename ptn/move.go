@@ -12,10 +12,10 @@ var moveRE = regexp.MustCompile(
 	`([CFS]?)([1-8]?)([a-h][1-9])([<>+-]?)([1-8]*)([CFS]?)`,
 )
 
-func ParseMove(move string) (*tak.Move, error) {
+func ParseMove(move string) (tak.Move, error) {
 	groups := moveRE.FindStringSubmatch(move)
 	if groups == nil {
-		return nil, errors.New("illegal move")
+		return tak.Move{}, errors.New("illegal move")
 	}
 	var (
 		place     = groups[1]
@@ -27,11 +27,11 @@ func ParseMove(move string) (*tak.Move, error) {
 	x := position[0] - 'a'
 	y := position[1] - '1'
 
-	m := &tak.Move{X: int(x), Y: int(y)}
+	m := tak.Move{X: int(x), Y: int(y)}
 	if direction == "" {
 		// place a piece
 		if carry != "" || drops != "" {
-			return nil, errors.New("can't carry or drop without a direction")
+			return tak.Move{}, errors.New("can't carry or drop without a direction")
 		}
 		switch place {
 		case "F", "":

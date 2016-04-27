@@ -10,7 +10,7 @@ import (
 )
 
 type Player interface {
-	GetMove(p *tak.Position) *tak.Move
+	GetMove(p *tak.Position) tak.Move
 }
 
 type CLI struct {
@@ -54,18 +54,18 @@ func (c *CLI) Play() *tak.Position {
 				d.BlackFlats)
 			return c.p
 		}
-		var m *tak.Move
+		var m tak.Move
 		if c.p.ToMove() == tak.White {
 			m = c.White.GetMove(c.p)
 		} else {
 			m = c.Black.GetMove(c.p)
 		}
-		p, e := c.p.Move(*m)
+		p, e := c.p.Move(&m)
 		if e != nil {
 			fmt.Fprintln(c.Out, "illegal move:", e)
 		} else {
 			c.p = p
-			c.moves = append(c.moves, *m)
+			c.moves = append(c.moves, m)
 		}
 	}
 }

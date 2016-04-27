@@ -18,7 +18,7 @@ type cliPlayer struct {
 	in  *bufio.Reader
 }
 
-func (c *cliPlayer) GetMove(p *tak.Position) *tak.Move {
+func (c *cliPlayer) GetMove(p *tak.Position) tak.Move {
 	for {
 		fmt.Fprintf(c.out, "%s> ", p.ToMove())
 		line, err := c.in.ReadString('\n')

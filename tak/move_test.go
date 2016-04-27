@@ -19,7 +19,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Place a flat stone")
-	n, e := p.Move(Move{3, 3, PlaceFlat, nil})
+	n, e := p.Move(&Move{3, 3, PlaceFlat, nil})
 	if e != nil {
 		t.Fatalf("place: %v", e)
 	}
@@ -37,7 +37,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Place a standing stone")
-	n, e = n.Move(Move{3, 4, PlaceStanding, nil})
+	n, e = n.Move(&Move{3, 4, PlaceStanding, nil})
 	if e != nil {
 		t.Fatalf("move 2: %v", e)
 	}
@@ -46,13 +46,18 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Slide onto a standing")
-	_, e = n.Move(Move{3, 3, SlideUp, []byte{1}})
+	orig := Move{3, 3, SlideUp, []byte{1}}
+	move := orig
+	_, e = n.Move(&move)
 	if e != ErrIllegalSlide {
 		t.Fatalf("slide onto wall allowed: %v", e)
 	}
+	if !reflect.DeepEqual(orig, move) {
+		t.Errorf("mutated move: was=%#v now=%#v", orig, move)
+	}
 
 	t.Log("Slide onto an empty square")
-	nn, e := n.Move(Move{3, 3, SlideDown, []byte{1}})
+	nn, e := n.Move(&Move{3, 3, SlideDown, []byte{1}})
 	if e != nil {
 		t.Fatalf("slide up: %v", e)
 	}
@@ -70,7 +75,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Place a capstone")
-	n, e = nn.Move(Move{3, 3, PlaceCapstone, nil})
+	n, e = nn.Move(&Move{3, 3, PlaceCapstone, nil})
 	if e != nil {
 		t.Fatalf("place cap: %v", e)
 	}
@@ -84,23 +89,23 @@ func TestMove(t *testing.T) {
 		t.Fatalf("black caps: %d", n.blackCaps)
 	}
 
-	n, e = n.Move(Move{2, 3, PlaceFlat, nil})
+	n, e = n.Move(&Move{2, 3, PlaceFlat, nil})
 	if e != nil {
 		t.Fatalf("move %v", e)
 	}
 
 	t.Log("Place too many capstones")
-	_, e = n.Move(Move{0, 0, PlaceCapstone, nil})
+	_, e = n.Move(&Move{0, 0, PlaceCapstone, nil})
 	if e != ErrNoCapstone {
 		t.Fatalf("place capstone: %v", e)
 	}
 	t.Log("Slide onto a capstone")
-	_, e = n.Move(Move{3, 4, SlideDown, []byte{1}})
+	_, e = n.Move(&Move{3, 4, SlideDown, []byte{1}})
 	if e != ErrIllegalSlide {
 		t.Fatalf("slide onto a capstone")
 	}
 	t.Log("Slide a capstone onto a flat")
-	n, e = n.Move(Move{3, 3, SlideUp, []byte{1}})
+	n, e = n.Move(&Move{3, 3, SlideUp, []byte{1}})
 	if e != nil {
 		t.Fatalf("cap onto flat: %v", e)
 	}

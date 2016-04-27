@@ -69,14 +69,14 @@ func playGame(c *client, line string) {
 		}
 		if color == p.ToMove() {
 			move := ai.GetMove(p)
-			next, err := p.Move(*move)
+			next, err := p.Move(&move)
 			if err != nil {
 				log.Printf("ai returned bad move: %s: %s",
-					ptn.FormatMove(move), err)
+					ptn.FormatMove(&move), err)
 				continue
 			}
 			p = next
-			c.sendCommand(gameStr, playtak.FormatServer(move))
+			c.sendCommand(gameStr, playtak.FormatServer(&move))
 		} else {
 		theirMove:
 			for line := range c.recv {
@@ -90,7 +90,7 @@ func playGame(c *client, line string) {
 					if err != nil {
 						panic(err)
 					}
-					p, err = p.Move(move)
+					p, err = p.Move(&move)
 					if err != nil {
 						panic(err)
 					}

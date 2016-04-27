@@ -79,7 +79,7 @@ func TestParsePTN(t *testing.T) {
 			if e != nil {
 				panic(e)
 			}
-			m.Move = *mm
+			m.Move = mm
 		}
 		if !reflect.DeepEqual(ops[i], ptn.Ops[i]) {
 			t.Errorf("[%d] %#v != %#v", i, ptn.Ops[i], ops[i])

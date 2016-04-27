@@ -60,8 +60,8 @@ func TestParseMove(t *testing.T) {
 			t.Errorf("ParseMove(%s): err=%v", tc.in, err)
 			continue
 		}
-		if !reflect.DeepEqual(get, &tc.out) {
-			t.Errorf("ParseMove(%s)=%#v not %#v", tc.in, get, &tc.out)
+		if !reflect.DeepEqual(get, tc.out) {
+			t.Errorf("ParseMove(%s)=%#v not %#v", tc.in, get, tc.out)
 		}
 		rt := FormatMove(&tc.out)
 		if rt != tc.str {

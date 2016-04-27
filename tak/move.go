@@ -50,7 +50,7 @@ var (
 	ErrIllegalOpening = errors.New("illegal opening move")
 )
 
-func (p *Position) Move(m Move) (*Position, error) {
+func (p *Position) Move(m *Move) (*Position, error) {
 	var place Piece
 	dx, dy := 0, 0
 	switch m.Type {
@@ -120,17 +120,18 @@ func (p *Position) Move(m Move) (*Position, error) {
 	copy(next.board, p.board)
 	next.set(m.X, m.Y, stack[ct:])
 	stack = stack[:ct:ct]
+	x, y := m.X, m.Y
 	for _, c := range m.Slides {
-		m.X += dx
-		m.Y += dy
-		if m.X < 0 || m.X >= next.cfg.Size ||
-			m.Y < 0 || m.Y >= next.cfg.Size {
+		x += dx
+		y += dy
+		if x < 0 || x >= next.cfg.Size ||
+			y < 0 || y >= next.cfg.Size {
 			return nil, ErrIllegalSlide
 		}
 		if int(c) < 1 || int(c) > len(stack) {
 			return nil, ErrIllegalSlide
 		}
-		base := next.At(m.X, m.Y)
+		base := next.At(x, y)
 		if len(base) > 0 {
 			switch base[0].Kind() {
 			case Flat:
@@ -146,7 +147,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 		if len(tmp) > int(c) {
 			tmp[c] = MakePiece(tmp[c].Color(), Flat)
 		}
-		next.set(m.X, m.Y, tmp)
+		next.set(x, y, tmp)
 		stack = stack[:len(stack)-int(c) : len(stack)-int(c)]
 	}
 
