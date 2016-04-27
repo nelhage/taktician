@@ -119,7 +119,7 @@ func (p *Position) Move(m Move) (*Position, error) {
 	next.board = make([]Square, len(p.board))
 	copy(next.board, p.board)
 	next.set(m.X, m.Y, stack[ct:])
-	stack = stack[:ct]
+	stack = stack[:ct:ct]
 	for _, c := range m.Slides {
 		m.X += dx
 		m.Y += dy
@@ -142,14 +142,12 @@ func (p *Position) Move(m Move) (*Position, error) {
 				}
 			}
 		}
-		tmp := make([]Piece, int(c)+len(base))
-		copy(tmp[:c], stack[len(stack)-int(c):])
-		copy(tmp[c:], base)
+		tmp := append(stack, base...)
 		if len(tmp) > int(c) {
 			tmp[c] = MakePiece(tmp[c].Color(), Flat)
 		}
 		next.set(m.X, m.Y, tmp)
-		stack = stack[:len(stack)-int(c)]
+		stack = stack[:len(stack)-int(c) : len(stack)-int(c)]
 	}
 
 	return &next, nil
