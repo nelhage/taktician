@@ -161,6 +161,7 @@ func TestAllMovesBasicSlides(t *testing.T) {
 		{4, 0, []MoveType{SlideLeft, SlideUp}},
 		{4, 4, []MoveType{SlideLeft, SlideDown}},
 		{2, 2, []MoveType{SlideLeft, SlideDown, SlideRight, SlideUp}},
+		{4, 1, []MoveType{SlideLeft, SlideDown, SlideUp}},
 	}
 	for _, tc := range cases {
 		p := New(Config{Size: 5})

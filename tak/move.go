@@ -222,7 +222,7 @@ func (p *Position) AllMoves() []Move {
 					h = p.cfg.Size
 				}
 				for _, s := range slides[h] {
-					if len(s) < d.c {
+					if len(s) <= d.c {
 						moves = append(moves, Move{x, y, d.d, s})
 					}
 				}
