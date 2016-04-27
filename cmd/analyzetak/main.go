@@ -19,7 +19,7 @@ var (
 func main() {
 	flag.Parse()
 
-	f, e := os.Open(os.Args[1])
+	f, e := os.Open(flag.Arg(0))
 	if e != nil {
 		log.Fatal("open:", e)
 	}
