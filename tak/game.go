@@ -43,6 +43,9 @@ type Position struct {
 	board []Square
 }
 
+// FromSquares initializes a Position with the specified squares and
+// move number. `board` is a slice of rows, numbered from low to high,
+// each of which is a slice of positions.
 func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
 	p := New(cfg)
 	p.move = move
