@@ -33,6 +33,11 @@ func formatpv(ms []tak.Move) string {
 }
 
 func (m *MinimaxAI) GetMove(p *tak.Position) *tak.Move {
+	ms, _ := m.Analyze(p)
+	return &ms[0]
+}
+
+func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 	var ms []tak.Move
 	var v int64
 	for i := 1; i <= m.depth; i++ {
@@ -42,7 +47,7 @@ func (m *MinimaxAI) GetMove(p *tak.Position) *tak.Move {
 				i, v, formatpv(ms))
 		}
 	}
-	return &ms[0]
+	return ms, v
 }
 
 func (ai *MinimaxAI) minimax(
@@ -128,5 +133,5 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 }
 
 func NewMinimax(depth int) *MinimaxAI {
-	return &MinimaxAI{depth}
+	return &MinimaxAI{depth: depth}
 }

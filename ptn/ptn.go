@@ -3,6 +3,7 @@ package ptn
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -63,6 +64,38 @@ func ParsePTN(r io.Reader) (*PTN, error) {
 		return nil, err
 	}
 	return &ptn, nil
+}
+
+func (p *PTN) FindTag(name string) string {
+	for _, t := range p.Tags {
+		if t.Name == name {
+			return t.Value
+		}
+	}
+	return ""
+}
+
+func (p *PTN) InitialPosition() (*tak.Position, error) {
+	sizeTag := p.FindTag("Size")
+	size, e := strconv.Atoi(sizeTag)
+	if e != nil {
+		return nil, fmt.Errorf("bad size: %s", sizeTag)
+	}
+	tps := p.FindTag("TPS")
+	var out *tak.Position
+	if tps == "" {
+		out = tak.New(tak.Config{Size: size})
+	} else {
+		out, e = ParseTPS(tps)
+		if e != nil {
+			return nil, fmt.Errorf("bad TPS: %v", e)
+		}
+		if out.Size() != size {
+			return nil, fmt.Errorf("size mismatch: tag %d != TPS %d",
+				size, out.Size())
+		}
+	}
+	return out, nil
 }
 
 func readEvents(r *bufio.Reader, ptn *PTN) error {
