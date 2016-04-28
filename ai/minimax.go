@@ -59,6 +59,15 @@ func (ai *MinimaxAI) minimax(
 	if depth == 0 || over {
 		return nil, ai.evaluate(p)
 	}
+
+	if p.MoveNumber() < 2 {
+		for _, c := range [][]int{{0, 0}, {p.Size() - 1, 0}, {0, p.Size() - 1}, {p.Size() - 1, p.Size() - 1}} {
+			x, y := c[0], c[1]
+			if len(p.At(x, y)) == 0 {
+				return []tak.Move{{X: x, Y: y, Type: tak.PlaceFlat}}, 0
+			}
+		}
+	}
 	moves := p.AllMoves()
 	if len(pv) > 0 {
 		for i, m := range moves {
