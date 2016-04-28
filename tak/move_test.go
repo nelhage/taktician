@@ -116,6 +116,35 @@ func TestMove(t *testing.T) {
 	}
 }
 
+func TestMoveSlideStacks(t *testing.T) {
+	p := New(Config{Size: 5})
+	p.move = 4
+	p.set(3, 3, Square{
+		MakePiece(White, Capstone),
+		MakePiece(White, Flat),
+		MakePiece(Black, Flat),
+	})
+	next, e := p.Move(&Move{
+		X: 3, Y: 3,
+		Type:   SlideLeft,
+		Slides: []byte{1, 1, 1}})
+	if e != nil {
+		t.Fatalf("slide: %v", e)
+	}
+	if sq := next.At(3, 3); len(sq) != 0 {
+		t.Errorf("(3,3)=%#v", sq)
+	}
+	if sq := next.At(2, 3); len(sq) != 1 || sq[0] != MakePiece(Black, Flat) {
+		t.Errorf("(2,3)=%#v", sq)
+	}
+	if sq := next.At(1, 3); len(sq) != 1 || sq[0] != MakePiece(White, Flat) {
+		t.Errorf("(1,3)=%#v", sq)
+	}
+	if sq := next.At(0, 3); len(sq) != 1 || sq[0] != MakePiece(White, Capstone) {
+		t.Errorf("(0,3)=%#v", sq)
+	}
+}
+
 func TestAllMovesEmptyBoard(t *testing.T) {
 	type coord struct{ x, y int }
 	p := New(Config{Size: 6})

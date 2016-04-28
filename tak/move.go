@@ -97,7 +97,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 				stones = &next.whiteStones
 			}
 		}
-		if *stones == 0 {
+		if *stones <= 0 {
 			return nil, ErrNoCapstone
 		}
 		*stones--
@@ -143,12 +143,14 @@ func (p *Position) Move(m *Move) (*Position, error) {
 				}
 			}
 		}
-		tmp := append(stack, base...)
+		cut := len(stack) - int(c)
+		var drop Square
+		drop, stack = stack[cut:len(stack):len(stack)], stack[:cut:cut]
+		tmp := append(drop, base...)
 		if len(tmp) > int(c) {
 			tmp[c] = MakePiece(tmp[c].Color(), Flat)
 		}
 		next.set(x, y, tmp)
-		stack = stack[:len(stack)-int(c) : len(stack)-int(c)]
 	}
 
 	return &next, nil
