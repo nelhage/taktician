@@ -106,9 +106,9 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 		case tak.NoColor:
 			return 0
 		case p.ToMove():
-			return maxEval
+			return maxEval - int64(p.MoveNumber())
 		default:
-			return minEval
+			return minEval + int64(p.MoveNumber())
 		}
 	}
 	me, them := 0, 0
