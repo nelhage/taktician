@@ -100,6 +100,12 @@ func imin(a, b int) int {
 	return b
 }
 
+const (
+	weightFlat       = 1
+	weightCaptured   = 1
+	weightControlled = 5
+)
+
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
 		switch winner {
@@ -111,26 +117,34 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			return minEval + int64(p.MoveNumber())
 		}
 	}
-	me, them := 0, 0
+	mine, theirs := 0, 0
+	me := p.ToMove()
+	addw := func(c tak.Color, w int) {
+		if c == me {
+			mine += w
+		} else {
+			theirs += w
+		}
+	}
 	for x := 0; x < p.Size(); x++ {
 		for y := 0; y < p.Size(); y++ {
 			sq := p.At(x, y)
 			if len(sq) == 0 {
 				continue
 			}
-			val := 0
-			val += imin(x, p.Size()-x-1)
-			val += imin(y, p.Size()-y-1)
-			if sq[0].Kind() == tak.Flat {
-				if sq[0].Color() == p.ToMove() {
-					me += val
-				} else {
-					them += val
+			addw(sq[0].Color(), weightControlled)
+			for i, stone := range sq {
+				if i > 0 && i < p.Size() {
+					addw(sq[0].Color(), weightCaptured)
+				}
+				if stone.Kind() == tak.Flat {
+					addw(stone.Color(), weightFlat)
 				}
 			}
 		}
 	}
-	return int64(me - them)
+
+	return int64(mine - theirs)
 }
 
 func NewMinimax(depth int) *MinimaxAI {
