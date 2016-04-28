@@ -50,6 +50,7 @@ func main() {
 
 func playGame(c *client, line string) {
 	ai := ai.NewMinimax(*depth)
+	ai.Debug = true
 	p := tak.New(tak.Config{Size: 5})
 	bits := strings.Split(line, " ")
 	log.Printf(line)
@@ -95,7 +96,7 @@ func playGame(c *client, line string) {
 						panic(err)
 					}
 					break theirMove
-				case "Abandoned", "Over":
+				case "Abandoned.", "Over":
 					return
 				}
 			}

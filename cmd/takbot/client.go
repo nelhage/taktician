@@ -55,8 +55,21 @@ func (c *client) recvThread() {
 	}
 }
 
+func (c *client) ping() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			c.send <- "PING"
+		case <-c.shutdown:
+			return
+		}
+	}
+}
+
 func (c *client) sendThread() {
-	ticker := time.NewTicker(30)
+	go c.ping()
 	for {
 		select {
 		case line := <-c.send:
@@ -66,11 +79,6 @@ func (c *client) sendThread() {
 			fmt.Fprintf(c.conn, "%s\n", line)
 		case <-c.shutdown:
 			return
-		case <-ticker.C:
-			select {
-			case c.send <- "PING":
-			default:
-			}
 		}
 	}
 }
