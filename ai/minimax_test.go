@@ -14,7 +14,10 @@ var depth = flag.Int("depth", 4, "minimax search depth")
 func BenchmarkMinimax(b *testing.B) {
 	var cfg = tak.Config{Size: *size}
 	p := tak.New(cfg)
+	p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
+	p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
 	ai := NewMinimax(*depth)
+
 	for i := 0; i < b.N; i++ {
 		var e error
 		m := ai.GetMove(p)
@@ -24,6 +27,8 @@ func BenchmarkMinimax(b *testing.B) {
 		}
 		if over, _ := p.GameOver(); over {
 			p = tak.New(cfg)
+			p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
+			p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
 		}
 	}
 }
