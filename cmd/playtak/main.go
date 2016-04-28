@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"nelhage.com/tak/ai"
 	"nelhage.com/tak/cli"
@@ -17,6 +18,7 @@ var (
 	white = flag.String("white", "human", "white player")
 	black = flag.String("black", "human", "white player")
 	size  = flag.Int("size", 5, "game size")
+	debug = flag.Int("debug", 0, "debug level")
 )
 
 func parsePlayer(in *bufio.Reader, s string) cli.Player {
@@ -46,7 +48,22 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 			}
 			depth = i
 		}
-		return ai.NewMinimax(depth)
+		p := ai.NewMinimax(depth)
+		p.Debug = *debug > 0
+		return p
+	}
+	if strings.HasPrefix(s, "mcts") {
+		var limit = 30 * time.Second
+		if len(s) > len("mcts") {
+			var err error
+			limit, err = time.ParseDuration(s[len("mcts:"):])
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		p := ai.NewMonteCarlo(limit)
+		p.Debug = *debug
+		return p
 	}
 	log.Fatalf("unparseable player: %s", s)
 	return nil
