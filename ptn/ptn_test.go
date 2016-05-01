@@ -7,8 +7,7 @@ import (
 	"testing"
 )
 
-func TestParsePTN(t *testing.T) {
-	text := `
+const testGame = `
 [Event "PTN Viewer Demo"]
 [Site "Here"]
 [Date "2015.11.21"]
@@ -27,7 +26,9 @@ func TestParsePTN(t *testing.T) {
 6. c2+ b3>'
 7. a5 2c3-2!
 `
-	ptn, err := ParsePTN(bytes.NewBufferString(text))
+
+func TestParsePTN(t *testing.T) {
+	ptn, err := ParsePTN(bytes.NewBufferString(testGame))
 	if err != nil {
 		t.Fatal("parse:", err)
 	}
@@ -84,5 +85,31 @@ func TestParsePTN(t *testing.T) {
 		if !reflect.DeepEqual(ops[i], ptn.Ops[i]) {
 			t.Errorf("[%d] %#v != %#v", i, ptn.Ops[i], ops[i])
 		}
+	}
+}
+
+func TestRoundTripPTN(t *testing.T) {
+	ptn, err := ParsePTN(bytes.NewBufferString(testGame))
+	if err != nil {
+		t.Fatal("parse")
+	}
+	render := ptn.Render()
+	back, err := ParsePTN(bytes.NewBufferString(render))
+	if err != nil {
+		t.Fatal("parse round-tripped")
+	}
+	if !reflect.DeepEqual(back.Tags, ptn.Tags) {
+		t.Fatal("tags did not round-trip")
+	}
+	for _, o := range ptn.Ops {
+		o.(Op).clearSrc()
+	}
+	for _, o := range back.Ops {
+		o.(Op).clearSrc()
+	}
+	if !reflect.DeepEqual(ptn.Ops, back.Ops) {
+		t.Fatalf("different ops! in=%#v, out=%#v",
+			ptn.Ops, back.Ops,
+		)
 	}
 }

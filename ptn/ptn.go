@@ -20,6 +20,7 @@ type Tag struct {
 
 type Op interface {
 	op()
+	clearSrc()
 
 	Source() string
 }
@@ -33,6 +34,11 @@ func (o opCommon) Source() string {
 }
 
 func (o opCommon) op() {}
+
+// for the tests
+func (o *opCommon) clearSrc() {
+	o.src = ""
+}
 
 type MoveNumber struct {
 	opCommon
