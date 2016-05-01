@@ -2,6 +2,7 @@ package ptn
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -47,6 +48,11 @@ type Move struct {
 type Comment struct {
 	opCommon
 	Comment string
+}
+
+type GameOver struct {
+	opCommon
+	End tak.WinDetails
 }
 
 type PTN struct {
@@ -142,6 +148,21 @@ func readMoves(r *bufio.Reader, ptn *PTN) error {
 				return e
 			}
 			ptn.Ops = append(ptn.Ops, &MoveNumber{common, n})
+		case tok == "R-0":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.White, Reason: tak.RoadWin}})
+		case tok == "0-R":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.Black, Reason: tak.RoadWin}})
+		case tok == "F-0":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.White, Reason: tak.FlatsWin}})
+		case tok == "0-F":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.Black, Reason: tak.FlatsWin}})
+		case tok == "1/2-1/2":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.NoColor, Reason: tak.FlatsWin}})
 		default:
 			trimmed := strings.TrimRight(tok, "?!'")
 			move, e := ParseMove(trimmed)
@@ -191,4 +212,42 @@ func skipWS(r *bufio.Reader) error {
 			return r.UnreadByte()
 		}
 	}
+}
+
+func (p *PTN) Render() string {
+	var out bytes.Buffer
+	for _, tag := range p.Tags {
+		fmt.Fprintf(&out, "[%s \"%s\"]\n",
+			tag.Name, strings.Replace(tag.Value, "\"", "", -1),
+		)
+	}
+	out.WriteString("\n")
+
+	for _, op := range p.Ops {
+		switch o := op.(type) {
+		case *MoveNumber:
+			fmt.Fprintf(&out, "\n%d.", o.Number)
+		case *Move:
+			fmt.Fprintf(&out, " %s%s", FormatMove(&o.Move), o.Modifiers)
+		case *Comment:
+			fmt.Fprintf(&out, " {%s}", o.Comment)
+		case *GameOver:
+			var w string
+			switch {
+			case o.End.Reason == tak.FlatsWin && o.End.Winner == tak.Black:
+				w = "0-F"
+			case o.End.Reason == tak.FlatsWin && o.End.Winner == tak.White:
+				w = "F-0"
+			case o.End.Reason == tak.RoadWin && o.End.Winner == tak.Black:
+				w = "0-R"
+			case o.End.Reason == tak.RoadWin && o.End.Winner == tak.White:
+				w = "R-0"
+			case o.End.Winner == tak.NoColor:
+				w = "1/2-1/2"
+			}
+			fmt.Fprintf(&out, "\n%s\n", w)
+		default:
+		}
+	}
+	return out.String()
 }

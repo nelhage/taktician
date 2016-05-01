@@ -47,6 +47,57 @@ func ParseTPS(tpn string) (*tak.Position, error) {
 	return tak.FromSquares(tak.Config{Size: len(pieces)}, pieces, move)
 }
 
+func FormatTPS(p *tak.Position) string {
+	var rows []string
+	for i := p.Size() - 1; i >= 0; i-- {
+		rows = append(rows, tpsRow(p, i))
+	}
+	var toMove string
+	if p.ToMove() == tak.White {
+		toMove = "1"
+	} else {
+		toMove = "2"
+	}
+	return fmt.Sprintf("%s %s %d", strings.Join(rows, "/"), toMove, p.MoveNumber()/2+1)
+}
+
+func tpsRow(p *tak.Position, y int) string {
+	var bits []string
+	for x := 0; x < p.Size(); {
+		var i int
+		for i = 0; x+i < p.Size() && len(p.At(x+i, y)) == 0; i++ {
+		}
+		switch i {
+		case 0:
+			bits = append(bits, tpsSquare(p.At(x, y)))
+			x++
+		case 1:
+			bits = append(bits, "x")
+		default:
+			bits = append(bits, fmt.Sprintf("x%d", i))
+		}
+		x += i
+	}
+	return strings.Join(bits, ",")
+}
+
+func tpsSquare(sq tak.Square) string {
+	var out []byte
+	for i := len(sq) - 1; i >= 0; i-- {
+		if sq[i].Color() == tak.White {
+			out = append(out, '1')
+		} else {
+			out = append(out, '2')
+		}
+	}
+	if sq[0].Kind() == tak.Standing {
+		out = append(out, 'S')
+	} else if sq[0].Kind() == tak.Capstone {
+		out = append(out, 'C')
+	}
+	return string(out)
+}
+
 func parseRow(row string) ([]tak.Square, error) {
 	var out []tak.Square
 	bits := strings.Split(row, ",")
