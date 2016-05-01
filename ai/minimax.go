@@ -78,19 +78,25 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 
-	best := make([]tak.Move, 1, depth)
+	best := make([]tak.Move, 0, depth)
 	max := minEval - 1
 	for _, m := range moves {
 		child, e := p.Move(&m)
 		if e != nil {
 			continue
 		}
-		ms, v := ai.minimax(child, depth-1, nil, -β, -α)
+		var ms []tak.Move
+		var v int64
+		if len(best) == 0 {
+			ms, v = ai.minimax(child, depth-1, nil, -β, -α)
+		} else {
+			ms, v = ai.minimax(child, depth-1, best[1:], -β, -α)
+		}
 		v = -v
 		if v > max {
 			max = v
-			best[0] = m
-			best = append(best[:1], ms...)
+			best = append(best[:0], m)
+			best = append(best, ms...)
 		}
 		if v > α {
 			α = v
