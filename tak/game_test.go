@@ -55,6 +55,22 @@ func TestHasRoad(t *testing.T) {
 	}
 }
 
+func TestHasRoadRegression(t *testing.T) {
+	p := New(Config{Size: 5})
+	p.set(1, 4, Square{MakePiece(White, Flat)})
+	p.set(1, 3, Square{MakePiece(White, Flat)})
+	p.set(1, 2, Square{MakePiece(White, Flat)})
+	p.set(2, 2, Square{MakePiece(White, Flat)})
+	p.set(3, 2, Square{MakePiece(White, Flat)})
+	p.set(4, 2, Square{MakePiece(White, Flat)})
+	p.set(4, 1, Square{MakePiece(White, Flat)})
+	p.set(4, 0, Square{MakePiece(White, Flat)})
+	c, ok := p.hasRoad()
+	if !ok || c != White {
+		t.Errorf("c=%v hasRoad=%v\n", c, ok)
+	}
+}
+
 func TestFlatsWinner(t *testing.T) {
 	p := New(Config{Size: 5})
 	p.set(0, 0, Square{MakePiece(White, Flat)})

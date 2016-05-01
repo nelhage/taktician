@@ -173,9 +173,15 @@ func (p *Position) bitroad(bits uint64) bool {
 		}
 		next := (bits >> (i * s)) & mask
 		row &= next
-		row |= ((row >> 1) & next) |
-			((row << 1) & next)
-		row &= mask
+		for {
+			last := row
+			row |= ((row >> 1) & next) |
+				((row << 1) & next)
+			row &= mask
+			if row == last {
+				break
+			}
+		}
 	}
 	return row != 0
 
