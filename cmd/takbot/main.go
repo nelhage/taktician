@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"nelhage.com/tak/ai"
@@ -17,6 +18,7 @@ var (
 	depth  = flag.Int("depth", 5, "minimax depth")
 	user   = flag.String("user", "", "username for login")
 	pass   = flag.String("pass", "", "password for login")
+	accept = flag.String("accept", "", "accept a game from specified user")
 )
 
 const Client = "Takker AI"
@@ -39,8 +41,20 @@ func main() {
 	if err != nil {
 		log.Fatal("login: ", err)
 	}
-
-	client.sendCommand("Seek", "5", "1200")
+	if *accept != "" {
+		for line := range client.recv {
+			if strings.HasPrefix(line, "Seek new") {
+				bits := strings.Split(line, " ")
+				if bits[3] == *accept {
+					log.Printf("accepting game %s from %s", bits[2], bits[3])
+					client.sendCommand("Accept", bits[2])
+					break
+				}
+			}
+		}
+	} else {
+		client.sendCommand("Seek", "5", "1200")
+	}
 	for line := range client.recv {
 		if strings.HasPrefix(line, "Game Start") {
 			playGame(client, line)
@@ -49,11 +63,12 @@ func main() {
 }
 
 func playGame(c *client, line string) {
+	log.Println("New Game", line)
 	ai := ai.NewMinimax(*depth)
 	ai.Debug = true
-	p := tak.New(tak.Config{Size: 5})
 	bits := strings.Split(line, " ")
-	log.Printf(line)
+	size, _ := strconv.Atoi(bits[3])
+	p := tak.New(tak.Config{Size: size})
 	gameStr := fmt.Sprintf("Game#%s", bits[2])
 	var color tak.Color
 	switch bits[7] {
