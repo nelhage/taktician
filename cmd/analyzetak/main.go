@@ -14,6 +14,7 @@ import (
 var (
 	depth = flag.Int("depth", 5, "minimax depth")
 	all   = flag.Bool("all", false, "show all possible moves")
+	tps   = flag.Bool("tps", false, "render position in tps")
 )
 
 func main() {
@@ -54,6 +55,9 @@ func main() {
 	}
 	fmt.Printf("\n")
 	fmt.Printf(" value=%d\n", val)
+	if *tps {
+		fmt.Printf("[TPS \"%s\"]\n", ptn.FormatTPS(p))
+	}
 	if *all {
 		fmt.Printf(" all moves:")
 		for _, m := range p.AllMoves() {
