@@ -19,6 +19,7 @@ var (
 	user   = flag.String("user", "", "username for login")
 	pass   = flag.String("pass", "", "password for login")
 	accept = flag.String("accept", "", "accept a game from specified user")
+	once   = flag.Bool("once", false, "play a single game and exit")
 )
 
 const Client = "Takker AI"
@@ -41,23 +42,27 @@ func main() {
 	if err != nil {
 		log.Fatal("login: ", err)
 	}
-	if *accept != "" {
-		for line := range client.recv {
-			if strings.HasPrefix(line, "Seek new") {
-				bits := strings.Split(line, " ")
-				if bits[3] == *accept {
-					log.Printf("accepting game %s from %s", bits[2], bits[3])
-					client.sendCommand("Accept", bits[2])
-					break
+	for {
+		if *accept != "" {
+			for line := range client.recv {
+				if strings.HasPrefix(line, "Seek new") {
+					bits := strings.Split(line, " ")
+					if bits[3] == *accept {
+						log.Printf("accepting game %s from %s", bits[2], bits[3])
+						client.sendCommand("Accept", bits[2])
+						break
+					}
 				}
 			}
+		} else {
+			client.sendCommand("Seek", "5", "1200")
 		}
-	} else {
-		client.sendCommand("Seek", "5", "1200")
-	}
-	for line := range client.recv {
-		if strings.HasPrefix(line, "Game Start") {
-			playGame(client, line)
+		for line := range client.recv {
+			if strings.HasPrefix(line, "Game Start") {
+				playGame(client, line)
+			}
+		}
+		if *once || *accept != "" {
 			return
 		}
 	}
@@ -81,10 +86,8 @@ func playGame(c *client, line string) {
 		panic(fmt.Sprintf("bad color: %s", bits[7]))
 	}
 	for {
-		if ok, _ := p.GameOver(); ok {
-			break
-		}
-		if color == p.ToMove() {
+		over, _ := p.GameOver()
+		if color == p.ToMove() && !over {
 			move := ai.GetMove(p)
 			next, err := p.Move(&move)
 			if err != nil {
