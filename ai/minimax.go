@@ -94,7 +94,7 @@ func (ai *MinimaxAI) minimax(
 		}
 		if v > α {
 			α = v
-			if α > β {
+			if α >= β {
 				break
 			}
 		}
