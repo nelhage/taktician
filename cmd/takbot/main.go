@@ -58,6 +58,7 @@ func main() {
 	for line := range client.recv {
 		if strings.HasPrefix(line, "Game Start") {
 			playGame(client, line)
+			return
 		}
 	}
 }
