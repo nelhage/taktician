@@ -220,6 +220,7 @@ type WinReason int
 const (
 	RoadWin WinReason = iota
 	FlatsWin
+	Resignation
 )
 
 type WinDetails struct {

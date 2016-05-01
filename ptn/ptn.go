@@ -163,6 +163,12 @@ func readMoves(r *bufio.Reader, ptn *PTN) error {
 		case tok == "1/2-1/2":
 			ptn.Ops = append(ptn.Ops, &GameOver{common,
 				tak.WinDetails{Winner: tak.NoColor, Reason: tak.FlatsWin}})
+		case tok == "1-0":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.White, Reason: tak.Resignation}})
+		case tok == "0-1":
+			ptn.Ops = append(ptn.Ops, &GameOver{common,
+				tak.WinDetails{Winner: tak.Black, Reason: tak.Resignation}})
 		default:
 			trimmed := strings.TrimRight(tok, "?!'")
 			move, e := ParseMove(trimmed)
@@ -242,6 +248,10 @@ func (p *PTN) Render() string {
 				w = "0-R"
 			case o.End.Reason == tak.RoadWin && o.End.Winner == tak.White:
 				w = "R-0"
+			case o.End.Reason == tak.Resignation && o.End.Winner == tak.Black:
+				w = "0-1"
+			case o.End.Reason == tak.Resignation && o.End.Winner == tak.White:
+				w = "1-0"
 			case o.End.Winner == tak.NoColor:
 				w = "1/2-1/2"
 			}
