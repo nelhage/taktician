@@ -23,7 +23,7 @@ var (
 	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
 	size     = flag.Int("size", 5, "size of game to offer")
 	once     = flag.Bool("once", false, "play a single game and exit")
-	takbot   = flag.Bool("takbot", true, "challenge TakBot")
+	takbot   = flag.Bool("takbot", false, "challenge TakBot")
 )
 
 const Client = "Taktician AI"
