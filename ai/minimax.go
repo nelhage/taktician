@@ -42,7 +42,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 	var ms []tak.Move
 	var v int64
 	for i := 1; i <= m.depth; i++ {
-		ms, v = m.minimax(p, i, ms, maxEval-1, maxEval+1)
+		ms, v = m.minimax(p, i, ms, minEval-1, maxEval+1)
 		if m.Debug {
 			log.Printf("[minimax] depth=%d val=%d pv=%s",
 				i, v, formatpv(ms))
