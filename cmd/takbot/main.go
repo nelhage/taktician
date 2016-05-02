@@ -20,6 +20,7 @@ var (
 	pass   = flag.String("pass", "", "password for login")
 	accept = flag.String("accept", "", "accept a game from specified user")
 	once   = flag.Bool("once", false, "play a single game and exit")
+	takbot = flag.Bool("takbot", true, "challenge TakBot")
 )
 
 const Client = "Takker AI"
@@ -42,6 +43,9 @@ func main() {
 	if err != nil {
 		log.Fatal("login: ", err)
 	}
+	if *accept != "" || *takbot {
+		*once = true
+	}
 	for {
 		if *accept != "" {
 			for line := range client.recv {
@@ -56,6 +60,9 @@ func main() {
 			}
 		} else {
 			client.sendCommand("Seek", "5", "1200")
+			if *takbot {
+				client.sendCommand("Shout", "takbot: play")
+			}
 		}
 		for line := range client.recv {
 			if strings.HasPrefix(line, "Game Start") {
@@ -63,7 +70,7 @@ func main() {
 				break
 			}
 		}
-		if *once || *accept != "" {
+		if *once {
 			return
 		}
 	}
