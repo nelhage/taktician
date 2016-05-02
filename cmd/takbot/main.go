@@ -19,6 +19,8 @@ var (
 	user   = flag.String("user", "", "username for login")
 	pass   = flag.String("pass", "", "password for login")
 	accept = flag.String("accept", "", "accept a game from specified user")
+	time   = flag.Duration("time", 20*time.Minutes, "Length of game to offer")
+	size   = flag.Int("size", 5, "size of game to offer")
 	once   = flag.Bool("once", false, "play a single game and exit")
 	takbot = flag.Bool("takbot", true, "challenge TakBot")
 )
@@ -59,7 +61,7 @@ func main() {
 				}
 			}
 		} else {
-			client.sendCommand("Seek", "5", "1200")
+			client.sendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(time.Seconds())))
 			if *takbot {
 				client.sendCommand("Shout", "takbot: play")
 			}
