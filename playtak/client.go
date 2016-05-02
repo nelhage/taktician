@@ -1,4 +1,4 @@
-package main
+package playtak
 
 import (
 	"bufio"
@@ -7,55 +7,59 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
-type client struct {
+type Client struct {
 	conn net.Conn
 
-	debug bool
+	Debug bool
 
-	recv     chan string
+	Recv     chan string
 	send     chan string
 	shutdown chan struct{}
+	wg       sync.WaitGroup
 }
 
-func (c *client) Connect(host string) error {
+func (c *Client) Connect(host string) error {
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
 		return err
 	}
 	c.conn = conn
-	c.recv = make(chan string)
+	c.Recv = make(chan string)
 	c.send = make(chan string)
 	c.shutdown = make(chan struct{})
+	c.wg.Add(2)
 	go c.recvThread()
 	go c.sendThread()
 	return nil
 }
 
-func (c *client) recvThread() {
+func (c *Client) recvThread() {
 	r := bufio.NewReader(c.conn)
+	defer c.wg.Done()
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			close(c.recv)
+			close(c.Recv)
 			panic(err)
 		}
 		// trim the newline
 		line = line[:len(line)-1]
-		if c.debug {
+		if c.Debug {
 			log.Printf("< %s", line)
 		}
 		select {
-		case c.recv <- line:
+		case c.Recv <- line:
 		case <-c.shutdown:
 			return
 		}
 	}
 }
 
-func (c *client) ping() {
+func (c *Client) ping() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -68,12 +72,13 @@ func (c *client) ping() {
 	}
 }
 
-func (c *client) sendThread() {
+func (c *Client) sendThread() {
 	go c.ping()
+	defer c.wg.Done()
 	for {
 		select {
 		case line := <-c.send:
-			if c.debug {
+			if c.Debug {
 				log.Printf("> %s", line)
 			}
 			fmt.Fprintf(c.conn, "%s\n", line)
@@ -83,26 +88,26 @@ func (c *client) sendThread() {
 	}
 }
 
-func (c *client) sendCommand(words ...string) {
+func (c *Client) SendCommand(words ...string) {
 	c.send <- strings.Join(words, " ")
 }
 
-func (c *client) SendClient(name string) {
-	c.sendCommand("Client", name)
+func (c *Client) SendClient(name string) {
+	c.SendCommand("Client", name)
 }
 
-func (c *client) Login(user, pass string) error {
-	for line := range c.recv {
+func (c *Client) Login(user, pass string) error {
+	for line := range c.Recv {
 		if strings.HasPrefix(line, "Login ") {
 			break
 		}
 	}
 	if pass == "" {
-		c.sendCommand("Login", user)
+		c.SendCommand("Login", user)
 	} else {
-		c.sendCommand("Login", user, pass)
+		c.SendCommand("Login", user, pass)
 	}
-	for line := range c.recv {
+	for line := range c.Recv {
 		if line == "Login or Register" {
 			return errors.New("bad password")
 		}
@@ -113,6 +118,12 @@ func (c *client) Login(user, pass string) error {
 	return errors.New("login failed")
 }
 
-func (c *client) LoginGuest() error {
+func (c *Client) LoginGuest() error {
 	return c.Login("Guest", "")
+}
+
+func (c *Client) Shutdown() {
+	close(c.shutdown)
+	c.wg.Wait()
+	c.conn.Close()
 }

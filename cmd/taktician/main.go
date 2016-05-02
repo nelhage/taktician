@@ -23,21 +23,21 @@ var (
 	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
 	size     = flag.Int("size", 5, "size of game to offer")
 	once     = flag.Bool("once", false, "play a single game and exit")
-	takbot   = flag.Bool("takbot", false, "challenge TakBot")
+	takbot   = flag.String("takbot", "", "challenge TakBot AI")
 )
 
-const Client = "Taktician AI"
+const ClientName = "Taktician AI"
 
 func main() {
 	flag.Parse()
-	client := &client{
-		debug: true,
+	client := &playtak.Client{
+		Debug: true,
 	}
 	err := client.Connect(*server)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client.SendClient(Client)
+	client.SendClient(ClientName)
 	if *user != "" {
 		err = client.Login(*user, *pass)
 	} else {
@@ -46,28 +46,28 @@ func main() {
 	if err != nil {
 		log.Fatal("login: ", err)
 	}
-	if *accept != "" || *takbot {
+	if *accept != "" || *takbot != "" {
 		*once = true
 	}
 	for {
 		if *accept != "" {
-			for line := range client.recv {
+			for line := range client.Recv {
 				if strings.HasPrefix(line, "Seek new") {
 					bits := strings.Split(line, " ")
 					if bits[3] == *accept {
 						log.Printf("accepting game %s from %s", bits[2], bits[3])
-						client.sendCommand("Accept", bits[2])
+						client.SendCommand("Accept", bits[2])
 						break
 					}
 				}
 			}
 		} else {
-			client.sendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
-			if *takbot {
-				client.sendCommand("Shout", "takbot: play")
+			client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
+			if *takbot != "" {
+				client.SendCommand("Shout", "takbot: play", *takbot)
 			}
 		}
-		for line := range client.recv {
+		for line := range client.Recv {
 			if strings.HasPrefix(line, "Game Start") {
 				playGame(client, line)
 				break
@@ -79,7 +79,7 @@ func main() {
 	}
 }
 
-func playGame(c *client, line string) {
+func playGame(c *playtak.Client, line string) {
 	log.Println("New Game", line)
 	ai := ai.NewMinimax(*depth)
 	ai.Debug = true
@@ -107,10 +107,10 @@ func playGame(c *client, line string) {
 				continue
 			}
 			p = next
-			c.sendCommand(gameStr, playtak.FormatServer(&move))
+			c.SendCommand(gameStr, playtak.FormatServer(&move))
 		} else {
 		theirMove:
-			for line := range c.recv {
+			for line := range c.Recv {
 				if !strings.HasPrefix(line, gameStr) {
 					continue
 				}
