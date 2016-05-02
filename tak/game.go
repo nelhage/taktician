@@ -107,7 +107,7 @@ func (p *Position) GameOver() (over bool, winner Color) {
 		return true, p
 	}
 
-	if p.whiteStones != 0 && p.blackStones != 0 {
+	if (p.whiteStones+p.whiteCaps) != 0 && (p.blackStones+p.blackCaps) != 0 {
 		return false, White
 	}
 

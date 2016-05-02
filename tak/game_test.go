@@ -92,6 +92,15 @@ func TestFlatsWinner(t *testing.T) {
 	}
 }
 
+func TestFlatsWinnerCapLeft(t *testing.T) {
+	p := New(Config{Size: 5})
+	p.whiteStones = 0
+	ok, _ := p.GameOver()
+	if ok {
+		t.Fatalf("over, but capstone is left")
+	}
+}
+
 func BenchmarkEmptyHasRoad(b *testing.B) {
 	p := New(Config{Size: 5})
 	for i := 0; i < b.N; i++ {
