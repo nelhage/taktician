@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"nelhage.com/tak/ai"
 	"nelhage.com/tak/playtak"
@@ -14,15 +15,15 @@ import (
 )
 
 var (
-	server = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
-	depth  = flag.Int("depth", 5, "minimax depth")
-	user   = flag.String("user", "", "username for login")
-	pass   = flag.String("pass", "", "password for login")
-	accept = flag.String("accept", "", "accept a game from specified user")
-	time   = flag.Duration("time", 20*time.Minutes, "Length of game to offer")
-	size   = flag.Int("size", 5, "size of game to offer")
-	once   = flag.Bool("once", false, "play a single game and exit")
-	takbot = flag.Bool("takbot", true, "challenge TakBot")
+	server   = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
+	depth    = flag.Int("depth", 5, "minimax depth")
+	user     = flag.String("user", "", "username for login")
+	pass     = flag.String("pass", "", "password for login")
+	accept   = flag.String("accept", "", "accept a game from specified user")
+	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
+	size     = flag.Int("size", 5, "size of game to offer")
+	once     = flag.Bool("once", false, "play a single game and exit")
+	takbot   = flag.Bool("takbot", true, "challenge TakBot")
 )
 
 const Client = "Takker AI"
@@ -61,7 +62,7 @@ func main() {
 				}
 			}
 		} else {
-			client.sendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(time.Seconds())))
+			client.sendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
 			if *takbot {
 				client.sendCommand("Shout", "takbot: play")
 			}
