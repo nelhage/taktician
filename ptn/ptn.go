@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -56,9 +57,21 @@ type Comment struct {
 	Comment string
 }
 
-type GameOver struct {
+type Result struct {
 	opCommon
-	End tak.WinDetails
+	Result string
+}
+
+func (r *Result) Winner() tak.Color {
+	switch r.Result {
+	case "R-0", "F-0", "1-0":
+		return tak.White
+	case "0-R", "0-F", "0-1":
+		return tak.Black
+	case "1/2-1/2":
+		return tak.NoColor
+	}
+	return tak.NoColor
 }
 
 type PTN struct {
@@ -139,6 +152,8 @@ func readEvents(r *bufio.Reader, ptn *PTN) error {
 	}
 }
 
+var resultRE = regexp.MustCompile(`^(F|R|1/2)-(F|R|1/2)$`)
+
 func readMoves(r *bufio.Reader, ptn *PTN) error {
 	s := bufio.NewScanner(r)
 	s.Split(splitMoves)
@@ -154,27 +169,8 @@ func readMoves(r *bufio.Reader, ptn *PTN) error {
 				return e
 			}
 			ptn.Ops = append(ptn.Ops, &MoveNumber{common, n})
-		case tok == "R-0":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.White, Reason: tak.RoadWin}})
-		case tok == "0-R":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.Black, Reason: tak.RoadWin}})
-		case tok == "F-0":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.White, Reason: tak.FlatsWin}})
-		case tok == "0-F":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.Black, Reason: tak.FlatsWin}})
-		case tok == "1/2-1/2":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.NoColor, Reason: tak.FlatsWin}})
-		case tok == "1-0":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.White, Reason: tak.Resignation}})
-		case tok == "0-1":
-			ptn.Ops = append(ptn.Ops, &GameOver{common,
-				tak.WinDetails{Winner: tak.Black, Reason: tak.Resignation}})
+		case resultRE.MatchString(tok):
+			ptn.Ops = append(ptn.Ops, &Result{common, tok})
 		default:
 			trimmed := strings.TrimRight(tok, "?!'")
 			move, e := ParseMove(trimmed)
@@ -243,27 +239,11 @@ func (p *PTN) Render() string {
 			fmt.Fprintf(&out, " %s%s", FormatMove(&o.Move), o.Modifiers)
 		case *Comment:
 			fmt.Fprintf(&out, " {%s}", o.Comment)
-		case *GameOver:
-			var w string
-			switch {
-			case o.End.Reason == tak.FlatsWin && o.End.Winner == tak.Black:
-				w = "0-F"
-			case o.End.Reason == tak.FlatsWin && o.End.Winner == tak.White:
-				w = "F-0"
-			case o.End.Reason == tak.RoadWin && o.End.Winner == tak.Black:
-				w = "0-R"
-			case o.End.Reason == tak.RoadWin && o.End.Winner == tak.White:
-				w = "R-0"
-			case o.End.Reason == tak.Resignation && o.End.Winner == tak.Black:
-				w = "0-1"
-			case o.End.Reason == tak.Resignation && o.End.Winner == tak.White:
-				w = "1-0"
-			case o.End.Winner == tak.NoColor:
-				w = "1/2-1/2"
-			}
-			fmt.Fprintf(&out, "\n%s\n", w)
+		case *Result:
+			fmt.Fprintf(&out, "\n%s\n", o.Result)
 		default:
 		}
 	}
+	out.WriteString("\n")
 	return out.String()
 }

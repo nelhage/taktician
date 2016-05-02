@@ -129,6 +129,7 @@ func render(g *Game, dir string) {
 		}
 		p.Ops = append(p.Ops, &ptn.Move{Move: m})
 	}
+	p.Ops = append(p.Ops, &ptn.Result{Result: g.Result})
 	out := p.Render()
 	e := ioutil.WriteFile(fmt.Sprintf("%s/%s.ptn", dir, g.Id),
 		[]byte(out), 0644)
