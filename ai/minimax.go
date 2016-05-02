@@ -116,9 +116,10 @@ func imin(a, b int) int {
 }
 
 const (
-	weightFlat       = 1
+	weightFlat       = 2
 	weightCaptured   = 1
 	weightControlled = 5
+	weightCapstone   = -1
 )
 
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
@@ -148,6 +149,9 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 				continue
 			}
 			addw(sq[0].Color(), weightControlled)
+			if sq[0].Kind() == tak.Capstone {
+				addw(sq[0].Color(), weightCapstone)
+			}
 			for i, stone := range sq {
 				if i > 0 && i < p.Size() {
 					addw(sq[0].Color(), weightCaptured)
