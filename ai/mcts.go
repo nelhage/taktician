@@ -107,21 +107,22 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 	return ai.descend(best)
 }
 
-const maxMoves = 100
+const maxMoves = 300
 
 func (ai *MonteCarloAI) evaluate(t *tree) bool {
 	p := t.position
 	for i := 0; i < maxMoves; i++ {
 		moves := p.AllMoves()
 		var next *tak.Position
-		i := ai.r.Int31n(int32(len(moves)))
-		for j := 0; j < len(moves); j++ {
-			m := moves[i]
+		for {
+			r := ai.r.Int31n(int32(len(moves)))
+			m := moves[r]
 			var e error
 			if next, e = p.Move(&m); e == nil {
 				break
 			}
-			i = (i + 1) % int32(len(moves))
+			moves[0], moves[r] = moves[r], moves[0]
+			moves = moves[1:]
 		}
 		if next == nil {
 			if ai.Debug > 3 {
