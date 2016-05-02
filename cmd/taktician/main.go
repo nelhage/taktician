@@ -26,7 +26,7 @@ var (
 	takbot   = flag.Bool("takbot", true, "challenge TakBot")
 )
 
-const Client = "Takker AI"
+const Client = "Taktician AI"
 
 func main() {
 	flag.Parse()
