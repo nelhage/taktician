@@ -17,6 +17,7 @@ import (
 const createTable = `
 CREATE TABLE games (
   id integer not null primary key,
+  size int,
   player1 varchar,
   player2 varchar,
   result string,
@@ -26,8 +27,8 @@ CREATE TABLE games (
 `
 
 const insertStmt = `
-INSERT INTO games (id, player1, player2, result, winner, moves)
-VALUES (?,?,?,?,?,?)
+INSERT INTO games (id, size, player1, player2, result, winner, moves)
+VALUES (?,?,?,?,?,?,?)
 `
 
 func indexPTN(dir string, db string) error {
@@ -57,13 +58,14 @@ func indexPTN(dir string, db string) error {
 	defer stmt.Close()
 	for _, g := range ptns {
 		id, _ := strconv.Atoi(g.FindTag("Id"))
+		size, _ := strconv.Atoi(g.FindTag("Size"))
 		player1 := g.FindTag("Player1")
-		player2 := g.FindTag("Player1")
+		player2 := g.FindTag("Player2")
 		result := g.FindTag("Result")
 		winner := (&ptn.Result{Result: result}).Winner().String()
 		moves := countMoves(g)
 		_, e := stmt.Exec(
-			id, player1, player2, result, winner, moves,
+			id, size, player1, player2, result, winner, moves,
 		)
 		if e != nil {
 			return e
