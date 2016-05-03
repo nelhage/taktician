@@ -9,12 +9,14 @@ import (
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 var (
 	depth = flag.Int("depth", 5, "minimax depth")
 	all   = flag.Bool("all", false, "show all possible moves")
 	tps   = flag.Bool("tps", false, "render position in tps")
+	move  = flag.Int("move", 0, "PTN move number to analyze")
 )
 
 func main() {
@@ -32,7 +34,12 @@ func main() {
 	if e != nil {
 		log.Fatal("analyze:", e)
 	}
+	found := false
 	for _, op := range parsed.Ops {
+		if n, ok := op.(*ptn.MoveNumber); ok && n.Number == *move {
+			found = true
+			analyze(p)
+		}
 		if m, ok := op.(*ptn.Move); ok {
 			next, e := p.Move(&m.Move)
 			if e != nil {
@@ -42,8 +49,15 @@ func main() {
 				log.Fatal("illegal move")
 			}
 			p = next
+			if found {
+				break
+			}
 		}
 	}
+	analyze(p)
+}
+
+func analyze(p *tak.Position) {
 	player := ai.NewMinimax(*depth)
 	player.Debug = true
 	pv, val := player.Analyze(p)
@@ -65,4 +79,6 @@ func main() {
 		}
 		fmt.Printf("\n")
 	}
+	fmt.Println()
+	fmt.Println()
 }
