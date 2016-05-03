@@ -114,6 +114,7 @@ func readPTNs(d string) ([]*ptn.PTN, error) {
 		if g.FindTag("Id") == "" {
 			g.Tags = append(g.Tags, ptn.Tag{Name: "Id", Value: id})
 		}
+		ioutil.WriteFile(path.Join(d, de.Name()), []byte(g.Render()), 0644)
 		out = append(out, g)
 	}
 	return out, nil
