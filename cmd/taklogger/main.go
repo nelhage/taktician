@@ -18,12 +18,20 @@ import (
 var (
 	server = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
 	out    = flag.String("out", "ptn", "Directory to write PTN files")
+	index  = flag.String("index", "", "write a sqlite index")
 )
 
 const ClientName = "Taktician Logger"
 
 func main() {
 	flag.Parse()
+	if *index != "" {
+		err := indexPTN(*out, *index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	client := &playtak.Client{
 		Debug: true,
 	}

@@ -113,3 +113,25 @@ func TestRoundTripPTN(t *testing.T) {
 		)
 	}
 }
+
+const emptyPTN = `
+[Size "8"]
+[Date "2016-05-02"]
+[Player1 "applemonkeyman"]
+[Player2 "KingSultan"]
+[Result "1-0"]
+
+`
+
+func TestEmpty(t *testing.T) {
+	ptn, err := ParsePTN(bytes.NewBufferString(emptyPTN))
+	if err != nil {
+		t.Fatal("parse empty", err)
+	}
+	if len(ptn.Ops) != 0 {
+		t.Fatal("ops", ptn.Ops)
+	}
+	if len(ptn.Tags) != 5 {
+		t.Fatal("tags", ptn.Tags)
+	}
+}
