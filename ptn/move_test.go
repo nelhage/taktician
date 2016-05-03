@@ -46,12 +46,12 @@ func TestParseMove(t *testing.T) {
 		{
 			"3a1+111",
 			tak.Move{X: 0, Y: 0, Type: tak.SlideUp, Slides: []byte{1, 1, 1}},
-			"3a1+11",
+			"3a1+111",
 		},
 		{
 			"5d4-22",
 			tak.Move{X: 3, Y: 3, Type: tak.SlideDown, Slides: []byte{2, 2, 1}},
-			"5d4-22",
+			"5d4-221",
 		},
 	}
 	for _, tc := range cases {

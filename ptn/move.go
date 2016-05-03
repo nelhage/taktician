@@ -76,8 +76,8 @@ func ParseMove(move string) (tak.Move, error) {
 
 func FormatMove(m *tak.Move) string {
 	var out []byte
+	stack := 0
 	if len(m.Slides) > 0 {
-		stack := 0
 		for _, c := range m.Slides {
 			stack += int(c)
 		}
@@ -104,8 +104,8 @@ func FormatMove(m *tak.Move) string {
 	case tak.SlideDown:
 		out = append(out, '-')
 	}
-	for i, s := range m.Slides {
-		if i < len(m.Slides)-1 {
+	if len(m.Slides) > 0 && int(m.Slides[0]) != stack {
+		for _, s := range m.Slides {
 			out = append(out, byte('0'+s))
 		}
 	}
