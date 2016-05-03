@@ -130,6 +130,7 @@ func render(g *Game, dir string) {
 		{Name: "Player1", Value: g.White},
 		{Name: "Player2", Value: g.Black},
 		{Name: "Result", Value: g.Result},
+		{Name: "Id", Value: g.Id},
 	}
 	for i, m := range g.Moves {
 		if i%2 == 0 {
