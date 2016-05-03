@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"nelhage.com/tak/playtak"
-	"nelhage.com/tak/ptn"
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/playtak"
+	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 var (

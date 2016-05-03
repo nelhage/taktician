@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/tak"
 )
 
 func TestParseServer(t *testing.T) {

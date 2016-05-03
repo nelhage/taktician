@@ -11,7 +11,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"nelhage.com/tak/ptn"
+	"github.com/nelhage/taktician/ptn"
 )
 
 const createTable = `

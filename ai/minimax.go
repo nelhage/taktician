@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"log"
 
-	"nelhage.com/tak/ptn"
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 const (

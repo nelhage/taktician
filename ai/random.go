@@ -3,7 +3,7 @@ package ai
 import (
 	"math/rand"
 
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/tak"
 )
 
 type RandomAI struct {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/tak"
 )
 
 func parseSquare(square string) (x, y int, err error) {

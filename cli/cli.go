@@ -5,8 +5,8 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"nelhage.com/tak/ptn"
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 type Player interface {

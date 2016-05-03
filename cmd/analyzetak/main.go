@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"nelhage.com/tak/ai"
-	"nelhage.com/tak/cli"
-	"nelhage.com/tak/ptn"
+	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/cli"
+	"github.com/nelhage/taktician/ptn"
 )
 
 var (

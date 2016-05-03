@@ -4,7 +4,7 @@ import (
 	"errors"
 	"regexp"
 
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/tak"
 )
 
 var moveRE = regexp.MustCompile(

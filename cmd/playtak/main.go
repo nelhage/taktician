@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"nelhage.com/tak/ai"
-	"nelhage.com/tak/cli"
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/cli"
+	"github.com/nelhage/taktician/tak"
 )
 
 var (

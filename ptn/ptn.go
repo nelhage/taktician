@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode"
 
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/tak"
 )
 
 type Tag struct {

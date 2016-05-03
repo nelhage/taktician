@@ -4,8 +4,8 @@ import (
 	"flag"
 	"testing"
 
-	"nelhage.com/tak/ptn"
-	"nelhage.com/tak/tak"
+	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 var size = flag.Int("size", 5, "board size to benchmark")
