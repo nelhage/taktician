@@ -152,7 +152,7 @@ func readEvents(r *bufio.Reader, ptn *PTN) error {
 	}
 }
 
-var resultRE = regexp.MustCompile(`^(F|R|1/2)-(F|R|1/2)$`)
+var resultRE = regexp.MustCompile(`^(F|R|1/2|1|0)-(F|R|1/2|1|0)$`)
 
 func readMoves(r *bufio.Reader, ptn *PTN) error {
 	s := bufio.NewScanner(r)
@@ -175,7 +175,7 @@ func readMoves(r *bufio.Reader, ptn *PTN) error {
 			trimmed := strings.TrimRight(tok, "?!'")
 			move, e := ParseMove(trimmed)
 			if e != nil {
-				return e
+				return fmt.Errorf("bad move: %s", trimmed)
 			}
 			ptn.Ops = append(ptn.Ops, &Move{common, move, tok[len(trimmed):]})
 		}
