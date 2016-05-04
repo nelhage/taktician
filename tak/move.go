@@ -102,6 +102,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		}
 		*stones--
 		next.set(m.X, m.Y, []Piece{place})
+		next.analyze()
 		return &next, nil
 	}
 
@@ -153,6 +154,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		next.set(x, y, tmp)
 	}
 
+	next.analyze()
 	return &next, nil
 }
 

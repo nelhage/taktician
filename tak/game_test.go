@@ -46,6 +46,7 @@ func TestPrecompute(t *testing.T) {
 func TestHasRoad(t *testing.T) {
 	p := New(Config{Size: 5})
 
+	p.analyze()
 	_, ok := p.hasRoad()
 	if ok {
 		t.Errorf("empty board hasRoad!")
@@ -54,6 +55,8 @@ func TestHasRoad(t *testing.T) {
 	for y := 0; y < 5; y++ {
 		p.board[y*5+2] = Square{MakePiece(Black, Flat)}
 	}
+
+	p.analyze()
 	c, ok := p.hasRoad()
 	if !ok || c != Black {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
@@ -62,12 +65,15 @@ func TestHasRoad(t *testing.T) {
 	p.set(2, 0, nil)
 	p.set(1, 0, Square{MakePiece(Black, Flat)})
 	p.set(1, 1, Square{MakePiece(Black, Flat)})
+
+	p.analyze()
 	c, ok = p.hasRoad()
 	if !ok || c != Black {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
 	p.set(1, 1, Square{MakePiece(Black, Standing)})
+	p.analyze()
 	c, ok = p.hasRoad()
 	if ok {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
@@ -83,6 +89,7 @@ func TestHasRoad(t *testing.T) {
 	p.set(3, 4, Square{MakePiece(White, Flat)})
 	p.set(4, 4, Square{MakePiece(White, Flat)})
 
+	p.analyze()
 	c, ok = p.hasRoad()
 	if !ok || c != White {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
@@ -99,6 +106,7 @@ func TestHasRoadRegression(t *testing.T) {
 	p.set(4, 2, Square{MakePiece(White, Flat)})
 	p.set(4, 1, Square{MakePiece(White, Flat)})
 	p.set(4, 0, Square{MakePiece(White, Flat)})
+	p.analyze()
 	c, ok := p.hasRoad()
 	if !ok || c != White {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
@@ -129,6 +137,7 @@ func TestFlatsWinner(t *testing.T) {
 func TestFlatsWinnerCapLeft(t *testing.T) {
 	p := New(Config{Size: 5})
 	p.whiteStones = 0
+	p.analyze()
 	ok, _ := p.GameOver()
 	if ok {
 		t.Fatalf("over, but capstone is left")
@@ -138,6 +147,7 @@ func TestFlatsWinnerCapLeft(t *testing.T) {
 func BenchmarkEmptyHasRoad(b *testing.B) {
 	p := New(Config{Size: 5})
 	for i := 0; i < b.N; i++ {
+		p.analyze()
 		p.hasRoad()
 	}
 }
@@ -157,6 +167,7 @@ func BenchmarkFullHasRoad(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		p.analyze()
 		p.hasRoad()
 	}
 }
@@ -171,6 +182,7 @@ func BenchmarkHasRoadWindy(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		p.analyze()
 		p.hasRoad()
 	}
 }

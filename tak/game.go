@@ -54,8 +54,16 @@ type Position struct {
 	blackStones byte
 	blackCaps   byte
 
-	move  int
-	board []Square
+	move     int
+	board    []Square
+	analysis Analysis
+}
+
+type Analysis struct {
+	WhiteRoad   uint64
+	BlackRoad   uint64
+	WhiteGroups []uint64
+	BlackGroups []uint64
 }
 
 // FromSquares initializes a Position with the specified squares and
@@ -83,6 +91,7 @@ func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
 			}
 		}
 	}
+	p.analyze()
 	return p, nil
 }
 
@@ -138,17 +147,16 @@ func (p *Position) roadAt(x, y int) (Color, bool) {
 }
 
 func (p *Position) hasRoad() (Color, bool) {
-	w, b := p.floodGroups()
 	white, black := false, false
 
-	for _, g := range w {
+	for _, g := range p.analysis.WhiteGroups {
 		if ((g&p.cfg.t) != 0 && (g&p.cfg.b) != 0) ||
 			((g&p.cfg.l) != 0 && (g&p.cfg.r) != 0) {
 			white = true
 			break
 		}
 	}
-	for _, g := range b {
+	for _, g := range p.analysis.BlackGroups {
 		if ((g&p.cfg.t) != 0 && (g&p.cfg.b) != 0) ||
 			((g&p.cfg.l) != 0 && (g&p.cfg.r) != 0) {
 			black = true
@@ -172,7 +180,7 @@ func (p *Position) hasRoad() (Color, bool) {
 
 }
 
-func (p *Position) floodGroups() ([]uint64, []uint64) {
+func (p *Position) analyze() {
 	var bb uint64
 	var bw uint64
 	for _, sq := range p.board {
@@ -186,11 +194,13 @@ func (p *Position) floodGroups() ([]uint64, []uint64) {
 			}
 		}
 	}
+	p.analysis.WhiteRoad = bw
+	p.analysis.BlackRoad = bb
 
 	alloc := make([]uint64, 0, 2*p.Size())
-	w := p.floodone(bw, alloc)
-	b := p.floodone(bb, w[len(w):cap(w)])
-	return w, b
+	p.analysis.WhiteGroups = p.floodone(bw, alloc)
+	alloc = p.analysis.WhiteGroups
+	p.analysis.BlackGroups = p.floodone(bb, alloc[len(alloc):cap(alloc)])
 }
 
 func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
