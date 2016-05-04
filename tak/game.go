@@ -6,10 +6,24 @@ type Config struct {
 	Size      int
 	Pieces    int
 	Capstones int
+
+	l, r, t, b uint64
+	mask       uint64
 }
 
 var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
 var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
+
+func (c *Config) precompute() {
+	s := uint(c.Size)
+	for i := uint(0); i < s; i++ {
+		c.l |= 1 << (s*(i+1) - 1)
+		c.r |= 1 << (s * i)
+		c.t |= 1 << (s*(s-1) + i)
+		c.b |= 1 << i
+	}
+	c.mask = 1<<uint(c.Size*c.Size) - 1
+}
 
 func New(g Config) *Position {
 	if g.Pieces == 0 {
@@ -18,6 +32,7 @@ func New(g Config) *Position {
 	if g.Capstones == 0 {
 		g.Capstones = defaultCaps[g.Size]
 	}
+	g.precompute()
 	p := &Position{
 		cfg:         &g,
 		whiteStones: byte(g.Pieces),
@@ -123,30 +138,23 @@ func (p *Position) roadAt(x, y int) (Color, bool) {
 }
 
 func (p *Position) hasRoad() (Color, bool) {
-	s := p.cfg.Size
+	w, b := p.floodGroups()
 	white, black := false, false
-	var rwx uint64
-	var rbx uint64
-	var rwy uint64
-	var rby uint64
 
-	for x := 0; x < s; x++ {
-		for y := 0; y < s; y++ {
-			if c, ok := p.roadAt(x, y); ok {
-				by := uint64(1 << uint(y*s+x))
-				bx := uint64(1 << uint(x*s+y))
-				if c == White {
-					rwy |= by
-					rwx |= bx
-				} else {
-					rby |= by
-					rbx |= bx
-				}
-			}
+	for _, g := range w {
+		if ((g&p.cfg.t) != 0 && (g&p.cfg.b) != 0) ||
+			((g&p.cfg.l) != 0 && (g&p.cfg.r) != 0) {
+			white = true
+			break
 		}
 	}
-	white = p.bitroad(rwx) || p.bitroad(rwy)
-	black = p.bitroad(rbx) || p.bitroad(rby)
+	for _, g := range b {
+		if ((g&p.cfg.t) != 0 && (g&p.cfg.b) != 0) ||
+			((g&p.cfg.l) != 0 && (g&p.cfg.r) != 0) {
+			black = true
+			break
+		}
+	}
 
 	switch {
 	case white && black:
@@ -161,6 +169,73 @@ func (p *Position) hasRoad() (Color, bool) {
 	default:
 		return White, false
 	}
+
+}
+
+func (p *Position) floodGroups() ([]uint64, []uint64) {
+	var bb uint64
+	var bw uint64
+	for _, sq := range p.board {
+		bw <<= 1
+		bb <<= 1
+		if len(sq) > 0 && sq[0].IsRoad() {
+			if sq[0].Color() == White {
+				bw |= 1
+			} else {
+				bb |= 1
+			}
+		}
+	}
+
+	alloc := make([]uint64, 0, 2*p.Size())
+	w := p.floodone(bw, alloc)
+	b := p.floodone(bb, w[len(w):cap(w)])
+	return w, b
+}
+
+func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
+	var seen uint64
+	for bits != 0 {
+		next := bits & (bits - 1)
+		bit := bits &^ next
+
+		if seen&bit == 0 {
+			g := p.flood(bits, bit)
+			if g != bit && popcount(g) > 2 {
+				out = append(out, g)
+			}
+			seen |= g
+		}
+
+		bits = next
+	}
+	return out
+}
+
+func (p *Position) flood(all uint64, seed uint64) uint64 {
+	for {
+		next := seed
+		next |= (seed << 1) &^ p.cfg.r
+		next |= (seed >> 1) &^ p.cfg.l
+		next |= (seed >> uint(p.cfg.Size))
+		next |= (seed << uint(p.cfg.Size))
+		next &= all & p.cfg.mask
+		if next == seed {
+			return next
+		}
+		seed = next
+	}
+}
+
+func popcount(x uint64) (n int) {
+	// bit population count, see
+	// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+	x -= (x >> 1) & 0x5555555555555555
+	x = (x>>2)&0x3333333333333333 + x&0x3333333333333333
+	x += x >> 4
+	x &= 0x0f0f0f0f0f0f0f0f
+	x *= 0x0101010101010101
+	return int(x >> 56)
 }
 
 func (p *Position) bitroad(bits uint64) bool {
