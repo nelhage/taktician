@@ -197,7 +197,7 @@ const (
 	weightFlat       = 200
 	weightCaptured   = 100
 	weightControlled = 500
-	weightCapstone   = -50
+	weightCapstone   = -150
 	weightThreat     = 150
 	weightAdvantage  = 50
 )
