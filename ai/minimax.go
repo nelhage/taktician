@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"log"
+	"time"
 
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -18,6 +19,14 @@ type MinimaxAI struct {
 	depth int
 
 	Debug bool
+
+	st stats
+}
+
+type stats struct {
+	generated uint64
+	evaluated uint64
+	cutoffs   uint64
 }
 
 func formatpv(ms []tak.Move) string {
@@ -41,11 +50,20 @@ func (m *MinimaxAI) GetMove(p *tak.Position) tak.Move {
 func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 	var ms []tak.Move
 	var v int64
+	top := time.Now()
 	for i := 1; i <= m.depth; i++ {
+		m.st = stats{}
+		start := time.Now()
 		ms, v = m.minimax(p, i, ms, minEval-1, maxEval+1)
 		if m.Debug {
-			log.Printf("[minimax] depth=%d val=%d pv=%s",
-				i, v, formatpv(ms))
+			log.Printf("[minimax] depth=%d val=%d pv=%s time=%s total=%s generated=%d evaluted=%d cutoffs=%d",
+				i, v, formatpv(ms),
+				time.Now().Sub(start),
+				time.Now().Sub(top),
+				m.st.generated,
+				m.st.evaluated,
+				m.st.cutoffs,
+			)
 		}
 		if v > winThreshold || v < -winThreshold {
 			break
@@ -61,6 +79,7 @@ func (ai *MinimaxAI) minimax(
 	α, β int64) ([]tak.Move, int64) {
 	over, _ := p.GameOver()
 	if depth == 0 || over {
+		ai.st.evaluated++
 		return nil, ai.evaluate(p)
 	}
 
@@ -73,6 +92,7 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 	moves := p.AllMoves()
+	ai.st.generated += uint64(len(moves))
 	if len(pv) > 0 {
 		for i, m := range moves {
 			if m.Equal(&pv[0]) {
@@ -105,6 +125,7 @@ func (ai *MinimaxAI) minimax(
 		if v > α {
 			α = v
 			if α >= β {
+				ai.st.cutoffs++
 				break
 			}
 		}
