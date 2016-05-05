@@ -51,7 +51,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 	var ms []tak.Move
 	var v int64
 	top := time.Now()
-	prevEval := uint64(1)
+	var prevEval uint64
 	for i := 1; i <= m.depth; i++ {
 		m.st = stats{}
 		start := time.Now()
@@ -62,7 +62,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 				time.Now().Sub(start),
 				time.Now().Sub(top),
 				m.st.evaluated,
-				m.st.evaluated/prevEval,
+				m.st.evaluated/(prevEval+1),
 			)
 		}
 		prevEval = m.st.evaluated
