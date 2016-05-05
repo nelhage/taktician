@@ -28,3 +28,18 @@ func Popcount(x uint64) int {
 	x *= 0x0101010101010101
 	return int(x >> 56)
 }
+
+func Flood(c *Constants, within uint64, seed uint64) uint64 {
+	for {
+		next := seed
+		next |= (seed << 1) &^ c.R
+		next |= (seed >> 1) &^ c.L
+		next |= (seed >> c.Size)
+		next |= (seed << c.Size)
+		next &= within & c.Mask
+		if next == seed {
+			return next
+		}
+		seed = next
+	}
+}

@@ -54,7 +54,8 @@ type Position struct {
 type Analysis struct {
 	WhiteRoad   uint64
 	BlackRoad   uint64
-	Occupied    uint64
+	White       uint64
+	Black       uint64
 	WhiteGroups []uint64
 	BlackGroups []uint64
 }
@@ -178,29 +179,36 @@ func (p *Position) Analysis() *Analysis {
 }
 
 func (p *Position) analyze() {
-	var bb uint64
-	var bw uint64
-	var o uint64
+	var br uint64
+	var wr uint64
+	var b uint64
+	var w uint64
 	for i, sq := range p.board {
-		if len(sq) > 0 {
-			o |= 1 << uint(i)
-			if sq[0].IsRoad() {
-				if sq[0].Color() == White {
-					bw |= 1 << uint(i)
-				} else {
-					bb |= 1 << uint(i)
-				}
+		if len(sq) == 0 {
+			continue
+		}
+		if sq[0].Color() == White {
+			w |= 1 << uint(i)
+		} else {
+			b |= 1 << uint(i)
+		}
+		if sq[0].IsRoad() {
+			if sq[0].Color() == White {
+				wr |= 1 << uint(i)
+			} else {
+				br |= 1 << uint(i)
 			}
 		}
 	}
-	p.analysis.WhiteRoad = bw
-	p.analysis.BlackRoad = bb
-	p.analysis.Occupied = o
+	p.analysis.WhiteRoad = wr
+	p.analysis.BlackRoad = br
+	p.analysis.White = w
+	p.analysis.Black = b
 
 	alloc := make([]uint64, 0, 2*p.Size())
-	p.analysis.WhiteGroups = p.floodone(bw, alloc)
+	p.analysis.WhiteGroups = p.floodone(wr, alloc)
 	alloc = p.analysis.WhiteGroups
-	p.analysis.BlackGroups = p.floodone(bb, alloc[len(alloc):cap(alloc)])
+	p.analysis.BlackGroups = p.floodone(br, alloc[len(alloc):len(alloc):cap(alloc)])
 }
 
 func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
@@ -210,7 +218,7 @@ func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
 		bit := bits &^ next
 
 		if seen&bit == 0 {
-			g := p.flood(bits, bit)
+			g := bitboard.Flood(&p.cfg.c, bits, bit)
 			if g != bit && bitboard.Popcount(g) > 2 {
 				out = append(out, g)
 			}
@@ -220,21 +228,6 @@ func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
 		bits = next
 	}
 	return out
-}
-
-func (p *Position) flood(all uint64, seed uint64) uint64 {
-	for {
-		next := seed
-		next |= (seed << 1) &^ p.cfg.c.R
-		next |= (seed >> 1) &^ p.cfg.c.L
-		next |= (seed >> uint(p.cfg.Size))
-		next |= (seed << uint(p.cfg.Size))
-		next &= all & p.cfg.c.Mask
-		if next == seed {
-			return next
-		}
-		seed = next
-	}
 }
 
 func (p *Position) bitroad(bits uint64) bool {

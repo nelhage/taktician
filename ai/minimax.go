@@ -19,13 +19,15 @@ const (
 
 type MinimaxAI struct {
 	depth int
-	size  int
+	size  uint
 	rand  *rand.Rand
 
 	Debug bool
 
-	st stats
-	c  bitboard.Constants
+	st      stats
+	c       bitboard.Constants
+	regions []uint64
+	rd      int
 }
 
 type stats struct {
@@ -53,7 +55,7 @@ func (m *MinimaxAI) GetMove(p *tak.Position) tak.Move {
 }
 
 func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
-	if m.size != p.Size() {
+	if m.size != uint(p.Size()) {
 		panic("Analyze: wrong size")
 	}
 	seed := time.Now().Unix()
@@ -181,7 +183,7 @@ const (
 	weightControlled = 500
 	weightCapstone   = -50
 	weightThreat     = 150
-	weightCenter     = 50
+	weightAdvantage  = 50
 )
 
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
@@ -216,10 +218,6 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 				addw(sq[0].Color(), weightCapstone)
 			}
 
-			if x == p.Size()/2 && y == p.Size()/2 {
-				// TODO(board-size)
-				addw(sq[0].Color(), weightCenter)
-			}
 			for i, stone := range sq {
 				if i > 0 && i < p.Size() {
 					addw(sq[0].Color(), weightCaptured)
@@ -230,8 +228,18 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			}
 		}
 	}
-	addw(tak.White, weightThreat*m.threats(analysis.WhiteGroups, analysis.Occupied))
-	addw(tak.Black, weightThreat*m.threats(analysis.BlackGroups, analysis.Occupied))
+	for _, r := range m.regions {
+		w := bitboard.Popcount(analysis.White & r)
+		b := bitboard.Popcount(analysis.Black & r)
+		if w > b {
+			addw(tak.White, (w-b)*weightAdvantage)
+		} else {
+			addw(tak.Black, (b-w)*weightAdvantage)
+		}
+	}
+	o := analysis.White | analysis.Black
+	addw(tak.White, weightThreat*m.threats(analysis.WhiteGroups, o))
+	addw(tak.Black, weightThreat*m.threats(analysis.BlackGroups, o))
 
 	return int64(mine - theirs)
 }
@@ -239,7 +247,7 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 func (m *MinimaxAI) threats(groups []uint64, filled uint64) int {
 	count := 0
 	empty := ^filled
-	s := uint(m.size)
+	s := m.size
 	for _, g := range groups {
 		if g&m.c.L != 0 {
 			if g&(m.c.R<<1) != 0 && empty&m.c.R != 0 {
@@ -265,8 +273,21 @@ func (m *MinimaxAI) threats(groups []uint64, filled uint64) int {
 	return count
 }
 
+func (m *MinimaxAI) precompute() {
+	m.c = bitboard.Precompute(m.size)
+	if m.size == 5 { // TODO(board-size)
+		br := uint64((1 << 3) - 1)
+		br |= br<<m.size | br<<(2*m.size)
+		m.regions = []uint64{
+			br, br << 2,
+			br << (2 * m.size), br << (2*m.size + 2),
+		}
+		m.rd = 2
+	}
+}
+
 func NewMinimax(size int, depth int) *MinimaxAI {
-	m := &MinimaxAI{size: size, depth: depth}
-	m.c = bitboard.Precompute(uint(size))
+	m := &MinimaxAI{size: uint(size), depth: depth}
+	m.precompute()
 	return m
 }
