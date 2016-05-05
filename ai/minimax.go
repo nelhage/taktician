@@ -51,20 +51,21 @@ func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 	var ms []tak.Move
 	var v int64
 	top := time.Now()
+	prevEval := uint64(1)
 	for i := 1; i <= m.depth; i++ {
 		m.st = stats{}
 		start := time.Now()
 		ms, v = m.minimax(p, i, ms, minEval-1, maxEval+1)
 		if m.Debug {
-			log.Printf("[minimax] depth=%d val=%d pv=%s time=%s total=%s generated=%d evaluted=%d cutoffs=%d",
+			log.Printf("[minimax] depth=%d val=%d pv=%s time=%s total=%s evaluated=%d branch=%d",
 				i, v, formatpv(ms),
 				time.Now().Sub(start),
 				time.Now().Sub(top),
-				m.st.generated,
 				m.st.evaluated,
-				m.st.cutoffs,
+				m.st.evaluated/prevEval,
 			)
 		}
+		prevEval = m.st.evaluated
 		if v > winThreshold || v < -winThreshold {
 			break
 		}
