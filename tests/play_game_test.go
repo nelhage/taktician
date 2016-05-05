@@ -59,6 +59,11 @@ func TestPlayPTNs(t *testing.T) {
 }
 
 func playPTN(t *testing.T, p *ptn.PTN) {
+	id := p.FindTag("Id")
+	if id == "" {
+		return
+	}
+	t.Log("playing", id)
 	size, _ := strconv.Atoi(p.FindTag("Size"))
 	g := tak.New(tak.Config{Size: size})
 	for _, op := range p.Ops {
@@ -72,5 +77,37 @@ func playPTN(t *testing.T, p *ptn.PTN) {
 			}
 			g = next
 		}
+	}
+	over, winner := g.GameOver()
+	var d tak.WinDetails
+	if over {
+		d = g.WinDetails()
+	}
+	switch p.FindTag("Result") {
+	case "R-0":
+		if !over || winner != tak.White || d.Reason != tak.RoadWin {
+			t.Error("road win for white:", d)
+		}
+	case "0-R":
+		if !over || winner != tak.Black || d.Reason != tak.RoadWin {
+			t.Error("road win for white:", d)
+		}
+	case "F-0":
+		if !over || winner != tak.White || d.Reason != tak.FlatsWin {
+			t.Error("flats win for white:", d)
+		}
+	case "0-F":
+		if !over || winner != tak.Black || d.Reason != tak.FlatsWin {
+			t.Error("flats win for black:", d)
+		}
+	case "1/2-1/2":
+		/*
+			if over && winner != tak.NoColor {
+				t.Error("tie", over, d)
+			}
+		*/
+
+		// playtak mishandles double-road wins as ties, so we
+		// can't usefully check here.
 	}
 }
