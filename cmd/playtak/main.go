@@ -21,12 +21,20 @@ var (
 	debug = flag.Int("debug", 0, "debug level")
 )
 
+type aiWrapper struct {
+	p ai.TakPlayer
+}
+
+func (a *aiWrapper) GetMove(p *tak.Position) tak.Move {
+	return a.p.GetMove(p, time.Minute)
+}
+
 func parsePlayer(in *bufio.Reader, s string) cli.Player {
 	if s == "human" {
 		return cli.NewCLIPlayer(os.Stdout, in)
 	}
 	if s == "rand" {
-		return ai.NewRandom(0)
+		return &aiWrapper{ai.NewRandom(0)}
 	}
 	if strings.HasPrefix(s, "rand") {
 		var seed int64
@@ -37,7 +45,7 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 			}
 			seed = int64(i)
 		}
-		return ai.NewRandom(seed)
+		return &aiWrapper{ai.NewRandom(seed)}
 	}
 	if strings.HasPrefix(s, "minimax") {
 		var depth = 3
@@ -50,7 +58,7 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 		}
 		p := ai.NewMinimax(*size, depth)
 		p.Debug = *debug > 0
-		return p
+		return &aiWrapper{p}
 	}
 	if strings.HasPrefix(s, "mcts") {
 		var limit = 30 * time.Second
@@ -63,7 +71,7 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 		}
 		p := ai.NewMonteCarlo(limit)
 		p.Debug = *debug
-		return p
+		return &aiWrapper{p}
 	}
 	log.Fatalf("unparseable player: %s", s)
 	return nil

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/cli"
@@ -13,10 +14,12 @@ import (
 )
 
 var (
-	depth = flag.Int("depth", 5, "minimax depth")
-	all   = flag.Bool("all", false, "show all possible moves")
-	tps   = flag.Bool("tps", false, "render position in tps")
-	move  = flag.Int("move", 0, "PTN move number to analyze")
+	depth     = flag.Int("depth", 5, "minimax depth")
+	all       = flag.Bool("all", false, "show all possible moves")
+	tps       = flag.Bool("tps", false, "render position in tps")
+	move      = flag.Int("move", 0, "PTN move number to analyze")
+	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
+	black     = flag.Bool("black", false, "only analyze black's move")
 )
 
 func main() {
@@ -38,7 +41,9 @@ func main() {
 	for _, op := range parsed.Ops {
 		if n, ok := op.(*ptn.MoveNumber); ok && n.Number == *move {
 			found = true
-			analyze(p)
+			if !*black {
+				analyze(p)
+			}
 		}
 		if m, ok := op.(*ptn.Move); ok {
 			next, e := p.Move(&m.Move)
@@ -60,7 +65,7 @@ func main() {
 func analyze(p *tak.Position) {
 	player := ai.NewMinimax(p.Size(), *depth)
 	player.Debug = true
-	pv, val := player.Analyze(p)
+	pv, val := player.Analyze(p, *timeLimit)
 	cli.RenderBoard(os.Stdout, p)
 	fmt.Printf("AI analysis:\n")
 	fmt.Printf(" pv=")

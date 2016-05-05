@@ -49,12 +49,12 @@ func formatpv(ms []tak.Move) string {
 	return out.String()
 }
 
-func (m *MinimaxAI) GetMove(p *tak.Position) tak.Move {
-	ms, _ := m.Analyze(p)
+func (m *MinimaxAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
+	ms, _ := m.Analyze(p, limit)
 	return ms[0]
 }
 
-func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
+func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, int64) {
 	if m.size != uint(p.Size()) {
 		panic("Analyze: wrong size")
 	}
@@ -68,22 +68,38 @@ func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
 	var v int64
 	top := time.Now()
 	var prevEval uint64
+	var branchSum uint64
 	for i := 1; i <= m.depth; i++ {
 		m.st = stats{}
 		start := time.Now()
 		ms, v = m.minimax(p, i, ms, minEval-1, maxEval+1)
+		timeUsed := time.Now().Sub(top)
+		timeMove := time.Now().Sub(start)
 		if m.Debug {
 			log.Printf("[minimax] depth=%d val=%d pv=%s time=%s total=%s evaluated=%d branch=%d",
 				i, v, formatpv(ms),
-				time.Now().Sub(start),
-				time.Now().Sub(top),
+				timeMove,
+				timeUsed,
 				m.st.evaluated,
 				m.st.evaluated/(prevEval+1),
 			)
 		}
+		if i > 1 {
+			branchSum += m.st.evaluated / (prevEval + 1)
+		}
 		prevEval = m.st.evaluated
 		if v > winThreshold || v < -winThreshold {
 			break
+		}
+		if i > 2 {
+			estimate := timeUsed + time.Now().Sub(start)*time.Duration(branchSum/uint64(i-1))
+			if estimate > limit {
+				if m.Debug {
+					log.Printf("time cutoff depth=%d used=%s estimate=%s",
+						i, timeUsed, estimate)
+				}
+				break
+			}
 		}
 	}
 	return ms, v

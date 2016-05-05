@@ -3,6 +3,7 @@ package ai
 import (
 	"flag"
 	"testing"
+	"time"
 
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -20,7 +21,7 @@ func BenchmarkMinimax(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		var e error
-		m := ai.GetMove(p)
+		m := ai.GetMove(p, time.Minute)
 		p, e = p.Move(&m)
 		if e != nil {
 			b.Fatal("bad move", e)
@@ -41,7 +42,7 @@ func TestRegression(t *testing.T) {
 		panic(err)
 	}
 	ai := NewMinimax(game.Size(), 3)
-	m := ai.GetMove(game)
+	m := ai.GetMove(game, time.Minute)
 	_, e := game.Move(&m)
 	if e != nil {
 		t.Fatalf("ai returned illegal move: %s: %s", ptn.FormatMove(&m), e)

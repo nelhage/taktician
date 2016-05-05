@@ -16,9 +16,8 @@ import (
 
 type MonteCarloAI struct {
 	limit time.Duration
-
-	c float64
-	r *rand.Rand
+	c     float64
+	r     *rand.Rand
 
 	Debug int
 }
@@ -33,13 +32,16 @@ type tree struct {
 	children []*tree
 }
 
-func (ai *MonteCarloAI) GetMove(p *tak.Position) tak.Move {
+func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 	tree := &tree{
 		position: p,
 	}
 	ai.populate(tree)
 	start := time.Now()
-	for time.Now().Sub(start) < ai.limit {
+	if ai.limit < limit {
+		limit = ai.limit
+	}
+	for time.Now().Sub(start) < limit {
 		node := ai.descend(tree)
 		if ai.Debug > 3 {
 			var s []string

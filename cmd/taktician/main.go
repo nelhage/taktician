@@ -79,6 +79,10 @@ func main() {
 	}
 }
 
+func timeBound(remaining time.Duration) time.Duration {
+	return time.Minute
+}
+
 func playGame(c *playtak.Client, line string) {
 	log.Println("New Game", line)
 	bits := strings.Split(line, " ")
@@ -96,10 +100,11 @@ func playGame(c *playtak.Client, line string) {
 	default:
 		panic(fmt.Sprintf("bad color: %s", bits[7]))
 	}
+	timeLeft := *gameTime
 	for {
 		over, _ := p.GameOver()
 		if color == p.ToMove() && !over {
-			move := ai.GetMove(p)
+			move := ai.GetMove(p, timeBound(timeLeft))
 			next, err := p.Move(&move)
 			if err != nil {
 				log.Printf("ai returned bad move: %s: %s",
@@ -109,8 +114,16 @@ func playGame(c *playtak.Client, line string) {
 			p = next
 			c.SendCommand(gameStr, playtak.FormatServer(&move))
 		} else {
+			var timeout <-chan time.Time
 		theirMove:
-			for line := range c.Recv {
+			for {
+				var line string
+				select {
+				case line = <-c.Recv:
+				case <-timeout:
+					break theirMove
+				}
+
 				if !strings.HasPrefix(line, gameStr) {
 					continue
 				}
@@ -125,9 +138,19 @@ func playGame(c *playtak.Client, line string) {
 					if err != nil {
 						panic(err)
 					}
-					break theirMove
+					timeout = time.NewTimer(500 * time.Millisecond).C
 				case "Abandoned.", "Over":
 					return
+				case "Time":
+					w, b := bits[2], bits[3]
+					var secsLeft int
+					if color == tak.White {
+						secsLeft, _ = strconv.Atoi(w)
+					} else {
+						secsLeft, _ = strconv.Atoi(b)
+					}
+					timeLeft = time.Duration(secsLeft) * time.Second
+					break theirMove
 				}
 			}
 		}

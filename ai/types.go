@@ -1,7 +1,11 @@
 package ai
 
-import "github.com/nelhage/taktician/tak"
+import (
+	"time"
+
+	"github.com/nelhage/taktician/tak"
+)
 
 type TakPlayer interface {
-	GetMove(p *tak.Position) tak.Move
+	GetMove(p *tak.Position, limit time.Duration) tak.Move
 }
