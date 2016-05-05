@@ -40,3 +40,31 @@ func TestPrecompute(t *testing.T) {
 		t.Error("c.mask(8):", strconv.FormatUint(c.Mask, 2))
 	}
 }
+
+func TestFlood(t *testing.T) {
+	cases := []struct {
+		size  uint
+		bound uint64
+		seed  uint64
+		out   uint64
+	}{
+		{
+			5,
+			0x108423c,
+			0x4,
+			0x108421c,
+		},
+	}
+	for _, tc := range cases {
+		c := Precompute(tc.size)
+		got := Flood(&c, tc.bound, tc.seed)
+		if got != tc.out {
+			t.Errorf("Flood[%d](%s, %s)=%s !=%s",
+				tc.size,
+				strconv.FormatUint(tc.bound, 2),
+				strconv.FormatUint(tc.seed, 2),
+				strconv.FormatUint(got, 2),
+				strconv.FormatUint(tc.out, 2))
+		}
+	}
+}

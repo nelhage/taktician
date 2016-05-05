@@ -206,9 +206,10 @@ func (p *Position) analyze() {
 	p.analysis.Black = b
 
 	alloc := make([]uint64, 0, 2*p.Size())
-	p.analysis.WhiteGroups = p.floodone(wr, alloc)
+	p.analysis.WhiteGroups = bitboard.FloodGroups(&p.cfg.c, wr, alloc)
 	alloc = p.analysis.WhiteGroups
-	p.analysis.BlackGroups = p.floodone(br, alloc[len(alloc):len(alloc):cap(alloc)])
+	alloc = alloc[len(alloc):len(alloc):cap(alloc)]
+	p.analysis.BlackGroups = bitboard.FloodGroups(&p.cfg.c, br, alloc)
 }
 
 func (p *Position) floodone(bits uint64, out []uint64) []uint64 {

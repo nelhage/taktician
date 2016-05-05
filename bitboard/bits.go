@@ -11,6 +11,7 @@ func Precompute(size uint) Constants {
 	for i := uint(0); i < size; i++ {
 		c.R |= 1 << (i * size)
 	}
+	c.Size = size
 	c.L = c.R << (size - 1)
 	c.T = ((1 << size) - 1) << (size * (size - 1))
 	c.B = (1 << size) - 1
@@ -42,4 +43,23 @@ func Flood(c *Constants, within uint64, seed uint64) uint64 {
 		}
 		seed = next
 	}
+}
+
+func FloodGroups(c *Constants, bits uint64, out []uint64) []uint64 {
+	var seen uint64
+	for bits != 0 {
+		next := bits & (bits - 1)
+		bit := bits &^ next
+
+		if seen&bit == 0 {
+			g := Flood(c, bits, bit)
+			if g != bit && Popcount(g) > 2 {
+				out = append(out, g)
+			}
+			seen |= g
+		}
+
+		bits = next
+	}
+	return out
 }
