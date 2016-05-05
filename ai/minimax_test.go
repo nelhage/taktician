@@ -16,7 +16,7 @@ func BenchmarkMinimax(b *testing.B) {
 	p := tak.New(cfg)
 	p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
 	p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
-	ai := NewMinimax(*depth)
+	ai := NewMinimax(*size, *depth)
 
 	for i := 0; i < b.N; i++ {
 		var e error
@@ -40,7 +40,7 @@ func TestRegression(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	ai := NewMinimax(3)
+	ai := NewMinimax(game.Size(), 3)
 	m := ai.GetMove(game)
 	_, e := game.Move(&m)
 	if e != nil {

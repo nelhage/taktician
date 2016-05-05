@@ -3,8 +3,10 @@ package ai
 import (
 	"bytes"
 	"log"
+	"math/rand"
 	"time"
 
+	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -17,10 +19,13 @@ const (
 
 type MinimaxAI struct {
 	depth int
+	size  int
+	rand  *rand.Rand
 
 	Debug bool
 
 	st stats
+	c  bitboard.Constants
 }
 
 type stats struct {
@@ -48,6 +53,15 @@ func (m *MinimaxAI) GetMove(p *tak.Position) tak.Move {
 }
 
 func (m *MinimaxAI) Analyze(p *tak.Position) ([]tak.Move, int64) {
+	if m.size != p.Size() {
+		panic("Analyze: wrong size")
+	}
+	seed := time.Now().Unix()
+	m.rand = rand.New(rand.NewSource(seed))
+	if m.Debug {
+		log.Printf("seed=%d", seed)
+	}
+
 	var ms []tak.Move
 	var v int64
 	top := time.Now()
@@ -94,6 +108,12 @@ func (ai *MinimaxAI) minimax(
 	}
 	moves := p.AllMoves()
 	ai.st.generated += uint64(len(moves))
+	if depth == ai.depth {
+		for i := len(moves) - 1; i > 0; i-- {
+			j := ai.rand.Int31n(int32(i))
+			moves[j], moves[i] = moves[i], moves[j]
+		}
+	}
 	if len(pv) > 0 {
 		for i, m := range moves {
 			if m.Equal(&pv[0]) {
@@ -141,11 +161,27 @@ func imin(a, b int) int {
 	return b
 }
 
+func imax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func iabs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
 const (
-	weightFlat       = 2
-	weightCaptured   = 1
-	weightControlled = 5
-	weightCapstone   = -1
+	weightFlat       = 200
+	weightCaptured   = 100
+	weightControlled = 500
+	weightCapstone   = -50
+	weightThreat     = 150
+	weightCenter     = 50
 )
 
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
@@ -168,6 +204,7 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			theirs += w
 		}
 	}
+	analysis := p.Analysis()
 	for x := 0; x < p.Size(); x++ {
 		for y := 0; y < p.Size(); y++ {
 			sq := p.At(x, y)
@@ -177,6 +214,11 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			addw(sq[0].Color(), weightControlled)
 			if sq[0].Kind() == tak.Capstone {
 				addw(sq[0].Color(), weightCapstone)
+			}
+
+			if x == p.Size()/2 && y == p.Size()/2 {
+				// TODO(board-size)
+				addw(sq[0].Color(), weightCenter)
 			}
 			for i, stone := range sq {
 				if i > 0 && i < p.Size() {
@@ -188,10 +230,43 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			}
 		}
 	}
+	addw(tak.White, weightThreat*m.threats(analysis.WhiteGroups, analysis.Occupied))
+	addw(tak.Black, weightThreat*m.threats(analysis.BlackGroups, analysis.Occupied))
 
 	return int64(mine - theirs)
 }
 
-func NewMinimax(depth int) *MinimaxAI {
-	return &MinimaxAI{depth: depth}
+func (m *MinimaxAI) threats(groups []uint64, filled uint64) int {
+	count := 0
+	empty := ^filled
+	s := uint(m.size)
+	for _, g := range groups {
+		if g&m.c.L != 0 {
+			if g&(m.c.R<<1) != 0 && empty&m.c.R != 0 {
+				count++
+			}
+		}
+		if g&m.c.R != 0 {
+			if g&(m.c.L>>1) != 0 && empty&m.c.L != 0 {
+				count++
+			}
+		}
+		if g&m.c.B != 0 {
+			if g&(m.c.T>>s) != 0 && empty&m.c.T != 0 {
+				count++
+			}
+		}
+		if g&m.c.T != 0 {
+			if g&(m.c.B<<s) != 0 && empty&m.c.B != 0 {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func NewMinimax(size int, depth int) *MinimaxAI {
+	m := &MinimaxAI{size: size, depth: depth}
+	m.c = bitboard.Precompute(uint(size))
+	return m
 }

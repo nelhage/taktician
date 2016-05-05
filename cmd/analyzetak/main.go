@@ -58,7 +58,7 @@ func main() {
 }
 
 func analyze(p *tak.Position) {
-	player := ai.NewMinimax(*depth)
+	player := ai.NewMinimax(p.Size(), *depth)
 	player.Debug = true
 	pv, val := player.Analyze(p)
 	cli.RenderBoard(os.Stdout, p)
