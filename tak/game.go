@@ -1,29 +1,21 @@
 package tak
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/nelhage/taktician/bitboard"
+)
 
 type Config struct {
 	Size      int
 	Pieces    int
 	Capstones int
 
-	l, r, t, b uint64
-	mask       uint64
+	c bitboard.Constants
 }
 
 var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
 var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
-
-func (c *Config) precompute() {
-	s := uint(c.Size)
-	for i := uint(0); i < s; i++ {
-		c.l |= 1 << (s*(i+1) - 1)
-		c.r |= 1 << (s * i)
-		c.t |= 1 << (s*(s-1) + i)
-		c.b |= 1 << i
-	}
-	c.mask = 1<<uint(c.Size*c.Size) - 1
-}
 
 func New(g Config) *Position {
 	if g.Pieces == 0 {
@@ -32,7 +24,7 @@ func New(g Config) *Position {
 	if g.Capstones == 0 {
 		g.Capstones = defaultCaps[g.Size]
 	}
-	g.precompute()
+	g.c = bitboard.Precompute(uint(g.Size))
 	p := &Position{
 		cfg:         &g,
 		whiteStones: byte(g.Pieces),
@@ -62,6 +54,7 @@ type Position struct {
 type Analysis struct {
 	WhiteRoad   uint64
 	BlackRoad   uint64
+	Occupied    uint64
 	WhiteGroups []uint64
 	BlackGroups []uint64
 }
@@ -150,15 +143,15 @@ func (p *Position) hasRoad() (Color, bool) {
 	white, black := false, false
 
 	for _, g := range p.analysis.WhiteGroups {
-		if ((g&p.cfg.t) != 0 && (g&p.cfg.b) != 0) ||
-			((g&p.cfg.l) != 0 && (g&p.cfg.r) != 0) {
+		if ((g&p.cfg.c.T) != 0 && (g&p.cfg.c.B) != 0) ||
+			((g&p.cfg.c.L) != 0 && (g&p.cfg.c.R) != 0) {
 			white = true
 			break
 		}
 	}
 	for _, g := range p.analysis.BlackGroups {
-		if ((g&p.cfg.t) != 0 && (g&p.cfg.b) != 0) ||
-			((g&p.cfg.l) != 0 && (g&p.cfg.r) != 0) {
+		if ((g&p.cfg.c.T) != 0 && (g&p.cfg.c.B) != 0) ||
+			((g&p.cfg.c.L) != 0 && (g&p.cfg.c.R) != 0) {
 			black = true
 			break
 		}
@@ -180,22 +173,29 @@ func (p *Position) hasRoad() (Color, bool) {
 
 }
 
+func (p *Position) Analysis() *Analysis {
+	return &p.analysis
+}
+
 func (p *Position) analyze() {
 	var bb uint64
 	var bw uint64
-	for _, sq := range p.board {
-		bw <<= 1
-		bb <<= 1
-		if len(sq) > 0 && sq[0].IsRoad() {
-			if sq[0].Color() == White {
-				bw |= 1
-			} else {
-				bb |= 1
+	var o uint64
+	for i, sq := range p.board {
+		if len(sq) > 0 {
+			o |= 1 << uint(i)
+			if sq[0].IsRoad() {
+				if sq[0].Color() == White {
+					bw |= 1 << uint(i)
+				} else {
+					bb |= 1 << uint(i)
+				}
 			}
 		}
 	}
 	p.analysis.WhiteRoad = bw
 	p.analysis.BlackRoad = bb
+	p.analysis.Occupied = o
 
 	alloc := make([]uint64, 0, 2*p.Size())
 	p.analysis.WhiteGroups = p.floodone(bw, alloc)
@@ -211,7 +211,7 @@ func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
 
 		if seen&bit == 0 {
 			g := p.flood(bits, bit)
-			if g != bit && popcount(g) > 2 {
+			if g != bit && bitboard.Popcount(g) > 2 {
 				out = append(out, g)
 			}
 			seen |= g
@@ -225,27 +225,16 @@ func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
 func (p *Position) flood(all uint64, seed uint64) uint64 {
 	for {
 		next := seed
-		next |= (seed << 1) &^ p.cfg.r
-		next |= (seed >> 1) &^ p.cfg.l
+		next |= (seed << 1) &^ p.cfg.c.R
+		next |= (seed >> 1) &^ p.cfg.c.L
 		next |= (seed >> uint(p.cfg.Size))
 		next |= (seed << uint(p.cfg.Size))
-		next &= all & p.cfg.mask
+		next &= all & p.cfg.c.Mask
 		if next == seed {
 			return next
 		}
 		seed = next
 	}
-}
-
-func popcount(x uint64) (n int) {
-	// bit population count, see
-	// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-	x -= (x >> 1) & 0x5555555555555555
-	x = (x>>2)&0x3333333333333333 + x&0x3333333333333333
-	x += x >> 4
-	x &= 0x0f0f0f0f0f0f0f0f
-	x *= 0x0101010101010101
-	return int(x >> 56)
 }
 
 func (p *Position) bitroad(bits uint64) bool {

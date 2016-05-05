@@ -1,47 +1,6 @@
 package tak
 
-import (
-	"strconv"
-	"testing"
-)
-
-func TestPrecompute(t *testing.T) {
-	c := &Config{Size: 5}
-	c.precompute()
-	if c.b != (1<<5)-1 {
-		t.Error("c.b(5):", strconv.FormatUint(c.b, 2))
-	}
-	if c.t != ((1<<5)-1)<<(4*5) {
-		t.Error("c.t(5):", strconv.FormatUint(c.t, 2))
-	}
-	if c.r != 0x0108421 {
-		t.Error("c.r(5):", strconv.FormatUint(c.r, 2))
-	}
-	if c.l != 0x1084210 {
-		t.Error("c.l(5):", strconv.FormatUint(c.l, 2))
-	}
-	if c.mask != 0x1ffffff {
-		t.Error("c.mask(5):", strconv.FormatUint(c.mask, 2))
-	}
-
-	c = &Config{Size: 8}
-	c.precompute()
-	if c.b != (1<<8)-1 {
-		t.Error("c.b(8):", strconv.FormatUint(c.b, 2))
-	}
-	if c.t != ((1<<8)-1)<<(7*8) {
-		t.Error("c.t(8):", strconv.FormatUint(c.t, 2))
-	}
-	if c.r != 0x101010101010101 {
-		t.Error("c.r(8):", strconv.FormatUint(c.r, 2))
-	}
-	if c.l != 0x8080808080808080 {
-		t.Error("c.l(8):", strconv.FormatUint(c.l, 2))
-	}
-	if c.mask != ^uint64(0) {
-		t.Error("c.mask(8):", strconv.FormatUint(c.mask, 2))
-	}
-}
+import "testing"
 
 func TestHasRoad(t *testing.T) {
 	p := New(Config{Size: 5})
