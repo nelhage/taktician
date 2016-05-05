@@ -125,7 +125,9 @@ func (p *Position) GameOver() (over bool, winner Color) {
 		return true, p
 	}
 
-	if (p.whiteStones+p.whiteCaps) != 0 && (p.blackStones+p.blackCaps) != 0 {
+	if (p.whiteStones+p.whiteCaps) != 0 &&
+		(p.blackStones+p.blackCaps) != 0 &&
+		(p.analysis.White|p.analysis.Black) != p.cfg.c.Mask {
 		return false, White
 	}
 
@@ -210,49 +212,6 @@ func (p *Position) analyze() {
 	alloc = p.analysis.WhiteGroups
 	alloc = alloc[len(alloc):len(alloc):cap(alloc)]
 	p.analysis.BlackGroups = bitboard.FloodGroups(&p.cfg.c, br, alloc)
-}
-
-func (p *Position) floodone(bits uint64, out []uint64) []uint64 {
-	var seen uint64
-	for bits != 0 {
-		next := bits & (bits - 1)
-		bit := bits &^ next
-
-		if seen&bit == 0 {
-			g := bitboard.Flood(&p.cfg.c, bits, bit)
-			if g != bit && bitboard.Popcount(g) > 2 {
-				out = append(out, g)
-			}
-			seen |= g
-		}
-
-		bits = next
-	}
-	return out
-}
-
-func (p *Position) bitroad(bits uint64) bool {
-	s := uint(p.cfg.Size)
-	var mask uint64 = (1 << s) - 1
-	row := bits & mask
-	for i := uint(1); i < s; i++ {
-		if row == 0 {
-			return false
-		}
-		next := (bits >> (i * s)) & mask
-		row &= next
-		for {
-			last := row
-			row |= ((row >> 1) & next) |
-				((row << 1) & next)
-			row &= mask
-			if row == last {
-				break
-			}
-		}
-	}
-	return row != 0
-
 }
 
 func (p *Position) countFlats() (w int, b int) {
