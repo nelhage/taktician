@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,7 @@ type Game struct {
 	Id     string
 	White  string
 	Black  string
+	Time   time.Time
 	Date   string
 	Site   string
 	Size   int
@@ -92,6 +94,7 @@ func addGame(games map[string]*Game, line string) *Game {
 	words := strings.Split(line, " ")
 	no := strings.SplitN(words[2], "#", 2)[1]
 	g := &Game{
+		Time:  time.Now(),
 		Id:    no,
 		White: words[3],
 		Black: strings.TrimRight(words[5], ","),
@@ -127,6 +130,7 @@ func render(g *Game, dir string) {
 	p.Tags = []ptn.Tag{
 		{Name: "Size", Value: strconv.Itoa(g.Size)},
 		{Name: "Date", Value: g.Date},
+		{Name: "Time", Value: g.Time.UTC().Format(time.RFC3339)},
 		{Name: "Player1", Value: g.White},
 		{Name: "Player2", Value: g.Black},
 		{Name: "Result", Value: g.Result},
@@ -140,6 +144,11 @@ func render(g *Game, dir string) {
 	}
 	p.Ops = append(p.Ops, &ptn.Result{Result: g.Result})
 	out := p.Render()
+	dir = path.Join(dir, g.Date)
+	if e := os.MkdirAll(dir, 0755); e != nil {
+		log.Printf("mkdir: %v", e)
+		return
+	}
 	e := ioutil.WriteFile(fmt.Sprintf("%s/%s.ptn", dir, g.Id),
 		[]byte(out), 0644)
 	if e != nil {
