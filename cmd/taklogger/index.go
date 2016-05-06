@@ -2,12 +2,12 @@ package main
 
 import (
 	"database/sql"
-	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -16,7 +16,9 @@ import (
 
 const createTable = `
 CREATE TABLE games (
-  id integer not null primary key,
+  day string not null,
+  id integer not null,
+  time datetime,
   size int,
   player1 varchar,
   player2 varchar,
@@ -27,8 +29,8 @@ CREATE TABLE games (
 `
 
 const insertStmt = `
-INSERT INTO games (id, size, player1, player2, result, winner, moves)
-VALUES (?,?,?,?,?,?,?)
+INSERT INTO games (day, id, time, size, player1, player2, result, winner, moves)
+VALUES (?,?,?,?,?,?,?,?,?)
 `
 
 func indexPTN(dir string, db string) error {
@@ -57,15 +59,20 @@ func indexPTN(dir string, db string) error {
 	}
 	defer stmt.Close()
 	for _, g := range ptns {
-		id, _ := strconv.Atoi(g.FindTag("Id"))
+		day := g.FindTag("Date")
+		id, e := strconv.Atoi(g.FindTag("Id"))
+		if day == "" || e != nil {
+			continue
+		}
 		size, _ := strconv.Atoi(g.FindTag("Size"))
+		t, _ := time.Parse(g.FindTag("Time"), time.RFC3339)
 		player1 := g.FindTag("Player1")
 		player2 := g.FindTag("Player2")
 		result := g.FindTag("Result")
 		winner := (&ptn.Result{Result: result}).Winner().String()
 		moves := countMoves(g)
-		_, e := stmt.Exec(
-			id, size, player1, player2, result, winner, moves,
+		_, e = stmt.Exec(
+			day, id, t, size, player1, player2, result, winner, moves,
 		)
 		if e != nil {
 			return e
@@ -85,37 +92,24 @@ func countMoves(g *ptn.PTN) int {
 }
 
 func readPTNs(d string) ([]*ptn.PTN, error) {
-	ents, e := ioutil.ReadDir(d)
-	if e != nil {
-		return nil, e
-	}
 	var out []*ptn.PTN
-	for _, de := range ents {
-		if !strings.HasSuffix(de.Name(), ".ptn") {
-			continue
+	e := filepath.Walk(d, func(path string, info os.FileInfo, err error) error {
+		if !strings.HasSuffix(path, ".ptn") {
+			return nil
 		}
-		id := strings.SplitN(de.Name(), ".", 2)[0]
-		_, e := strconv.ParseInt(id, 10, 64)
+		f, e := os.Open(path)
 		if e != nil {
-			continue
+			log.Printf("open(%s): %v", path, e)
+			return nil
 		}
-		f, e := os.Open(path.Join(d, de.Name()))
-		if e != nil {
-			log.Printf("open(%s): %v", de.Name(), e)
-			continue
-		}
+		defer f.Close()
 		g, e := ptn.ParsePTN(f)
 		if e != nil {
-			log.Printf("parse(%s): %v", de.Name(), e)
-			f.Close()
-			continue
+			log.Printf("parse(%s): %v", path, e)
+			return nil
 		}
-		f.Close()
-		if g.FindTag("Id") == "" {
-			g.Tags = append(g.Tags, ptn.Tag{Name: "Id", Value: id})
-		}
-		ioutil.WriteFile(path.Join(d, de.Name()), []byte(g.Render()), 0644)
 		out = append(out, g)
-	}
-	return out, nil
+		return nil
+	})
+	return out, e
 }
