@@ -23,7 +23,7 @@ type MinimaxAI struct {
 	rand  *rand.Rand
 
 	Seed  int64
-	Debug bool
+	Debug int
 
 	st      stats
 	c       bitboard.Constants
@@ -67,7 +67,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		seed = m.Seed
 	}
 	m.rand = rand.New(rand.NewSource(seed))
-	if m.Debug {
+	if m.Debug > 0 {
 		log.Printf("seed=%d", seed)
 	}
 
@@ -79,11 +79,11 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	for i := 1; i <= m.depth; i++ {
 		m.st = stats{}
 		start := time.Now()
-		ms, v = m.minimax(p, i, ms, minEval-1, maxEval+1)
+		ms, v = m.minimax(p, 0, i, ms, minEval-1, maxEval+1)
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
-		if m.Debug {
-			log.Printf("[minimax] depth=%d val=%d pv=%s time=%s total=%s evaluated=%d branch=%d",
+		if m.Debug > 0 {
+			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d branch=%d",
 				i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
@@ -98,11 +98,11 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		if v > winThreshold || v < -winThreshold {
 			break
 		}
-		if i > 2 {
+		if i > 2 && i != m.depth {
 			estimate := timeUsed + time.Now().Sub(start)*time.Duration(branchSum/uint64(i-1))
 			if estimate > limit {
-				if m.Debug {
-					log.Printf("time cutoff depth=%d used=%s estimate=%s",
+				if m.Debug > 0 {
+					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
 						i, timeUsed, estimate)
 				}
 				break
@@ -114,7 +114,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 
 func (ai *MinimaxAI) minimax(
 	p *tak.Position,
-	depth int,
+	ply, depth int,
 	pv []tak.Move,
 	α, β int64) ([]tak.Move, int64) {
 	over, _ := p.GameOver()
@@ -133,7 +133,7 @@ func (ai *MinimaxAI) minimax(
 	}
 	moves := p.AllMoves()
 	ai.st.generated += uint64(len(moves))
-	if depth == ai.depth {
+	if ply == 0 {
 		for i := len(moves) - 1; i > 0; i-- {
 			j := ai.rand.Int31n(int32(i))
 			moves[j], moves[i] = moves[i], moves[j]
@@ -156,13 +156,17 @@ func (ai *MinimaxAI) minimax(
 			continue
 		}
 		var ms []tak.Move
+		var newpv []tak.Move
 		var v int64
-		if len(best) == 0 {
-			ms, v = ai.minimax(child, depth-1, nil, -β, -α)
-		} else {
-			ms, v = ai.minimax(child, depth-1, best[1:], -β, -α)
+		if len(best) != 0 {
+			newpv = best[1:]
 		}
+		ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
 		v = -v
+		if ai.Debug > 2 && ply == 0 {
+			log.Printf("[minimax] search: depth=%d ply=%d m=%s pv=%s window=(%d,%d) ms=%s v=%d evaluated=%d",
+				depth, ply, ptn.FormatMove(&m), formatpv(newpv), α, β, formatpv(ms), v, ai.st.evaluated)
+		}
 		if v > max {
 			max = v
 			best = append(best[:0], m)

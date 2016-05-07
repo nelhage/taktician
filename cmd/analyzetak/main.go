@@ -21,6 +21,7 @@ var (
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
 	black     = flag.Bool("black", false, "only analyze black's move")
 	seed      = flag.Int64("seed", 0, "specify a seed")
+	debug     = flag.Int("debug", 1, "debug level")
 )
 
 func main() {
@@ -68,7 +69,7 @@ func analyze(p *tak.Position) {
 	if *seed != 0 {
 		player.Seed = *seed
 	}
-	player.Debug = true
+	player.Debug = *debug
 	pv, val := player.Analyze(p, *timeLimit)
 	cli.RenderBoard(os.Stdout, p)
 	fmt.Printf("AI analysis:\n")
