@@ -1,7 +1,9 @@
 package tak
 
 import (
+	"crypto/rand"
 	"errors"
+	"fmt"
 
 	"github.com/nelhage/taktician/bitboard"
 )
@@ -16,6 +18,19 @@ type Config struct {
 
 var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
 var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
+
+var posHashes [][]byte
+
+func init() {
+	for i := 0; i < 64; i++ {
+		b := make([]byte, 8)
+		_, e := rand.Read(b)
+		if e != nil {
+			panic(fmt.Sprintf("rand: %v", e))
+		}
+		posHashes = append(posHashes, b)
+	}
+}
 
 func New(g Config) *Position {
 	if g.Pieces == 0 {
@@ -49,6 +64,7 @@ type Position struct {
 	move     int
 	board    []Square
 	analysis Analysis
+	hash     uint64
 }
 
 type Analysis struct {
@@ -98,7 +114,35 @@ func (p *Position) At(x, y int) Square {
 }
 
 func (p *Position) set(x, y int, s Square) {
-	p.board[y*p.cfg.Size+x] = s
+	i := y*p.cfg.Size + x
+	p.hash ^= p.hashAt(i)
+	p.board[i] = s
+	p.hash ^= p.hashAt(i)
+}
+
+const (
+	offset64 = 14695981039346656037
+	prime64  = 1099511628211
+)
+
+func (p *Position) hashAt(i int) uint64 {
+	if len(p.board[i]) == 0 {
+		return 0
+	}
+	var s uint64 = offset64
+	for _, c := range posHashes[i] {
+		s *= prime64
+		s ^= uint64(c)
+	}
+	for _, c := range p.board[i] {
+		s *= prime64
+		s ^= uint64(c)
+	}
+	return s
+}
+
+func (p *Position) Hash() uint64 {
+	return p.hash
 }
 
 func (p *Position) ToMove() Color {

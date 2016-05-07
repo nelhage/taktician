@@ -12,7 +12,7 @@ func TestHasRoad(t *testing.T) {
 	}
 
 	for y := 0; y < 5; y++ {
-		p.board[y*5+2] = Square{MakePiece(Black, Flat)}
+		p.set(2, y, Square{MakePiece(Black, Flat)})
 	}
 
 	p.analyze()
@@ -143,5 +143,73 @@ func BenchmarkHasRoadWindy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		p.analyze()
 		p.hasRoad()
+	}
+}
+
+func moves(ms []Move) *Position {
+	p := New(Config{Size: 5})
+	for _, m := range ms {
+		n, e := p.Move(&m)
+		if e != nil {
+			panic("move")
+		}
+		p = n
+	}
+	return p
+}
+
+func TestHash(t *testing.T) {
+	a := moves([]Move{
+		Move{X: 0, Y: 0, Type: PlaceFlat},
+		Move{X: 1, Y: 1, Type: PlaceFlat},
+
+		Move{X: 2, Y: 2, Type: PlaceFlat},
+		Move{X: 3, Y: 3, Type: PlaceFlat},
+
+		Move{X: 1, Y: 3, Type: PlaceFlat},
+		Move{X: 3, Y: 1, Type: PlaceFlat},
+	})
+
+	b := moves([]Move{
+		Move{X: 0, Y: 0, Type: PlaceFlat},
+		Move{X: 1, Y: 1, Type: PlaceFlat},
+
+		Move{X: 1, Y: 3, Type: PlaceFlat},
+		Move{X: 3, Y: 1, Type: PlaceFlat},
+
+		Move{X: 2, Y: 2, Type: PlaceFlat},
+		Move{X: 3, Y: 3, Type: PlaceFlat},
+	})
+
+	if a.Hash() != b.Hash() {
+		t.Fatalf("hashes don't match")
+	}
+
+	c := moves([]Move{
+		Move{X: 0, Y: 0, Type: PlaceFlat},
+		Move{X: 1, Y: 1, Type: PlaceFlat},
+
+		Move{X: 1, Y: 3, Type: PlaceFlat},
+		Move{X: 3, Y: 1, Type: PlaceFlat},
+	})
+	if c.Hash() == a.Hash() {
+		t.Fatalf("collision")
+	}
+
+	d := moves([]Move{
+		Move{X: 0, Y: 0, Type: PlaceFlat},
+		Move{X: 1, Y: 1, Type: PlaceFlat},
+
+		Move{X: 3, Y: 2, Type: PlaceFlat},
+		Move{X: 4, Y: 3, Type: PlaceFlat},
+
+		Move{X: 1, Y: 3, Type: PlaceFlat},
+		Move{X: 3, Y: 1, Type: PlaceFlat},
+
+		Move{X: 3, Y: 2, Type: SlideLeft, Slides: []byte{1}},
+		Move{X: 4, Y: 3, Type: SlideLeft, Slides: []byte{1}},
+	})
+	if d.Hash() != a.Hash() {
+		t.Fatalf("hash fail")
 	}
 }
