@@ -25,16 +25,16 @@ type MinimaxAI struct {
 	Seed  int64
 	Debug int
 
-	st      stats
+	st      Stats
 	c       bitboard.Constants
 	regions []uint64
 	rd      int
 }
 
-type stats struct {
-	generated uint64
-	evaluated uint64
-	cutoffs   uint64
+type Stats struct {
+	Generated uint64
+	Evaluated uint64
+	Cutoffs   uint64
 }
 
 func formatpv(ms []tak.Move) string {
@@ -51,11 +51,11 @@ func formatpv(ms []tak.Move) string {
 }
 
 func (m *MinimaxAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
-	ms, _ := m.Analyze(p, limit)
+	ms, _, _ := m.Analyze(p, limit)
 	return ms[0]
 }
 
-func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, int64) {
+func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, int64, Stats) {
 	if m.size != uint(p.Size()) {
 		panic("Analyze: wrong size")
 	}
@@ -77,7 +77,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	var prevEval uint64
 	var branchSum uint64
 	for i := 1; i <= m.depth; i++ {
-		m.st = stats{}
+		m.st = Stats{}
 		start := time.Now()
 		ms, v = m.minimax(p, 0, i, ms, minEval-1, maxEval+1)
 		timeUsed := time.Now().Sub(top)
@@ -87,14 +87,14 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 				i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
-				m.st.evaluated,
-				m.st.evaluated/(prevEval+1),
+				m.st.Evaluated,
+				m.st.Evaluated/(prevEval+1),
 			)
 		}
 		if i > 1 {
-			branchSum += m.st.evaluated / (prevEval + 1)
+			branchSum += m.st.Evaluated / (prevEval + 1)
 		}
-		prevEval = m.st.evaluated
+		prevEval = m.st.Evaluated
 		if v > winThreshold || v < -winThreshold {
 			break
 		}
@@ -109,7 +109,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			}
 		}
 	}
-	return ms, v
+	return ms, v, m.st
 }
 
 func (ai *MinimaxAI) minimax(
@@ -119,7 +119,7 @@ func (ai *MinimaxAI) minimax(
 	α, β int64) ([]tak.Move, int64) {
 	over, _ := p.GameOver()
 	if depth == 0 || over {
-		ai.st.evaluated++
+		ai.st.Evaluated++
 		return nil, ai.evaluate(p)
 	}
 
@@ -132,7 +132,7 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 	moves := p.AllMoves()
-	ai.st.generated += uint64(len(moves))
+	ai.st.Generated += uint64(len(moves))
 	if ply == 0 {
 		for i := len(moves) - 1; i > 0; i-- {
 			j := ai.rand.Int31n(int32(i))
@@ -166,7 +166,7 @@ func (ai *MinimaxAI) minimax(
 		v = -v
 		if ai.Debug > 2 && ply == 0 {
 			log.Printf("[minimax] search: depth=%d ply=%d m=%s pv=%s window=(%d,%d) ms=%s v=%d evaluated=%d",
-				depth, ply, ptn.FormatMove(&m), formatpv(newpv), α, β, formatpv(ms), v, ai.st.evaluated)
+				depth, ply, ptn.FormatMove(&m), formatpv(newpv), α, β, formatpv(ms), v, ai.st.Evaluated)
 		}
 		if v > max {
 			max = v
@@ -176,7 +176,7 @@ func (ai *MinimaxAI) minimax(
 		if v > α {
 			α = v
 			if α >= β {
-				ai.st.cutoffs++
+				ai.st.Cutoffs++
 				break
 			}
 		}

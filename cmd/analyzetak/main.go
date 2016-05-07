@@ -70,7 +70,7 @@ func analyze(p *tak.Position) {
 		player.Seed = *seed
 	}
 	player.Debug = *debug
-	pv, val := player.Analyze(p, *timeLimit)
+	pv, val, _ := player.Analyze(p, *timeLimit)
 	cli.RenderBoard(os.Stdout, p)
 	fmt.Printf("AI analysis:\n")
 	fmt.Printf(" pv=")
