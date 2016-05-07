@@ -149,6 +149,7 @@ func (ai *MinimaxAI) minimax(
 	}
 
 	best := make([]tak.Move, 0, depth)
+	best = append(best, pv...)
 	max := minEval - 1
 	for _, m := range moves {
 		child, e := p.Move(&m)
