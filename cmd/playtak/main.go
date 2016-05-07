@@ -56,8 +56,11 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 			}
 			depth = i
 		}
-		p := ai.NewMinimax(*size, depth)
-		p.Debug = *debug
+		p := ai.NewMinimax(ai.MinimaxConfig{
+			Size:  *size,
+			Depth: depth,
+			Debug: *debug,
+		})
 		return &aiWrapper{p}
 	}
 	if strings.HasPrefix(s, "mcts") {

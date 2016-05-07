@@ -65,11 +65,12 @@ func main() {
 }
 
 func analyze(p *tak.Position) {
-	player := ai.NewMinimax(p.Size(), *depth)
-	if *seed != 0 {
-		player.Seed = *seed
-	}
-	player.Debug = *debug
+	player := ai.NewMinimax(ai.MinimaxConfig{
+		Size:  p.Size(),
+		Depth: *depth,
+		Seed:  *seed,
+		Debug: *debug,
+	})
 	pv, val, _ := player.Analyze(p, *timeLimit)
 	cli.RenderBoard(os.Stdout, p)
 	fmt.Printf("AI analysis:\n")

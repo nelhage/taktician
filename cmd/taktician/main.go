@@ -87,8 +87,11 @@ func playGame(c *playtak.Client, line string) {
 	log.Println("New Game", line)
 	bits := strings.Split(line, " ")
 	size, _ := strconv.Atoi(bits[3])
-	ai := ai.NewMinimax(size, *depth)
-	ai.Debug = 1
+	ai := ai.NewMinimax(ai.MinimaxConfig{
+		Size:  size,
+		Depth: *depth,
+		Debug: 1,
+	})
 	p := tak.New(tak.Config{Size: size})
 	gameStr := fmt.Sprintf("Game#%s", bits[2])
 	var color tak.Color
