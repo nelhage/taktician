@@ -22,6 +22,7 @@ type MinimaxAI struct {
 	size  uint
 	rand  *rand.Rand
 
+	Seed  int64
 	Debug bool
 
 	st      stats
@@ -58,7 +59,13 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	if m.size != uint(p.Size()) {
 		panic("Analyze: wrong size")
 	}
-	seed := time.Now().Unix()
+
+	var seed int64
+	if m.Seed == 0 {
+		seed = time.Now().Unix()
+	} else {
+		seed = m.Seed
+	}
 	m.rand = rand.New(rand.NewSource(seed))
 	if m.Debug {
 		log.Printf("seed=%d", seed)

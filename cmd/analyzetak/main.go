@@ -20,6 +20,7 @@ var (
 	move      = flag.Int("move", 0, "PTN move number to analyze")
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
 	black     = flag.Bool("black", false, "only analyze black's move")
+	seed      = flag.Int64("seed", 0, "specify a seed")
 )
 
 func main() {
@@ -64,6 +65,9 @@ func main() {
 
 func analyze(p *tak.Position) {
 	player := ai.NewMinimax(p.Size(), *depth)
+	if *seed != 0 {
+		player.Seed = *seed
+	}
 	player.Debug = true
 	pv, val := player.Analyze(p, *timeLimit)
 	cli.RenderBoard(os.Stdout, p)
