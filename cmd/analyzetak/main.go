@@ -85,5 +85,14 @@ func analyze(p *tak.Position) {
 		fmt.Printf("\n")
 	}
 	fmt.Println()
+
+	for _, m := range pv {
+		p, _ = p.Move(&m)
+	}
+
+	fmt.Println("Resulting position:")
+	cli.RenderBoard(os.Stdout, p)
+
+	fmt.Println()
 	fmt.Println()
 }
