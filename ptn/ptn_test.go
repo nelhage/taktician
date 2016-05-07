@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/nelhage/taktician/tak"
 )
 
 const testGame = `
@@ -134,4 +136,71 @@ func TestEmpty(t *testing.T) {
 	if len(ptn.Tags) != 5 {
 		t.Fatal("tags", ptn.Tags)
 	}
+}
+
+func TestPositionAtMove(t *testing.T) {
+	src := `[Size "5"]
+[Date "2016-05-07"]
+[Time "2016-05-07T10:17:03Z"]
+[Player1 "Guest369"]
+[Player2 "TakticianBot"]
+[Result "0-R"]
+[Id "1334"]
+
+
+1. a1 e1
+2. c3 b3
+3. b4 a3
+4. b2 d3
+5. b1 c2
+6. c3< a3>
+7. b4- Sc3
+8. b5 c3<
+9. Cc3 4b3-22
+10. a2 c5
+11. a2> 3b1+
+12. b1 4b2-
+13. b4 a2
+14. c3- a5
+15. 2c2< a3
+16. Sa4 c4
+17. Sc3 d1
+18. b2- 2b2+11
+0-R`
+	cases := []struct {
+		move  int
+		color tak.Color
+		tps   string
+	}{
+		{1, tak.White, "x5/x5/x5/x5/x5 1 1"},
+		{1, tak.Black, "x5/x5/x5/x5/2,x4 2 1"},
+		{1, tak.NoColor, ""},
+		{18, tak.Black, "2,1,2,x2/1S,1,2,x2/2,2,1S,2,x/2,1122,x3/2,111121C,x,2,1 2 18"},
+		{0, tak.NoColor, "2,1,2,x2/1S,12,2,x2/2,22,1S,2,x/2,11,x3/2,111121C,x,2,1 1 19"},
+	}
+	p, e := ParsePTN(bytes.NewBufferString(src))
+	if e != nil {
+		panic(e)
+	}
+	for _, tc := range cases {
+		pos, e := p.PositionAtMove(tc.move, tc.color)
+		if tc.tps == "" {
+			if e == nil {
+				t.Errorf("AtMove(%d, %s) did not return error", tc.move, tc.color)
+			}
+			continue
+		}
+
+		if e != nil {
+			t.Errorf("AtMove(%d, %s): %v", tc.move, tc.color, e)
+			continue
+		}
+		tps := FormatTPS(pos)
+		if tps != tc.tps {
+			t.Errorf("AtMove(%d, %s) =\n  %s\n!= %s",
+				tc.move, tc.color, tps, tc.tps,
+			)
+		}
+	}
+
 }

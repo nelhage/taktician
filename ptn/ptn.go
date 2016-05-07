@@ -123,6 +123,42 @@ func (p *PTN) InitialPosition() (*tak.Position, error) {
 	return out, nil
 }
 
+// PositionAtMove returns the position of the game after PTN move
+// marker `move`, with `color` to play.
+//
+// `move=0` will cause the code to return the final position of the
+// game.
+func (p *PTN) PositionAtMove(move int, color tak.Color) (*tak.Position, error) {
+	if color == tak.NoColor && move != 0 {
+		return nil, fmt.Errorf("can't specify NoColor and move!=0")
+	}
+	g, e := p.InitialPosition()
+	if e != nil {
+		return nil, e
+	}
+	var ptnMove int
+	for _, op := range p.Ops {
+		switch o := op.(type) {
+		case *MoveNumber:
+			ptnMove = o.Number
+		case *Move:
+			next, e := g.Move(&o.Move)
+			if e != nil {
+				return nil, fmt.Errorf("Illegal Move: %d. %s: %v",
+					ptnMove, o.Source(), e)
+			}
+			g = next
+		}
+		if move > 0 && move == ptnMove && g.ToMove() == color {
+			return g, nil
+		}
+	}
+	if move > 0 {
+		return nil, fmt.Errorf("move not found: %d", move)
+	}
+	return g, nil
+}
+
 func readEvents(r *bufio.Reader, ptn *PTN) error {
 	for {
 		if e := skipWS(r); e != nil {
