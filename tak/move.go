@@ -29,7 +29,7 @@ func (m *Move) Equal(rhs *Move) bool {
 	if m.Type != rhs.Type {
 		return false
 	}
-	if m.Type >= SlideLeft {
+	if m.Type < SlideLeft {
 		return true
 	}
 	if len(m.Slides) != len(rhs.Slides) {

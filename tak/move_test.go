@@ -219,3 +219,18 @@ func TestAllMovesBasicSlides(t *testing.T) {
 
 	}
 }
+
+func TestEqual(t *testing.T) {
+	a := &Move{
+		X: 3, Y: 4, Type: SlideDown, Slides: []byte{3},
+	}
+	b := &Move{
+		X: 3, Y: 4, Type: SlideDown, Slides: []byte{2},
+	}
+	if !a.Equal(a) {
+		t.Errorf("%#v != self", a)
+	}
+	if a.Equal(b) {
+		t.Errorf("%#v = %#v!", a, b)
+	}
+}
