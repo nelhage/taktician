@@ -160,10 +160,16 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 	if len(pv) > 0 {
+		j := 1
 		for i, m := range moves {
 			if m.Equal(&pv[0]) {
 				moves[0], moves[i] = moves[i], moves[0]
-				break
+				if m.Type < tak.SlideLeft {
+					break
+				}
+			} else if j < len(moves) && m.X == pv[0].X && m.Y == pv[0].Y {
+				moves[j], moves[i] = moves[i], moves[j]
+				j++
 			}
 		}
 	}
