@@ -121,6 +121,7 @@ func handleCmd(g *Game, cmd []string) bool {
 		g.Result = cmd[2]
 		return true
 	case "Abandoned.":
+		return true
 	}
 	return false
 }
