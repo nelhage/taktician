@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,12 +15,15 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
+var debug = flag.Int("debug", 0, "debug level")
+
 type TestCase struct {
 	p          *ptn.PTN
 	id         string
 	moveNumber int
 	color      tak.Color
-	depth      int
+
+	cfg ai.MinimaxConfig
 
 	maxEval  uint64
 	badMoves []tak.Move
@@ -52,7 +56,7 @@ func TestAIRegression(t *testing.T) {
 func preparePTN(p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
 		p:     p,
-		depth: 5,
+		cfg:   ai.MinimaxConfig{Depth: 5},
 		limit: time.Minute,
 	}
 	var e error
@@ -83,7 +87,7 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 				return nil, fmt.Errorf("bad MaxEval: %s", t.Value)
 			}
 		case "Depth":
-			tc.depth, e = strconv.Atoi(t.Value)
+			tc.cfg.Depth, e = strconv.Atoi(t.Value)
 			if e != nil {
 				return nil, fmt.Errorf("bad depth: %s", t.Value)
 			}
@@ -97,6 +101,11 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 			tc.limit, e = time.ParseDuration(t.Value)
 			if e != nil {
 				return nil, fmt.Errorf("bad limit: `%s`: %v", t.Value, e)
+			}
+		case "Seed":
+			tc.cfg.Seed, e = strconv.ParseInt(t.Value, 10, 64)
+			if e != nil {
+				return nil, fmt.Errorf("bad MaxEval: %s", t.Value)
 			}
 		case "Speed":
 			tc.speed = t.Value
@@ -117,7 +126,10 @@ func runTest(t *testing.T, tc *TestCase) {
 	var buf bytes.Buffer
 	cli.RenderBoard(&buf, p)
 	t.Log(buf.String())
-	ai := ai.NewMinimax(ai.MinimaxConfig{Size: p.Size(), Depth: tc.depth})
+	cfg := tc.cfg
+	cfg.Size = p.Size()
+	cfg.Debug = *debug
+	ai := ai.NewMinimax(cfg)
 	pv, v, st := ai.Analyze(p, tc.limit)
 	if len(pv) == 0 {
 		t.Errorf("%s: did not return a move!", tc.id)
