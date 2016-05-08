@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/nelhage/taktician/bitboard"
@@ -38,6 +39,7 @@ type MinimaxConfig struct {
 	Depth int
 	Debug int
 	Seed  int64
+	Spawn int
 }
 
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
@@ -141,19 +143,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	return ms, v, m.st
 }
 
-func (ai *MinimaxAI) minimax(
-	p *tak.Position,
-	ply, depth int,
-	pv []tak.Move,
-	α, β int64) ([]tak.Move, int64) {
-	over, _ := p.GameOver()
-	if depth == 0 || over {
-		ai.st.Evaluated++
-		return nil, ai.evaluate(p)
-	}
-
-	moves := p.AllMoves()
-	ai.st.Generated += uint64(len(moves))
+func (ai *MinimaxAI) order(moves []tak.Move, ply int, pv []tak.Move) {
 	if ply == 0 {
 		for i := len(moves) - 1; i > 0; i-- {
 			j := ai.rand.Int31n(int32(i))
@@ -174,40 +164,129 @@ func (ai *MinimaxAI) minimax(
 			}
 		}
 	}
+}
+
+type mmJob struct {
+	p          *tak.Position
+	ply, depth int
+
+	sync.Mutex
+	α, β int64
+	best []tak.Move
+
+	ms <-chan tak.Move
+	wg sync.WaitGroup
+}
+
+func (ai *MinimaxAI) mmWorker(j *mmJob) {
+	defer j.wg.Done()
+
+	pv := make([]tak.Move, 0, j.depth)
+	for m := range j.ms {
+		child, e := j.p.Move(&m)
+		if e != nil {
+			continue
+		}
+		j.Lock()
+		if len(j.best) != 0 {
+			copy(pv[:0], j.best[1:])
+		}
+		α, β := j.α, j.β
+		j.Unlock()
+		if α >= β {
+			ai.st.Cutoffs++
+			break
+		}
+		ms, v := ai.minimax(child, j.ply+1, j.depth-1, pv, -β, -α)
+		v = -v
+		if v > α {
+			j.Lock()
+			if v > j.α {
+				j.best = append(j.best[:0], m)
+				j.best = append(j.best, ms...)
+				j.α = v
+			}
+			j.Unlock()
+		}
+	}
+}
+
+func (ai *MinimaxAI) minimax(
+	p *tak.Position,
+	ply, depth int,
+	pv []tak.Move,
+	α, β int64) ([]tak.Move, int64) {
+	over, _ := p.GameOver()
+	if depth == 0 || over {
+		ai.st.Evaluated++
+		return nil, ai.evaluate(p)
+	}
+
+	moves := p.AllMoves()
+	ai.st.Generated += uint64(len(moves))
+	ai.order(moves, ply, pv)
 
 	best := make([]tak.Move, 0, depth)
 	best = append(best, pv...)
-	for _, m := range moves {
+
+	i := 0
+	var m tak.Move
+	var ms []tak.Move
+	var v int64
+
+	for i, m = range moves {
 		child, e := p.Move(&m)
 		if e != nil {
 			continue
 		}
-		var ms []tak.Move
 		var newpv []tak.Move
-		var v int64
 		if len(best) != 0 {
 			newpv = best[1:]
 		}
 		ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
 		v = -v
-		if ai.cfg.Debug > 2 && ply == 0 {
-			log.Printf("[minimax] search: depth=%d ply=%d m=%s pv=%s window=(%d,%d) ms=%s v=%d evaluated=%d",
-				depth, ply, ptn.FormatMove(&m), formatpv(newpv), α, β, formatpv(ms), v, ai.st.Evaluated)
-		}
-
-		if len(best) == 0 {
-			best = append(best[:0], m)
-			best = append(best, ms...)
-		}
 		if v > α {
-			best = append(best[:0], m)
+			best = append(best[:0], moves[0])
 			best = append(best, ms...)
 			α = v
 			if α >= β {
 				ai.st.Cutoffs++
-				break
+				return best, v
 			}
 		}
+		break
 	}
-	return best, α
+	spawn := ai.cfg.Spawn
+	if depth <= 3 {
+		spawn = 1
+	}
+	mc := make(chan tak.Move, spawn)
+	job := &mmJob{
+		p: p,
+		α: α, β: β,
+		best:  best,
+		ms:    mc,
+		depth: depth,
+		ply:   ply,
+	}
+	job.wg.Add(spawn)
+	for i := 0; i < spawn; i++ {
+		go ai.mmWorker(job)
+	}
+	done := make(chan struct{})
+	go func() {
+		job.wg.Wait()
+		close(done)
+	}()
+outer:
+	for _, m := range moves[i:] {
+		select {
+		case mc <- m:
+		case <-done:
+			break outer
+		}
+	}
+	close(mc)
+	<-done
+	return job.best, job.α
 }

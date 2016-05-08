@@ -24,6 +24,7 @@ var (
 	seed      = flag.Int64("seed", 0, "specify a seed")
 	debug     = flag.Int("debug", 1, "debug level")
 	quiet     = flag.Bool("quiet", false, "don't print board diagrams")
+	spawn     = flag.Int("spawn", 1, "parallelism")
 )
 
 func main() {
@@ -62,6 +63,7 @@ func analyze(p *tak.Position) {
 		Depth: *depth,
 		Seed:  *seed,
 		Debug: *debug,
+		Spawn: *spawn,
 	})
 	pv, val, _ := player.Analyze(p, *timeLimit)
 	if !*quiet {

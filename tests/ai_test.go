@@ -18,6 +18,7 @@ import (
 
 var debug = flag.Int("debug", 0, "debug level")
 var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
+var spawn = flag.Int("spawn", 1, "threads to spawn")
 
 type TestCase struct {
 	p          *ptn.PTN
@@ -57,8 +58,11 @@ func TestAIRegression(t *testing.T) {
 
 func preparePTN(p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
-		p:     p,
-		cfg:   ai.MinimaxConfig{Depth: 5},
+		p: p,
+		cfg: ai.MinimaxConfig{
+			Depth: 5,
+			Spawn: *spawn,
+		},
 		limit: time.Minute,
 	}
 	var e error
