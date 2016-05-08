@@ -23,6 +23,7 @@ var (
 	white     = flag.Bool("white", false, "only analyze white's move")
 	seed      = flag.Int64("seed", 0, "specify a seed")
 	debug     = flag.Int("debug", 1, "debug level")
+	quiet     = flag.Bool("quiet", false, "don't print board diagrams")
 )
 
 func main() {
@@ -63,7 +64,9 @@ func analyze(p *tak.Position) {
 		Debug: *debug,
 	})
 	pv, val, _ := player.Analyze(p, *timeLimit)
-	cli.RenderBoard(os.Stdout, p)
+	if !*quiet {
+		cli.RenderBoard(os.Stdout, p)
+	}
 	fmt.Printf("AI analysis:\n")
 	fmt.Printf(" pv=")
 	for _, m := range pv {
@@ -87,8 +90,10 @@ func analyze(p *tak.Position) {
 		p, _ = p.Move(&m)
 	}
 
-	fmt.Println("Resulting position:")
-	cli.RenderBoard(os.Stdout, p)
+	if !*quiet {
+		fmt.Println("Resulting position:")
+		cli.RenderBoard(os.Stdout, p)
+	}
 
 	fmt.Println()
 	fmt.Println()
