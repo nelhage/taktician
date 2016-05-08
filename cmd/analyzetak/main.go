@@ -20,6 +20,7 @@ var (
 	move      = flag.Int("move", 0, "PTN move number to analyze")
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
 	black     = flag.Bool("black", false, "only analyze black's move")
+	white     = flag.Bool("white", false, "only analyze white's move")
 	seed      = flag.Int64("seed", 0, "specify a seed")
 	debug     = flag.Int("debug", 1, "debug level")
 )
@@ -35,32 +36,22 @@ func main() {
 	if e != nil {
 		log.Fatal("parse:", e)
 	}
-	p, e := parsed.InitialPosition()
+	color := tak.NoColor
+	switch {
+	case *white && *black:
+		log.Fatal("-white and -black are exclusive")
+	case *white:
+		color = tak.White
+	case *black:
+		color = tak.Black
+	case *move != 0:
+		color = tak.White
+	}
+	p, e := parsed.PositionAtMove(*move, color)
 	if e != nil {
-		log.Fatal("analyze:", e)
+		log.Fatal("find move:", e)
 	}
-	found := false
-	for _, op := range parsed.Ops {
-		if n, ok := op.(*ptn.MoveNumber); ok && n.Number == *move {
-			found = true
-			if !*black {
-				analyze(p)
-			}
-		}
-		if m, ok := op.(*ptn.Move); ok {
-			next, e := p.Move(&m.Move)
-			if e != nil {
-				fmt.Printf("illegal move: %s\n", ptn.FormatMove(&m.Move))
-				fmt.Printf("move=%d\n", p.MoveNumber())
-				cli.RenderBoard(os.Stdout, p)
-				log.Fatal("illegal move")
-			}
-			p = next
-			if found {
-				break
-			}
-		}
-	}
+
 	analyze(p)
 }
 
