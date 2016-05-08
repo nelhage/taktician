@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -112,12 +114,20 @@ func runTest(t *testing.T, tc *TestCase) {
 		t.Errorf("%s: find move: %v", tc.id, e)
 		return
 	}
+	var buf bytes.Buffer
+	cli.RenderBoard(&buf, p)
+	t.Log(buf.String())
 	ai := ai.NewMinimax(ai.MinimaxConfig{Size: p.Size(), Depth: tc.depth})
-	pv, _, st := ai.Analyze(p, tc.limit)
+	pv, v, st := ai.Analyze(p, tc.limit)
 	if len(pv) == 0 {
 		t.Errorf("%s: did not return a move!", tc.id)
 		return
 	}
+	var ms []string
+	for _, m := range pv {
+		ms = append(ms, ptn.FormatMove(&m))
+	}
+	t.Logf("ai: pv=[%s] value=%v", strings.Join(ms, " "), v)
 	_, e = p.Move(&pv[0])
 	if e != nil {
 		t.Errorf("%s: illegal move: `%s'", tc.id, ptn.FormatMove(&pv[0]))
