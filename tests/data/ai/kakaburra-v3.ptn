@@ -1,0 +1,35 @@
+[Size "5"]
+[Date "2016-05-07"]
+[Time "2016-05-07T20:46:45Z"]
+[Player1 "TakticianBot"]
+[Player2 "kakaburra"]
+[Result "0-R"]
+[Id "1573"]
+[Name "kakaburra-v3"]
+[Move "8 white"]
+
+1. a1 a5
+2. c3 c2
+3. c4 b3
+4. d3 d2
+5. a3 b2
+6. e2 d1
+7. e1 e3
+8. c5 a2
+9. d3> Cd3
+10. e1< d3>
+11. c3- 3e3<12
+12. e3 d4
+13. a3- a3
+14. 2a2+ a2
+15. c4> 2c3<11
+16. Sa4 4a3>13
+17. b1 d3+
+18. a3 d3
+19. a3- a1+
+20. 2c2<11 b2<
+21. e3< 2d4-
+22. 2d1+11 d2+
+23. b1+ 4a2>
+24. e3 e4
+0-R

@@ -20,13 +20,15 @@ var debug = flag.Int("debug", 0, "debug level")
 type TestCase struct {
 	p          *ptn.PTN
 	id         string
+	name       string
 	moveNumber int
 	color      tak.Color
 
 	cfg ai.MinimaxConfig
 
-	maxEval  uint64
-	badMoves []tak.Move
+	maxEval   uint64
+	badMoves  []tak.Move
+	goodMoves []tak.Move
 
 	speed string
 
@@ -97,6 +99,12 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 				return nil, fmt.Errorf("bad move: `%s': %v", t.Value, e)
 			}
 			tc.badMoves = append(tc.badMoves, move)
+		case "GoodMove":
+			move, e := ptn.ParseMove(t.Value)
+			if e != nil {
+				return nil, fmt.Errorf("bad move: `%s': %v", t.Value, e)
+			}
+			tc.goodMoves = append(tc.goodMoves, move)
 		case "Limit":
 			tc.limit, e = time.ParseDuration(t.Value)
 			if e != nil {
@@ -111,16 +119,23 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 			tc.speed = t.Value
 		case "Id":
 			tc.id = t.Value
+		case "Name":
+			tc.name = t.Value
 		}
 	}
 	return &tc, nil
 }
 
 func runTest(t *testing.T, tc *TestCase) {
-	t.Logf("considering `%s'...", tc.id)
+	name := ""
+	if tc.id != "" {
+		name = fmt.Sprintf("[%s]", tc.id)
+	}
+	name = fmt.Sprintf("%s%s", name, tc.name)
+	t.Logf("considering %s...", name)
 	p, e := tc.p.PositionAtMove(tc.moveNumber, tc.color)
 	if e != nil {
-		t.Errorf("%s: find move: %v", tc.id, e)
+		t.Errorf("!! %s: find move: %v", name, e)
 		return
 	}
 	var buf bytes.Buffer
@@ -132,7 +147,7 @@ func runTest(t *testing.T, tc *TestCase) {
 	ai := ai.NewMinimax(cfg)
 	pv, v, st := ai.Analyze(p, tc.limit)
 	if len(pv) == 0 {
-		t.Errorf("%s: did not return a move!", tc.id)
+		t.Errorf("!! %s: did not return a move!", name)
 		return
 	}
 	var ms []string
@@ -142,15 +157,25 @@ func runTest(t *testing.T, tc *TestCase) {
 	t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
 	_, e = p.Move(&pv[0])
 	if e != nil {
-		t.Errorf("%s: illegal move: `%s'", tc.id, ptn.FormatMove(&pv[0]))
+		t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
 	}
 	for _, m := range tc.badMoves {
 		if pv[0].Equal(&m) {
-			t.Errorf("%s: bad move: `%s'", tc.id, ptn.FormatMove(&pv[0]))
+			t.Errorf("!! %s: bad move: `%s'", name, ptn.FormatMove(&pv[0]))
 		}
 	}
+	found := false
+	for _, m := range tc.goodMoves {
+		if pv[0].Equal(&m) {
+			found = true
+			break
+		}
+	}
+	if len(tc.goodMoves) != 0 && !found {
+		t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(&pv[0]))
+	}
 	if tc.maxEval != 0 && st.Evaluated > tc.maxEval {
-		t.Errorf("%s: evaluated %d > %d positions",
-			tc.id, st.Evaluated, tc.maxEval)
+		t.Errorf("!! %s: evaluated %d > %d positions",
+			name, st.Evaluated, tc.maxEval)
 	}
 }

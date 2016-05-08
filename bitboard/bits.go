@@ -32,17 +32,21 @@ func Popcount(x uint64) int {
 
 func Flood(c *Constants, within uint64, seed uint64) uint64 {
 	for {
-		next := seed
-		next |= (seed << 1) &^ c.R
-		next |= (seed >> 1) &^ c.L
-		next |= (seed >> c.Size)
-		next |= (seed << c.Size)
-		next &= within & c.Mask
+		next := Grow(c, within, seed)
 		if next == seed {
 			return next
 		}
 		seed = next
 	}
+}
+
+func Grow(c *Constants, within uint64, seed uint64) uint64 {
+	next := seed
+	next |= (seed << 1) &^ c.R
+	next |= (seed >> 1) &^ c.L
+	next |= (seed >> c.Size)
+	next |= (seed << c.Size)
+	return next & within
 }
 
 func FloodGroups(c *Constants, bits uint64, out []uint64) []uint64 {
@@ -62,4 +66,27 @@ func FloodGroups(c *Constants, bits uint64, out []uint64) []uint64 {
 		bits = next
 	}
 	return out
+}
+
+func Dimensions(c *Constants, bits uint64) (w, h int) {
+	if bits == 0 {
+		return 0, 0
+	}
+	b := c.L
+	for bits&b == 0 {
+		b >>= 1
+	}
+	for b != 0 && bits&b != 0 {
+		b >>= 1
+		w++
+	}
+	b = c.T
+	for bits&b == 0 {
+		b >>= c.Size
+	}
+	for b != 0 && bits&b != 0 {
+		b >>= c.Size
+		h++
+	}
+	return w, h
 }

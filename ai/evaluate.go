@@ -8,9 +8,9 @@ import (
 const (
 	weightFlat       = 200
 	weightCaptured   = 100
-	weightControlled = 500
+	weightControlled = 300
 	weightCapstone   = -150
-	weightThreat     = 150
+	weightGroup      = 4
 	weightAdvantage  = 50
 )
 
@@ -41,7 +41,9 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			if len(sq) == 0 {
 				continue
 			}
-			addw(sq[0].Color(), weightControlled)
+			if sq[0].Kind() != tak.Standing {
+				addw(sq[0].Color(), weightControlled)
+			}
 			if sq[0].Kind() == tak.Capstone {
 				addw(sq[0].Color(), weightCapstone)
 			}
@@ -56,6 +58,11 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			}
 		}
 	}
+
+	empty := ^(analysis.White | analysis.Black)
+	addw(tak.White, m.scoreGroups(analysis.WhiteGroups, empty))
+	addw(tak.Black, m.scoreGroups(analysis.BlackGroups, empty))
+
 	for _, r := range m.regions {
 		w := bitboard.Popcount(analysis.White & r)
 		b := bitboard.Popcount(analysis.Black & r)
@@ -65,38 +72,23 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			addw(tak.Black, (b-w)*weightAdvantage)
 		}
 	}
-	o := analysis.White | analysis.Black
-	addw(tak.White, weightThreat*m.threats(analysis.WhiteGroups, o))
-	addw(tak.Black, weightThreat*m.threats(analysis.BlackGroups, o))
 
 	return int64(mine - theirs)
 }
 
-func (m *MinimaxAI) threats(groups []uint64, filled uint64) int {
-	count := 0
-	empty := ^filled
-	s := uint(m.cfg.Size)
-	for _, g := range groups {
-		if g&m.c.L != 0 {
-			if g&(m.c.R<<1) != 0 && empty&m.c.R != 0 {
-				count++
-			}
+func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64) int {
+	sc := 0
+	for _, g := range gs {
+		w, h := bitboard.Dimensions(&ai.c, g)
+		sz := bitboard.Popcount(g)
+		libs := bitboard.Popcount(bitboard.Grow(&ai.c, g|empty, g) &^ g)
+
+		sp := w
+		if h > sp {
+			sp = h
 		}
-		if g&m.c.R != 0 {
-			if g&(m.c.L>>1) != 0 && empty&m.c.L != 0 {
-				count++
-			}
-		}
-		if g&m.c.B != 0 {
-			if g&(m.c.T>>s) != 0 && empty&m.c.T != 0 {
-				count++
-			}
-		}
-		if g&m.c.T != 0 {
-			if g&(m.c.B<<s) != 0 && empty&m.c.B != 0 {
-				count++
-			}
-		}
+		sc += (sp*sp + (2 * sz) + libs) * weightGroup
 	}
-	return count
+
+	return sc
 }
