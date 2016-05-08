@@ -1,0 +1,25 @@
+[Size "5"]
+[Date "2016-05-02"]
+[Player1 "TakticianBot"]
+[Player2 "kakaburra"]
+[Result "0-R"]
+[Id "7249"]
+[Move "3 white"]
+[BadMove "a3"]
+
+
+1. a1 e5
+2. a2 b2
+3. a3 c3
+4. a4 b1
+5. a5 b3
+6. b4 c4
+7. c5 Cd4
+8. a2> b1+
+9. d5 Sb5
+10. e4 c2
+11. c1 b1
+12. d3 d4<
+13. d3< b3>
+14. c1< a1>
+15. a1 c4+

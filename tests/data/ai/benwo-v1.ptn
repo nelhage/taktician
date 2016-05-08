@@ -1,0 +1,25 @@
+[Size "5"]
+[Date "2016-05-01"]
+[Player1 "BenWo"]
+[Player2 "TakticianBot"]
+[Result "R-0"]
+[Id "6454"]
+[Move "3 black"]
+[Depth "5"]
+[BadMove "a3"]
+[--BadMove "c3"]
+
+1. a1 e1
+2. e2 a2
+3. e3 a3
+4. Ce4 Se5
+5. d5 d4
+6. c5 a4
+7. Sa5 b5
+8. a5- b3
+9. 2a4- b2
+10. 3a3> c4
+11. e4+ e4
+12. e5- d4+
+13. c5> e5<
+14. e5
