@@ -17,6 +17,8 @@ const (
 	winThreshold       = 1 << 29
 )
 
+type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
+
 type MinimaxAI struct {
 	cfg  MinimaxConfig
 	rand *rand.Rand
@@ -24,6 +26,8 @@ type MinimaxAI struct {
 	st      Stats
 	c       bitboard.Constants
 	regions []uint64
+
+	evaluate EvaluationFunc
 }
 
 type Stats struct {
@@ -37,11 +41,17 @@ type MinimaxConfig struct {
 	Depth int
 	Debug int
 	Seed  int64
+
+	Evaluate EvaluationFunc
 }
 
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m := &MinimaxAI{cfg: cfg}
 	m.precompute()
+	m.evaluate = cfg.Evaluate
+	if m.evaluate == nil {
+		m.evaluate = V3evaluate
+	}
 	return m
 }
 
@@ -148,7 +158,7 @@ func (ai *MinimaxAI) minimax(
 	over, _ := p.GameOver()
 	if depth == 0 || over {
 		ai.st.Evaluated++
-		return nil, ai.evaluate(p)
+		return nil, ai.evaluate(ai, p)
 	}
 
 	moves := p.AllMoves()

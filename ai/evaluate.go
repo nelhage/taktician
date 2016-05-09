@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	weightFlat       = 200
-	weightCaptured   = 100
-	weightControlled = 300
-	weightCapstone   = -150
-	weightGroup      = 4
+	v3WeightFlat       = 200
+	v3WeightCaptured   = 100
+	v3WeightControlled = 300
+	v3WeightCapstone   = -150
+	v3WeightGroup      = 4
 )
 
-func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
+func V3evaluate(m *MinimaxAI, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
 		switch winner {
 		case tak.NoColor:
@@ -33,7 +33,7 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			theirs += w
 		}
 	}
-	weightGroup := weightGroup
+	weightGroup := v3WeightGroup
 	maxStack := 0
 	analysis := p.Analysis()
 	for x := 0; x < p.Size(); x++ {
@@ -46,18 +46,18 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 				maxStack = len(sq)
 			}
 			if sq[0].Kind() != tak.Standing {
-				addw(sq[0].Color(), weightControlled)
+				addw(sq[0].Color(), v3WeightControlled)
 			}
 			if sq[0].Kind() == tak.Capstone {
-				addw(sq[0].Color(), weightCapstone)
+				addw(sq[0].Color(), v3WeightCapstone)
 			}
 
 			for i, stone := range sq {
 				if i > 0 && i < p.Size() {
-					addw(sq[0].Color(), weightCaptured)
+					addw(sq[0].Color(), v3WeightCaptured)
 				}
 				if stone.Kind() == tak.Flat {
-					addw(stone.Color(), weightFlat)
+					addw(stone.Color(), v3WeightFlat)
 				}
 			}
 		}
