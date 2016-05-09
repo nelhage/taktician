@@ -139,7 +139,7 @@ func runTest(t *testing.T, tc *TestCase) {
 	for _, m := range pv {
 		ms = append(ms, ptn.FormatMove(&m))
 	}
-	t.Logf("ai: pv=[%s] value=%v", strings.Join(ms, " "), v)
+	t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
 	_, e = p.Move(&pv[0])
 	if e != nil {
 		t.Errorf("%s: illegal move: `%s'", tc.id, ptn.FormatMove(&pv[0]))
