@@ -11,7 +11,6 @@ const (
 	weightControlled = 300
 	weightCapstone   = -150
 	weightGroup      = 4
-	weightAdvantage  = 50
 )
 
 func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
@@ -34,12 +33,17 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 			theirs += w
 		}
 	}
+	weightGroup := weightGroup
+	maxStack := 0
 	analysis := p.Analysis()
 	for x := 0; x < p.Size(); x++ {
 		for y := 0; y < p.Size(); y++ {
 			sq := p.At(x, y)
 			if len(sq) == 0 {
 				continue
+			}
+			if len(sq) > maxStack {
+				maxStack = len(sq)
 			}
 			if sq[0].Kind() != tak.Standing {
 				addw(sq[0].Color(), weightControlled)
@@ -60,23 +64,19 @@ func (m *MinimaxAI) evaluate(p *tak.Position) int64 {
 	}
 
 	empty := ^(analysis.White | analysis.Black)
-	addw(tak.White, m.scoreGroups(analysis.WhiteGroups, empty))
-	addw(tak.Black, m.scoreGroups(analysis.BlackGroups, empty))
-
-	for _, r := range m.regions {
-		w := bitboard.Popcount(analysis.White & r)
-		b := bitboard.Popcount(analysis.Black & r)
-		if w > b {
-			addw(tak.White, (w-b)*weightAdvantage)
-		} else {
-			addw(tak.Black, (b-w)*weightAdvantage)
-		}
+	if maxStack >= 3 {
+		weightGroup--
 	}
+	if bitboard.Popcount(empty) < (p.Size()*p.Size())/2 {
+		weightGroup--
+	}
+	addw(tak.White, m.scoreGroups(analysis.WhiteGroups, empty, weightGroup))
+	addw(tak.Black, m.scoreGroups(analysis.BlackGroups, empty, weightGroup))
 
 	return int64(mine - theirs)
 }
 
-func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64) int {
+func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64, weight int) int {
 	sc := 0
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(&ai.c, g)
@@ -87,7 +87,7 @@ func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64) int {
 		if h > sp {
 			sp = h
 		}
-		sc += (sp*sp + (2 * sz) + libs) * weightGroup
+		sc += (sp*sp + (2 * sz) + libs) * weight
 	}
 
 	return sc
