@@ -7,6 +7,7 @@ import (
 
 const (
 	v3WeightFlat       = 200
+	v3WeightStanding   = 100
 	v3WeightCaptured   = 100
 	v3WeightControlled = 300
 	v3WeightCapstone   = -150
@@ -45,7 +46,9 @@ func V3evaluate(m *MinimaxAI, p *tak.Position) int64 {
 			if len(sq) > maxStack {
 				maxStack = len(sq)
 			}
-			if sq[0].Kind() != tak.Standing {
+			if sq[0].Kind() == tak.Standing {
+				addw(sq[0].Color(), v3WeightStanding)
+			} else {
 				addw(sq[0].Color(), v3WeightControlled)
 			}
 			if sq[0].Kind() == tak.Capstone {
