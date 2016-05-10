@@ -68,6 +68,9 @@ func (m *MinimaxAI) precompute() {
 			br << (3 * s), br << (3*s + 3),
 		}
 	}
+	if m.cfg.Spawn == 0 {
+		m.cfg.Spawn = 1
+	}
 }
 
 func formatpv(ms []tak.Move) string {
@@ -114,11 +117,12 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
-			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d branch=%d",
+			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d cutoffs=%d branch=%d",
 				i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
 				m.st.Evaluated,
+				m.st.Cutoffs,
 				m.st.Evaluated/(prevEval+1),
 			)
 		}
@@ -189,7 +193,7 @@ func (ai *MinimaxAI) mmWorker(j *mmJob) {
 		}
 		j.Lock()
 		if len(j.best) != 0 {
-			copy(pv[:0], j.best[1:])
+			pv = append(pv[:0], j.best[1:]...)
 		}
 		α, β := j.α, j.β
 		j.Unlock()
@@ -234,6 +238,11 @@ func (ai *MinimaxAI) minimax(
 	var ms []tak.Move
 	var v int64
 
+	spawn := ai.cfg.Spawn
+	if depth < 5 {
+		spawn = 1
+	}
+
 	for i, m = range moves {
 		child, e := p.Move(&m)
 		if e != nil {
@@ -245,8 +254,12 @@ func (ai *MinimaxAI) minimax(
 		}
 		ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
 		v = -v
+		if len(best) == 0 {
+			best = append(best[:0], m)
+			best = append(best, ms...)
+		}
 		if v > α {
-			best = append(best[:0], moves[0])
+			best = append(best[:0], m)
 			best = append(best, ms...)
 			α = v
 			if α >= β {
@@ -254,11 +267,9 @@ func (ai *MinimaxAI) minimax(
 				return best, v
 			}
 		}
-		break
-	}
-	spawn := ai.cfg.Spawn
-	if depth <= 3 {
-		spawn = 1
+		if spawn > 1 {
+			break
+		}
 	}
 	mc := make(chan tak.Move, spawn)
 	job := &mmJob{
@@ -269,24 +280,26 @@ func (ai *MinimaxAI) minimax(
 		depth: depth,
 		ply:   ply,
 	}
-	job.wg.Add(spawn)
-	for i := 0; i < spawn; i++ {
-		go ai.mmWorker(job)
-	}
-	done := make(chan struct{})
-	go func() {
-		job.wg.Wait()
-		close(done)
-	}()
-outer:
-	for _, m := range moves[i:] {
-		select {
-		case mc <- m:
-		case <-done:
-			break outer
+	if i < len(moves) {
+		job.wg.Add(spawn)
+		for i := 0; i < spawn; i++ {
+			go ai.mmWorker(job)
 		}
+		done := make(chan struct{})
+		go func() {
+			job.wg.Wait()
+			close(done)
+		}()
+	outer:
+		for _, m := range moves[i:] {
+			select {
+			case mc <- m:
+			case <-done:
+				break outer
+			}
+		}
+		close(mc)
+		<-done
 	}
-	close(mc)
-	<-done
 	return job.best, job.α
 }
