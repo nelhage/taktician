@@ -27,6 +27,7 @@ type MinimaxAI struct {
 }
 
 type Stats struct {
+	Depth     int
 	Generated uint64
 	Evaluated uint64
 	Cutoffs   uint64
@@ -105,7 +106,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	var prevEval uint64
 	var branchSum uint64
 	for i := 1; i <= m.cfg.Depth; i++ {
-		m.st = Stats{}
+		m.st = Stats{Depth: i}
 		start := time.Now()
 		ms, v = m.minimax(p, 0, i, ms, minEval-1, maxEval+1)
 		timeUsed := time.Now().Sub(top)

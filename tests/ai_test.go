@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 )
 
 var debug = flag.Int("debug", 0, "debug level")
+var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
 
 type TestCase struct {
 	p          *ptn.PTN
@@ -130,7 +132,14 @@ func runTest(t *testing.T, tc *TestCase) {
 	cfg.Size = p.Size()
 	cfg.Debug = *debug
 	ai := ai.NewMinimax(cfg)
+	start := time.Now()
 	pv, v, st := ai.Analyze(p, tc.limit)
+	elapsed := time.Now().Sub(start)
+	if *dumpPerf {
+		log.Printf("%s move=%d color=%s depth=%d evaluated=%d time=%s",
+			tc.id, tc.moveNumber, tc.color, st.Depth, st.Evaluated, elapsed,
+		)
+	}
 	if len(pv) == 0 {
 		t.Errorf("%s: did not return a move!", tc.id)
 		return
