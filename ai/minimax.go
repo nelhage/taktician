@@ -238,9 +238,11 @@ func (ai *MinimaxAI) minimax(
 	var ms []tak.Move
 	var v int64
 
-	spawn := ai.cfg.Spawn
-	if depth < 5 {
+	var spawn int
+	if depth <= 4 {
 		spawn = 1
+	} else {
+		spawn = ai.cfg.Spawn
 	}
 
 	for i, m = range moves {
