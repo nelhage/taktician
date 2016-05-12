@@ -15,6 +15,8 @@ type Weights struct {
 
 	Concentration int
 
+	Liberties int
+
 	Groups [8]int
 }
 
@@ -123,12 +125,14 @@ func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64, ws *Weights) int {
 	sc := 0
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(&ai.c, g)
+		libs := bitboard.Popcount(bitboard.Grow(&ai.c, g|empty, g) &^ g)
 
 		sp := w
 		if h > sp {
 			sp = h
 		}
 		sc += ws.Groups[sp]
+		sc += ws.Liberties * libs
 	}
 
 	return sc
