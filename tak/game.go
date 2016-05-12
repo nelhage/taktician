@@ -128,7 +128,7 @@ func (p *Position) GameOver() (over bool, winner Color) {
 	if (p.whiteStones+p.whiteCaps) != 0 &&
 		(p.blackStones+p.blackCaps) != 0 &&
 		(p.analysis.White|p.analysis.Black) != p.cfg.c.Mask {
-		return false, White
+		return false, NoColor
 	}
 
 	return true, p.flatsWinner()
@@ -251,6 +251,7 @@ const (
 )
 
 type WinDetails struct {
+	Over       bool
 	Reason     WinReason
 	Winner     Color
 	WhiteFlats int
@@ -259,10 +260,8 @@ type WinDetails struct {
 
 func (p *Position) WinDetails() WinDetails {
 	over, c := p.GameOver()
-	if !over {
-		panic("WinDetails on a game not over")
-	}
 	var d WinDetails
+	d.Over = over
 	d.Winner = c
 	d.WhiteFlats, d.BlackFlats = p.countFlats()
 	if _, ok := p.hasRoad(); ok {

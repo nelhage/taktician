@@ -136,7 +136,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		if v > winThreshold || v < -winThreshold {
 			break
 		}
-		if i > 2 && i != m.cfg.Depth {
+		if i > 2 && i != m.cfg.Depth && limit != 0 {
 			estimate := timeUsed + time.Now().Sub(start)*time.Duration(branchSum/uint64(i-1))
 			if estimate > limit {
 				if m.cfg.Debug > 0 {
