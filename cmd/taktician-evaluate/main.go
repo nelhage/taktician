@@ -13,6 +13,7 @@ import (
 var (
 	depth  = flag.Int("depth", 3, "depth to search")
 	size   = flag.Int("size", 5, "board size")
+	zero   = flag.Bool("zero", false, "start with zero weights, not defaults")
 	w1     = flag.String("w1", "", "first set of weights")
 	w2     = flag.String("w2", "", "second set of weights")
 	seed   = flag.Int64("seed", 1, "starting seed")
@@ -36,6 +37,10 @@ func main() {
 
 	weights1 := ai.DefaultWeights
 	weights2 := ai.DefaultWeights
+	if *zero {
+		weights1 = ai.Weights{}
+		weights2 = ai.Weights{}
+	}
 	if *w1 != "" {
 		err := json.Unmarshal([]byte(*w1), &weights1)
 		if err != nil {
@@ -83,8 +88,8 @@ func main() {
 		}
 	}
 
-	log.Printf("done games=%d p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
-		*games,
+	log.Printf("done games=%d seed=%d p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
+		*games, *seed,
 		stats[0].wins, stats[0].roadWins, stats[0].flatWins,
 		stats[1].wins, stats[1].roadWins, stats[1].flatWins)
 }
