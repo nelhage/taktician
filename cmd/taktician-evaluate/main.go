@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
+	"math/rand"
 	"sync"
 
 	"github.com/nelhage/taktician/ai"
@@ -19,6 +20,8 @@ var (
 	seed   = flag.Int64("seed", 1, "starting seed")
 	games  = flag.Int("games", 10, "number of games")
 	cutoff = flag.Int("cutoff", 81, "cut games off after how many plies")
+
+	verbose = flag.Bool("verbose", false, "log results per game")
 )
 
 type gameSpec struct {
@@ -59,20 +62,23 @@ func main() {
 		flatWins int
 		roadWins int
 	}
+	var ties int
 
 	rc := make(chan gameResult)
 
 	go runGames(weights1, weights2, *seed, rc)
 	for r := range rc {
 		d := r.p.WinDetails()
-		log.Printf("game n=%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
-			r.spec.i, r.p.MoveNumber(),
-			r.spec.p1color, d.Winner,
-			d.WhiteFlats,
-			d.BlackFlats,
-			r.p.WhiteStones(),
-			r.p.BlackStones(),
-		)
+		if *verbose {
+			log.Printf("game n=%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
+				r.spec.i, r.p.MoveNumber(),
+				r.spec.p1color, d.Winner,
+				d.WhiteFlats,
+				d.BlackFlats,
+				r.p.WhiteStones(),
+				r.p.BlackStones(),
+			)
+		}
 		if d.Over {
 			st := &stats[0]
 			if d.Winner == r.spec.p1color.Flip() {
@@ -86,10 +92,17 @@ func main() {
 				st.roadWins++
 			}
 		}
+		if d.Winner == tak.NoColor {
+			ties++
+		}
 	}
 
-	log.Printf("done games=%d seed=%d p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
-		*games, *seed,
+	j, _ := json.Marshal(&weights1)
+	log.Printf("p1=%s", j)
+	j, _ = json.Marshal(&weights2)
+	log.Printf("p2=%s", j)
+	log.Printf("done games=%d seed=%d ties=%d p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
+		*games, *seed, ties,
 		stats[0].wins, stats[0].roadWins, stats[0].flatWins,
 		stats[1].wins, stats[1].roadWins, stats[1].flatWins)
 }
@@ -126,18 +139,18 @@ func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 			wg.Done()
 		}()
 	}
+	r := rand.New(rand.NewSource(seed))
 	for g := 0; g < *games; g++ {
 		var white, black ai.TakPlayer
 		p1 := ai.NewMinimax(ai.MinimaxConfig{
 			Depth:    *depth,
-			Seed:     seed,
+			Seed:     r.Int63(),
 			Evaluate: ai.MakeEvaluator(&w1),
 			Size:     *size,
 		})
-		seed++
 		p2 := ai.NewMinimax(ai.MinimaxConfig{
 			Depth:    *depth,
-			Seed:     seed,
+			Seed:     r.Int63(),
 			Evaluate: ai.MakeEvaluator(&w2),
 			Size:     *size,
 		})
