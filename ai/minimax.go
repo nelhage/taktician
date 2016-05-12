@@ -50,7 +50,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m.precompute()
 	m.evaluate = cfg.Evaluate
 	if m.evaluate == nil {
-		m.evaluate = V3evaluate
+		m.evaluate = DefaultEvaluate
 	}
 	return m
 }

@@ -5,24 +5,61 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-const (
-	v3WeightFlat       = 200
-	v3WeightStanding   = 100
-	v3WeightCaptured   = 100
-	v3WeightControlled = 300
-	v3WeightCapstone   = -150
-	v3WeightGroup      = 4
-)
+type Weights struct {
+	TopFlat  int
+	Standing int
+	Capstone int
 
-func V3evaluate(m *MinimaxAI, p *tak.Position) int64 {
+	Flat     int
+	Captured int
+
+	Concentration int
+
+	Groups [8]int
+}
+
+var DefaultWeights = Weights{
+	TopFlat:  500,
+	Standing: 400,
+	Capstone: 350,
+
+	Flat: 100,
+
+	Captured: 100,
+
+	Concentration: 50,
+	Groups: [8]int{
+		0,   // 0
+		0,   // 1
+		100, // 2
+		200, // 3
+		400, // 4
+	},
+}
+
+func MakeEvaluator(w *Weights) EvaluationFunc {
+	return func(m *MinimaxAI, p *tak.Position) int64 {
+		return evaluate(w, m, p)
+	}
+}
+
+var DefaultEvaluate = MakeEvaluator(&DefaultWeights)
+
+func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
+		var pieces int64
+		if winner == tak.White {
+			pieces = int64(p.WhiteStones())
+		} else {
+			pieces = int64(p.BlackStones())
+		}
 		switch winner {
 		case tak.NoColor:
 			return 0
 		case p.ToMove():
-			return maxEval - int64(p.MoveNumber())
+			return maxEval - int64(p.MoveNumber()) + pieces
 		default:
-			return minEval + int64(p.MoveNumber())
+			return minEval + int64(p.MoveNumber()) - pieces
 		}
 	}
 	mine, theirs := 0, 0
@@ -34,7 +71,6 @@ func V3evaluate(m *MinimaxAI, p *tak.Position) int64 {
 			theirs += w
 		}
 	}
-	weightGroup := v3WeightGroup
 	maxStack := 0
 	analysis := p.Analysis()
 	for x := 0; x < p.Size(); x++ {
@@ -46,51 +82,53 @@ func V3evaluate(m *MinimaxAI, p *tak.Position) int64 {
 			if len(sq) > maxStack {
 				maxStack = len(sq)
 			}
-			if sq[0].Kind() == tak.Standing {
-				addw(sq[0].Color(), v3WeightStanding)
-			} else {
-				addw(sq[0].Color(), v3WeightControlled)
-			}
-			if sq[0].Kind() == tak.Capstone {
-				addw(sq[0].Color(), v3WeightCapstone)
+			switch sq[0].Kind() {
+			case tak.Standing:
+				addw(sq[0].Color(), w.Standing)
+			case tak.Flat:
+				addw(sq[0].Color(), w.TopFlat)
+			case tak.Capstone:
+				addw(sq[0].Color(), w.Capstone)
 			}
 
 			for i, stone := range sq {
 				if i > 0 && i < p.Size() {
-					addw(sq[0].Color(), v3WeightCaptured)
+					addw(sq[0].Color(), w.Captured)
 				}
 				if stone.Kind() == tak.Flat {
-					addw(stone.Color(), v3WeightFlat)
+					addw(stone.Color(), w.Flat)
 				}
 			}
 		}
 	}
 
 	empty := ^(analysis.White | analysis.Black)
-	if maxStack >= 3 {
-		weightGroup--
+	addw(tak.White, m.scoreGroups(analysis.WhiteGroups, empty, w))
+	addw(tak.Black, m.scoreGroups(analysis.BlackGroups, empty, w))
+
+	for _, r := range m.regions {
+		wc := bitboard.Popcount(analysis.White & r)
+		bc := bitboard.Popcount(analysis.Black & r)
+		if wc > bc {
+			addw(tak.White, (wc-bc)*w.Concentration)
+		} else {
+			addw(tak.Black, (bc-wc)*w.Concentration)
+		}
 	}
-	if bitboard.Popcount(empty) < (p.Size()*p.Size())/2 {
-		weightGroup--
-	}
-	addw(tak.White, m.scoreGroups(analysis.WhiteGroups, empty, weightGroup))
-	addw(tak.Black, m.scoreGroups(analysis.BlackGroups, empty, weightGroup))
 
 	return int64(mine - theirs)
 }
 
-func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64, weight int) int {
+func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64, ws *Weights) int {
 	sc := 0
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(&ai.c, g)
-		sz := bitboard.Popcount(g)
-		libs := bitboard.Popcount(bitboard.Grow(&ai.c, g|empty, g) &^ g)
 
 		sp := w
 		if h > sp {
 			sp = h
 		}
-		sc += (sp*sp + (2 * sz) + libs) * weight
+		sc += ws.Groups[sp]
 	}
 
 	return sc
