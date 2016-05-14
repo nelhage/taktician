@@ -16,10 +16,16 @@ type Client struct {
 
 	Debug bool
 
+	err error
+
 	Recv     chan string
 	send     chan string
 	shutdown chan struct{}
 	wg       sync.WaitGroup
+}
+
+func (c *Client) Error() error {
+	return c.err
 }
 
 func (c *Client) Connect(host string) error {
@@ -44,7 +50,9 @@ func (c *Client) recvThread() {
 		line, err := r.ReadString('\n')
 		if err != nil {
 			close(c.Recv)
-			panic(err)
+			c.err = err
+			c.conn.Close()
+			return
 		}
 		// trim the newline
 		line = line[:len(line)-1]
