@@ -17,7 +17,6 @@ import (
 )
 
 var (
-	depth  = flag.Int("depth", 3, "depth to search")
 	size   = flag.Int("size", 5, "board size")
 	zero   = flag.Bool("zero", false, "start with zero weights, not defaults")
 	w1     = flag.String("w1", "", "first set of weights")
@@ -25,6 +24,9 @@ var (
 	seed   = flag.Int64("seed", 1, "starting seed")
 	games  = flag.Int("games", 10, "number of games")
 	cutoff = flag.Int("cutoff", 81, "cut games off after how many plies")
+
+	depth = flag.Int("depth", 3, "depth to search")
+	limit = flag.Duration("limit", 0, "search duration")
 
 	verbose = flag.Bool("verbose", false, "log results per game")
 
@@ -118,6 +120,11 @@ func main() {
 		*games, *seed, ties,
 		stats[0].wins, stats[0].roadWins, stats[0].flatWins,
 		stats[1].wins, stats[1].roadWins, stats[1].flatWins)
+	a, b := int64(stats[0].wins), int64(stats[1].wins)
+	if a < b {
+		a, b = b, a
+	}
+	log.Printf("p[one-sided]=%f", binomTest(a, b, 0.5))
 }
 
 func writeGame(d string, r *gameResult) {
@@ -138,15 +145,15 @@ func writeGame(d string, r *gameResult) {
 }
 
 func worker(games <-chan gameSpec, out chan<- gameResult) {
-	var ms []tak.Move
 	for g := range games {
+		var ms []tak.Move
 		p := tak.New(tak.Config{Size: *size})
 		for i := 0; i < *cutoff; i++ {
 			var m tak.Move
 			if p.ToMove() == tak.White {
-				m = g.white.GetMove(p, 0)
+				m = g.white.GetMove(p, *limit)
 			} else {
-				m = g.black.GetMove(p, 0)
+				m = g.black.GetMove(p, *limit)
 			}
 			p, _ = p.Move(&m)
 			ms = append(ms, m)
