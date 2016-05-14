@@ -187,6 +187,7 @@ func (ai *MinimaxAI) minimax(
 
 	best := make([]tak.Move, 0, depth)
 	best = append(best, pv...)
+	max := minEval - 1
 	for _, m := range moves {
 		child, e := p.Move(&m)
 		if e != nil {
@@ -204,14 +205,12 @@ func (ai *MinimaxAI) minimax(
 			log.Printf("[minimax] search: depth=%d ply=%d m=%s pv=%s window=(%d,%d) ms=%s v=%d evaluated=%d",
 				depth, ply, ptn.FormatMove(&m), formatpv(newpv), α, β, formatpv(ms), v, ai.st.Evaluated)
 		}
-
-		if len(best) == 0 {
+		if v > max {
+			max = v
 			best = append(best[:0], m)
 			best = append(best, ms...)
 		}
 		if v > α {
-			best = append(best[:0], m)
-			best = append(best, ms...)
 			α = v
 			if α >= β {
 				ai.st.Cutoffs++
@@ -219,5 +218,5 @@ func (ai *MinimaxAI) minimax(
 			}
 		}
 	}
-	return best, α
+	return best, max
 }
