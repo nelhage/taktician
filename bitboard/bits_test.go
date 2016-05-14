@@ -68,3 +68,27 @@ func TestFlood(t *testing.T) {
 		}
 	}
 }
+
+func TestDimensions(t *testing.T) {
+	cases := []struct {
+		size uint
+		bits uint64
+		w    int
+		h    int
+	}{
+		{5, 0x108421c, 3, 5},
+		{5, 0, 0, 0},
+		{5, 0x843800, 3, 3},
+		{5, 0x08000, 1, 1},
+	}
+	for _, tc := range cases {
+		c := Precompute(tc.size)
+		w, h := Dimensions(&c, tc.bits)
+		if w != tc.w || h != tc.h {
+			t.Errorf("Dimensions(%d, %x) = (%d,%d) != (%d,%d)",
+				tc.size, tc.bits, w, h, tc.w, tc.h,
+			)
+		}
+	}
+
+}
