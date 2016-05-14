@@ -21,21 +21,22 @@ type Weights struct {
 }
 
 var DefaultWeights = Weights{
-	TopFlat:  500,
-	Standing: 400,
-	Capstone: 350,
+	TopFlat:  300,
+	Standing: 200,
+	Capstone: 300,
 
-	Flat: 100,
+	Flat:      100,
+	Liberties: 25,
 
-	Captured: 100,
+	Captured: 0,
 
-	Concentration: 50,
+	Concentration: 0,
 	Groups: [8]int{
-		0,   // 0
-		0,   // 1
-		100, // 2
-		200, // 3
-		400, // 4
+		0, // 0
+		0, // 1
+		0, // 2
+		0, // 3
+		0, // 4
 	},
 }
 
@@ -118,6 +119,11 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		}
 	}
 
+	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^analysis.Black, analysis.White) &^ analysis.White)
+	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^analysis.White, analysis.Black) &^ analysis.Black)
+	addw(tak.White, w.Liberties*wl)
+	addw(tak.Black, w.Liberties*bl)
+
 	return int64(mine - theirs)
 }
 
@@ -125,14 +131,12 @@ func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64, ws *Weights) int {
 	sc := 0
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(&ai.c, g)
-		libs := bitboard.Popcount(bitboard.Grow(&ai.c, g|empty, g) &^ g)
 
 		sp := w
 		if h > sp {
 			sp = h
 		}
 		sc += ws.Groups[sp]
-		sc += ws.Liberties * libs
 	}
 
 	return sc
