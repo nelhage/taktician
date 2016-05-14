@@ -3,11 +3,16 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
+	"path"
 	"sync"
 
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -22,6 +27,10 @@ var (
 	cutoff = flag.Int("cutoff", 81, "cut games off after how many plies")
 
 	verbose = flag.Bool("verbose", false, "log results per game")
+
+	threads = flag.Int("threads", 4, "number of parallel threads")
+
+	out = flag.String("out", "", "directory to write ptns to")
 )
 
 type gameSpec struct {
@@ -33,6 +42,7 @@ type gameSpec struct {
 type gameResult struct {
 	spec gameSpec
 	p    *tak.Position
+	ms   []tak.Move
 }
 
 func main() {
@@ -95,6 +105,9 @@ func main() {
 		if d.Winner == tak.NoColor {
 			ties++
 		}
+		if *out != "" {
+			writeGame(*out, &r)
+		}
 	}
 
 	j, _ := json.Marshal(&weights1)
@@ -107,7 +120,25 @@ func main() {
 		stats[1].wins, stats[1].roadWins, stats[1].flatWins)
 }
 
+func writeGame(d string, r *gameResult) {
+	os.MkdirAll(d, 0755)
+	p := &ptn.PTN{}
+	p.Tags = []ptn.Tag{
+		{"Size", fmt.Sprintf("%d", r.p.Size())},
+		{"Player1", r.spec.p1color.String()},
+	}
+	for i, m := range r.ms {
+		if i%2 == 0 {
+			p.Ops = append(p.Ops, &ptn.MoveNumber{Number: i/2 + 1})
+		}
+		p.Ops = append(p.Ops, &ptn.Move{Move: m})
+	}
+	ptnPath := path.Join(d, fmt.Sprintf("%d.ptn", r.spec.i))
+	ioutil.WriteFile(ptnPath, []byte(p.Render()), 0644)
+}
+
 func worker(games <-chan gameSpec, out chan<- gameResult) {
+	var ms []tak.Move
 	for g := range games {
 		p := tak.New(tak.Config{Size: *size})
 		for i := 0; i < *cutoff; i++ {
@@ -118,6 +149,7 @@ func worker(games <-chan gameSpec, out chan<- gameResult) {
 				m = g.black.GetMove(p, 0)
 			}
 			p, _ = p.Move(&m)
+			ms = append(ms, m)
 			if ok, _ := p.GameOver(); ok {
 				break
 			}
@@ -125,6 +157,7 @@ func worker(games <-chan gameSpec, out chan<- gameResult) {
 		out <- gameResult{
 			spec: g,
 			p:    p,
+			ms:   ms,
 		}
 	}
 }
@@ -132,8 +165,8 @@ func worker(games <-chan gameSpec, out chan<- gameResult) {
 func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 	gc := make(chan gameSpec)
 	var wg sync.WaitGroup
-	wg.Add(4)
-	for i := 0; i < 4; i++ {
+	wg.Add(*threads)
+	for i := 0; i < *threads; i++ {
 		go func() {
 			worker(gc, rc)
 			wg.Done()
