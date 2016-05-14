@@ -28,15 +28,16 @@ var DefaultWeights = Weights{
 	Flat:      100,
 	Liberties: 25,
 
-	Captured: 0,
+	Captured: 25,
 
-	Concentration: 0,
+	Concentration: 50,
+
 	Groups: [8]int{
-		0, // 0
-		0, // 1
-		0, // 2
-		0, // 3
-		0, // 4
+		0,   // 0
+		0,   // 1
+		0,   // 2
+		100, // 3
+		200, // 4
 	},
 }
 
