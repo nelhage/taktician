@@ -133,11 +133,8 @@ func (ai *MinimaxAI) scoreGroups(gs []uint64, empty uint64, ws *Weights) int {
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(&ai.c, g)
 
-		sp := w
-		if h > sp {
-			sp = h
-		}
-		sc += ws.Groups[sp]
+		sc += ws.Groups[w]
+		sc += ws.Groups[h]
 	}
 
 	return sc
