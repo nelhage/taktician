@@ -24,6 +24,7 @@ var (
 	seed      = flag.Int64("seed", 0, "specify a seed")
 	debug     = flag.Int("debug", 1, "debug level")
 	quiet     = flag.Bool("quiet", false, "don't print board diagrams")
+	explain   = flag.Bool("explain", false, "explain scoring")
 )
 
 func main() {
@@ -66,6 +67,9 @@ func analyze(p *tak.Position) {
 	pv, val, _ := player.Analyze(p, *timeLimit)
 	if !*quiet {
 		cli.RenderBoard(os.Stdout, p)
+		if *explain {
+			ai.ExplainScore(player, os.Stdout, p)
+		}
 	}
 	fmt.Printf("AI analysis:\n")
 	fmt.Printf(" pv=")
@@ -93,6 +97,9 @@ func analyze(p *tak.Position) {
 	if !*quiet {
 		fmt.Println("Resulting position:")
 		cli.RenderBoard(os.Stdout, p)
+		if *explain {
+			ai.ExplainScore(player, os.Stdout, p)
+		}
 	}
 
 	fmt.Println()

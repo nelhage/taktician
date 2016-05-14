@@ -59,23 +59,6 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 func (m *MinimaxAI) precompute() {
 	s := uint(m.cfg.Size)
 	m.c = bitboard.Precompute(s)
-	switch m.cfg.Size {
-	// TODO(board-size)
-	case 5:
-		br := uint64((1 << 3) - 1)
-		br |= br<<s | br<<(2*s)
-		m.regions = []uint64{
-			br, br << 2,
-			br << (2 * s), br << (2*s + 2),
-		}
-	case 6:
-		br := uint64((1 << 3) - 1)
-		br |= br<<s | br<<(2*s)
-		m.regions = []uint64{
-			br, br << 3,
-			br << (3 * s), br << (3*s + 3),
-		}
-	}
 }
 
 func formatpv(ms []tak.Move) string {

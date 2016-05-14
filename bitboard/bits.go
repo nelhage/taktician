@@ -46,7 +46,7 @@ func Grow(c *Constants, within uint64, seed uint64) uint64 {
 	next |= (seed >> 1) &^ c.L
 	next |= (seed >> c.Size)
 	next |= (seed << c.Size)
-	return next & within
+	return next & within & c.Mask
 }
 
 func FloodGroups(c *Constants, bits uint64, out []uint64) []uint64 {
