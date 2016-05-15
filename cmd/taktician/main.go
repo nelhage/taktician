@@ -23,6 +23,7 @@ var (
 	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
 	size     = flag.Int("size", 5, "size of game to offer")
 	once     = flag.Bool("once", false, "play a single game and exit")
+	debug    = flag.Int("debug", 1, "debug level")
 	takbot   = flag.String("takbot", "", "challenge TakBot AI")
 )
 
@@ -106,7 +107,7 @@ func playGame(c *playtak.Client, line string) {
 	ai := ai.NewMinimax(ai.MinimaxConfig{
 		Size:  size,
 		Depth: *depth,
-		Debug: 1,
+		Debug: *debug,
 	})
 	p := tak.New(tak.Config{Size: size})
 	gameStr := fmt.Sprintf("Game#%s", bits[2])
