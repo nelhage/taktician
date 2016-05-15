@@ -1,6 +1,10 @@
 package ai
 
-import "github.com/nelhage/taktician/tak"
+import (
+	"sort"
+
+	"github.com/nelhage/taktician/tak"
+)
 
 type moveGenerator struct {
 	ai  *MinimaxAI
@@ -12,6 +16,18 @@ type moveGenerator struct {
 
 	ms []tak.Move
 	i  int
+}
+
+type sortMoves struct{ m *moveGenerator }
+
+func (s sortMoves) Len() int { return len(s.m.ms) }
+func (s sortMoves) Less(i, j int) bool {
+	ii := s.m.ms[i].X + s.m.ms[i].Y*s.m.ai.cfg.Size
+	ji := s.m.ms[j].X + s.m.ms[j].Y*s.m.ai.cfg.Size
+	return s.m.ai.heatMap[ii] > s.m.ai.heatMap[ji]
+}
+func (s sortMoves) Swap(i, j int) {
+	s.m.ms[i], s.m.ms[j] = s.m.ms[j], s.m.ms[i]
 }
 
 func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
@@ -43,6 +59,8 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 					j := mg.ai.rand.Int31n(int32(i))
 					mg.ms[j], mg.ms[i] = mg.ms[i], mg.ms[j]
 				}
+			} else {
+				sort.Sort(sortMoves{mg})
 			}
 			fallthrough
 		default:
