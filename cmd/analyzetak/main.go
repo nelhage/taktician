@@ -18,6 +18,7 @@ var (
 	all       = flag.Bool("all", false, "show all possible moves")
 	tps       = flag.Bool("tps", false, "render position in tps")
 	move      = flag.Int("move", 0, "PTN move number to analyze")
+	final     = flag.Bool("final", false, "analyze final position only")
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
 	black     = flag.Bool("black", false, "only analyze black's move")
 	white     = flag.Bool("white", false, "only analyze white's move")
@@ -49,7 +50,7 @@ func main() {
 	case *move != 0:
 		color = tak.White
 	}
-	if *move != 0 {
+	if *move != 0 || *final {
 		p, e := parsed.PositionAtMove(*move, color)
 		if e != nil {
 			log.Fatal("find move:", e)
