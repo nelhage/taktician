@@ -163,8 +163,18 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		if v > winThreshold || v < -winThreshold {
 			break
 		}
-		if i > 2 && i != m.cfg.Depth && limit != 0 {
-			estimate := timeUsed + time.Now().Sub(start)*time.Duration(branchSum/uint64(i-1))
+		if i+base != m.cfg.Depth && limit != 0 {
+			var branch uint64
+			if i > 2 {
+				branch = branchSum / uint64(i-1)
+			} else {
+				// conservative estimate if we haven't
+				// run enough plies to have one
+				// yet. This can matter if the table
+				// returns a deep move
+				branch = 20
+			}
+			estimate := timeUsed + time.Now().Sub(start)*time.Duration(branch)
 			if estimate > limit {
 				if m.cfg.Debug > 0 {
 					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
