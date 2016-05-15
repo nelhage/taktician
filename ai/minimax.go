@@ -16,8 +16,7 @@ const (
 	minEval            = -maxEval
 	winThreshold       = 1 << 29
 
-	tableSize  uint64 = (1 << 20)
-	debugTable        = false
+	tableSize uint64 = (1 << 20)
 )
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
@@ -40,7 +39,7 @@ type tableEntry struct {
 	depth int
 	value int64
 	bound boundType
-	ms    []tak.Move
+	m     tak.Move
 	p     *tak.Position
 }
 
@@ -145,7 +144,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	te := m.ttGet(p.Hash())
 	if te != nil && te.bound == exactBound {
 		base = te.depth
-		ms = te.ms
+		ms = []tak.Move{te.m}
 	}
 
 	for i := 1; i+base <= m.cfg.Depth; i++ {
@@ -204,6 +203,8 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	return ms, v, m.st
 }
 
+const debugTable = false
+
 func (ai *MinimaxAI) minimax(
 	p *tak.Position,
 	ply, depth int,
@@ -224,14 +225,14 @@ func (ai *MinimaxAI) minimax(
 				(te.value < α && te.bound == upperBound) ||
 				(te.value > β && te.bound == lowerBound) {
 				ai.st.TTHits++
-				return te.ms, te.value
+				return []tak.Move{te.m}, te.value
 			}
 		}
 
 		if te.bound == exactBound &&
 			(te.value > winThreshold || te.value < -winThreshold) {
 			ai.st.TTHits++
-			return te.ms, te.value
+			return []tak.Move{te.m}, te.value
 		}
 	}
 	mg := MoveGenerator{
@@ -277,14 +278,14 @@ func (ai *MinimaxAI) minimax(
 					ai.st.Cut0++
 				}
 				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
-					var tm []tak.Move
+					var tm tak.Move
 					td := 0
 					if te != nil {
-						tm = te.ms
+						tm = te.m
 						td = te.depth
 					}
 					log.Printf("[minimax] late cutoff depth=%d m=%d pv=%s te=%d:%s killer=%s pos=%q",
-						depth, i, formatpv(pv), td, formatpv(tm), ptn.FormatMove(&m), ptn.FormatTPS(p),
+						depth, i, formatpv(pv), td, ptn.FormatMove(&tm), ptn.FormatMove(&m), ptn.FormatTPS(p),
 					)
 				}
 				break
@@ -295,11 +296,11 @@ func (ai *MinimaxAI) minimax(
 	if debugTable && te != nil &&
 		te.depth == depth &&
 		te.bound == exactBound &&
-		!best[0].Equal(&te.ms[0]) {
+		!best[0].Equal(&te.m) {
 		log.Printf("? ply=%d depth=%d found=[%s, %v] t=[%s, %v]",
 			ply, depth,
 			ptn.FormatMove(&best[0]), α,
-			ptn.FormatMove(&te.ms[0]), te.value,
+			ptn.FormatMove(&te.m), te.value,
 		)
 		log.Printf(" p> %#v", p)
 		log.Printf("tp> %#v", te.p)
@@ -308,7 +309,7 @@ func (ai *MinimaxAI) minimax(
 	te = ai.ttPut(p.Hash())
 	te.hash = p.Hash()
 	te.depth = depth
-	te.ms = best
+	te.m = best[0]
 	te.value = α
 	if debugTable {
 		te.p = p

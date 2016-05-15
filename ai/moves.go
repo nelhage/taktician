@@ -25,7 +25,7 @@ func (mg *MoveGenerator) Next() (m tak.Move, p *tak.Position) {
 		case 0:
 			mg.i++
 			if mg.te != nil {
-				m = mg.te.ms[0]
+				m = mg.te.m
 				break
 			}
 			fallthrough
@@ -33,6 +33,9 @@ func (mg *MoveGenerator) Next() (m tak.Move, p *tak.Position) {
 			mg.i++
 			if len(mg.pv) > 0 {
 				m = mg.pv[0]
+				if mg.te != nil && m.Equal(&mg.te.m) {
+					continue
+				}
 				break
 			}
 			fallthrough
@@ -53,7 +56,7 @@ func (mg *MoveGenerator) Next() (m tak.Move, p *tak.Position) {
 			}
 			m = mg.ms[0]
 			mg.ms = mg.ms[1:]
-			if mg.te != nil && mg.te.ms[0].Equal(&m) {
+			if mg.te != nil && mg.te.m.Equal(&m) {
 				continue
 			}
 			if len(mg.pv) != 0 && mg.pv[0].Equal(&m) {
