@@ -38,6 +38,7 @@ var DefaultWeights = Weights{
 		0,   // 2
 		100, // 3
 		300, // 4
+		500, // 5
 	},
 }
 
