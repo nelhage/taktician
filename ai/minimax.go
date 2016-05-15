@@ -241,12 +241,12 @@ func (ai *MinimaxAI) minimax(
 			return []tak.Move{te.m}, te.value
 		}
 	}
-	mg := MoveGenerator{
-		rand: ai.rand,
-		ply:  ply,
-		p:    p,
-		te:   te,
-		pv:   pv,
+	mg := moveGenerator{
+		ai:  ai,
+		ply: ply,
+		p:   p,
+		te:  te,
+		pv:  pv,
 	}
 
 	best := make([]tak.Move, 0, depth)

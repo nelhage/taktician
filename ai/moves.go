@@ -1,15 +1,11 @@
 package ai
 
-import (
-	"math/rand"
+import "github.com/nelhage/taktician/tak"
 
-	"github.com/nelhage/taktician/tak"
-)
-
-type MoveGenerator struct {
-	rand *rand.Rand
-	ply  int
-	p    *tak.Position
+type moveGenerator struct {
+	ai  *MinimaxAI
+	ply int
+	p   *tak.Position
 
 	te *tableEntry
 	pv []tak.Move
@@ -18,7 +14,7 @@ type MoveGenerator struct {
 	i  int
 }
 
-func (mg *MoveGenerator) Next() (m tak.Move, p *tak.Position) {
+func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 	for {
 		var m tak.Move
 		switch mg.i {
@@ -44,7 +40,7 @@ func (mg *MoveGenerator) Next() (m tak.Move, p *tak.Position) {
 			mg.ms = mg.p.AllMoves()
 			if mg.ply == 0 {
 				for i := len(mg.ms) - 1; i > 0; i-- {
-					j := mg.rand.Int31n(int32(i))
+					j := mg.ai.rand.Int31n(int32(i))
 					mg.ms[j], mg.ms[i] = mg.ms[i], mg.ms[j]
 				}
 			}
