@@ -69,8 +69,10 @@ func main() {
 			}
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
+				log.Printf("%d. %s", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
 				analyzeWith(w, p)
 			case p.ToMove() == tak.Black && color != tak.White:
+				log.Printf("%d. ... %s", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
 				analyzeWith(b, p)
 			}
 			var e error
