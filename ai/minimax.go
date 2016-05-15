@@ -266,7 +266,14 @@ func (ai *MinimaxAI) minimax(
 		if len(best) != 0 {
 			newpv = best[1:]
 		}
-		ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
+		if i > 1 {
+			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -α-1, -α)
+			if -v > α && -v < β {
+				ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
+			}
+		} else {
+			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
+		}
 		v = -v
 		if ai.cfg.Debug > 2 && ply == 0 {
 			log.Printf("[minimax] search: depth=%d ply=%d m=%s pv=%s window=(%d,%d) ms=%s v=%d evaluated=%d",
