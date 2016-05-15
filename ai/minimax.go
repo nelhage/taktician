@@ -276,6 +276,17 @@ func (ai *MinimaxAI) minimax(
 				if i == 1 {
 					ai.st.Cut0++
 				}
+				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
+					var tm []tak.Move
+					td := 0
+					if te != nil {
+						tm = te.ms
+						td = te.depth
+					}
+					log.Printf("[minimax] late cutoff depth=%d m=%d pv=%s te=%d:%s killer=%s pos=%q",
+						depth, i, formatpv(pv), td, formatpv(tm), ptn.FormatMove(&m), ptn.FormatTPS(p),
+					)
+				}
 				break
 			}
 		}
