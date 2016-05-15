@@ -133,15 +133,22 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	top := time.Now()
 	var prevEval uint64
 	var branchSum uint64
-	for i := 1; i <= m.cfg.Depth; i++ {
-		m.st = Stats{Depth: i}
+	base := 0
+	te := m.ttGet(p.Hash())
+	if te != nil && te.bound == exactBound {
+		base = te.depth
+		ms = []tak.Move{te.m}
+	}
+
+	for i := 1; i+base <= m.cfg.Depth; i++ {
+		m.st = Stats{Depth: i + base}
 		start := time.Now()
-		ms, v = m.minimax(p, 0, i, ms, minEval-1, maxEval+1)
+		ms, v = m.minimax(p, 0, i+base, ms, minEval-1, maxEval+1)
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
 			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d branch=%d",
-				i, v, formatpv(ms),
+				base+i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
 				m.st.Evaluated,
