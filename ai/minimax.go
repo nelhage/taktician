@@ -55,6 +55,7 @@ type Stats struct {
 	Depth     int
 	Generated uint64
 	Evaluated uint64
+	Terminal  uint64
 	Visited   uint64
 
 	CutNodes  uint64
@@ -164,8 +165,10 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d cut=%d cut0=%d(%2.2f) m/cut=%2.2f all=%d",
+			log.Printf("[minimax]  stats: visited=%d evaluated=%d terminal=%d cut=%d cut0=%d(%2.2f) m/cut=%2.2f all=%d",
 				m.st.Visited,
+				m.st.Evaluated,
+				m.st.Terminal,
 				m.st.CutNodes,
 				m.st.Cut0,
 				float64(m.st.Cut0)/float64(m.st.CutNodes+1),
@@ -213,6 +216,9 @@ func (ai *MinimaxAI) minimax(
 	over, _ := p.GameOver()
 	if depth == 0 || over {
 		ai.st.Evaluated++
+		if over {
+			ai.st.Terminal++
+		}
 		return nil, ai.evaluate(ai, p)
 	}
 
