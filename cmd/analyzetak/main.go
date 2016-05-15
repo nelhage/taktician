@@ -67,9 +67,10 @@ func main() {
 			if !ok {
 				continue
 			}
-			if p.ToMove() == tak.White {
+			switch {
+			case p.ToMove() == tak.White && color != tak.Black:
 				analyzeWith(w, p)
-			} else {
+			case p.ToMove() == tak.Black && color != tak.White:
 				analyzeWith(b, p)
 			}
 			var e error
