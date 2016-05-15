@@ -49,21 +49,53 @@ func main() {
 	case *move != 0:
 		color = tak.White
 	}
-	p, e := parsed.PositionAtMove(*move, color)
-	if e != nil {
-		log.Fatal("find move:", e)
-	}
+	if *move != 0 {
+		p, e := parsed.PositionAtMove(*move, color)
+		if e != nil {
+			log.Fatal("find move:", e)
+		}
 
-	analyze(p)
+		analyze(p)
+	} else {
+		p, e := parsed.InitialPosition()
+		if e != nil {
+			log.Fatal("initial:", e)
+		}
+		w, b := makeAI(p), makeAI(p)
+		for _, o := range parsed.Ops {
+			m, ok := o.(*ptn.Move)
+			if !ok {
+				continue
+			}
+			if p.ToMove() == tak.White {
+				analyzeWith(w, p)
+			} else {
+				analyzeWith(b, p)
+			}
+			var e error
+			p, e = p.Move(&m.Move)
+			if e != nil {
+				log.Fatalf("illegal move %s: %v",
+					ptn.FormatMove(&m.Move), e)
+			}
+		}
+	}
 }
 
-func analyze(p *tak.Position) {
-	player := ai.NewMinimax(ai.MinimaxConfig{
+func makeAI(p *tak.Position) *ai.MinimaxAI {
+	return ai.NewMinimax(ai.MinimaxConfig{
 		Size:  p.Size(),
 		Depth: *depth,
 		Seed:  *seed,
 		Debug: *debug,
 	})
+}
+
+func analyze(p *tak.Position) {
+	analyzeWith(makeAI(p), p)
+}
+
+func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 	pv, val, _ := player.Analyze(p, *timeLimit)
 	if !*quiet {
 		cli.RenderBoard(os.Stdout, p)
