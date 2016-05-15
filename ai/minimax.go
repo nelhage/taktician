@@ -55,8 +55,15 @@ type Stats struct {
 	Depth     int
 	Generated uint64
 	Evaluated uint64
-	Cutoffs   uint64
-	TTHits    uint64
+	Visited   uint64
+
+	CutNodes  uint64
+	Cut0      uint64
+	CutSearch uint64
+
+	AllNodes uint64
+
+	TTHits uint64
 }
 
 type MinimaxConfig struct {
@@ -87,8 +94,8 @@ func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
 	return te
 }
 
-func (m *MinimaxAI) ttPut(t *tableEntry) {
-	m.table[t.hash%tableSize] = *t
+func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
+	return &m.table[h%tableSize]
 }
 
 func (m *MinimaxAI) precompute() {
@@ -156,6 +163,14 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 				m.st.Evaluated/(prevEval+1),
 			)
 		}
+		if m.cfg.Debug > 1 {
+			log.Printf("[minimax]  stats: visited=%d cut=%d cut0=%d m/cut=%0.2f all=%d",
+				m.st.Visited,
+				m.st.CutNodes,
+				m.st.Cut0,
+				float64(m.st.CutSearch)/float64(m.st.CutNodes+1),
+				m.st.AllNodes)
+		}
 		if i > 1 {
 			branchSum += m.st.Evaluated / (prevEval + 1)
 		}
@@ -199,6 +214,8 @@ func (ai *MinimaxAI) minimax(
 		ai.st.Evaluated++
 		return nil, ai.evaluate(ai, p)
 	}
+
+	ai.st.Visited++
 
 	moves := p.AllMoves()
 	ai.st.Generated += uint64(len(moves))
@@ -247,7 +264,7 @@ func (ai *MinimaxAI) minimax(
 	best := make([]tak.Move, 0, depth)
 	best = append(best, pv...)
 	improved := false
-	for _, m := range moves {
+	for i, m := range moves {
 		child, e := p.Move(&m)
 		if e != nil {
 			continue
@@ -275,7 +292,11 @@ func (ai *MinimaxAI) minimax(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.st.Cutoffs++
+				ai.st.CutSearch += uint64(i + 1)
+				ai.st.CutNodes++
+				if i == 0 {
+					ai.st.Cut0++
+				}
 				break
 			}
 		}
@@ -294,24 +315,21 @@ func (ai *MinimaxAI) minimax(
 		log.Printf("tp> %#v", te.p)
 	}
 
-	if depth > 1 {
-		te := tableEntry{
-			hash:  p.Hash(),
-			depth: depth,
-			m:     best[0],
-			value: α,
-		}
-		if debugTable {
-			te.p = p
-		}
-		if !improved {
-			te.bound = upperBound
-		} else if α >= β {
-			te.bound = lowerBound
-		} else {
-			te.bound = exactBound
-		}
-		ai.ttPut(&te)
+	te = ai.ttPut(p.Hash())
+	te.hash = p.Hash()
+	te.depth = depth
+	te.m = best[0]
+	te.value = α
+	if debugTable {
+		te.p = p
+	}
+	if !improved {
+		te.bound = upperBound
+		ai.st.AllNodes++
+	} else if α >= β {
+		te.bound = lowerBound
+	} else {
+		te.bound = exactBound
 	}
 
 	return best, α
