@@ -136,8 +136,7 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 		if *explain {
 			ai.ExplainScore(player, os.Stdout, p)
 		}
+		fmt.Println()
+		fmt.Println()
 	}
-
-	fmt.Println()
-	fmt.Println()
 }
