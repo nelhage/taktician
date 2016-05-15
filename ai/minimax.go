@@ -15,6 +15,8 @@ const (
 	maxEval      int64 = 1 << 30
 	minEval            = -maxEval
 	winThreshold       = 1 << 29
+
+	tableSize uint64 = (1 << 20)
 )
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
@@ -28,13 +30,32 @@ type MinimaxAI struct {
 	regions []uint64
 
 	evaluate EvaluationFunc
+
+	table []tableEntry
 }
+
+type tableEntry struct {
+	hash  uint64
+	depth int
+	value int64
+	bound boundType
+	m     tak.Move
+}
+
+type boundType byte
+
+const (
+	lowerBound = iota
+	exactBound = iota
+	upperBound = iota
+)
 
 type Stats struct {
 	Depth     int
 	Generated uint64
 	Evaluated uint64
 	Cutoffs   uint64
+	TTHits    uint64
 }
 
 type MinimaxConfig struct {
@@ -53,7 +74,20 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	if m.evaluate == nil {
 		m.evaluate = DefaultEvaluate
 	}
+	m.table = make([]tableEntry, tableSize)
 	return m
+}
+
+func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
+	te := &m.table[h%tableSize]
+	if te.hash != h {
+		return nil
+	}
+	return te
+}
+
+func (m *MinimaxAI) ttPut(t *tableEntry) {
+	m.table[t.hash%tableSize] = *t
 }
 
 func (m *MinimaxAI) precompute() {
@@ -105,11 +139,12 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
-			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d branch=%d",
+			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d branch=%d",
 				i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
 				m.st.Evaluated,
+				m.st.TTHits,
 				m.st.Evaluated/(prevEval+1),
 			)
 		}
@@ -153,6 +188,22 @@ func (ai *MinimaxAI) minimax(
 			moves[j], moves[i] = moves[i], moves[j]
 		}
 	}
+	te := ai.ttGet(p.Hash())
+	if te != nil {
+		if te.depth >= depth {
+			if te.bound == exactBound ||
+				(te.value < α && te.bound == upperBound) ||
+				(te.value > β && te.bound == lowerBound) {
+				ai.st.TTHits++
+				return []tak.Move{te.m}, te.value
+			}
+		}
+		if te.bound == exactBound &&
+			(te.value > winThreshold || te.value < -winThreshold) {
+			ai.st.TTHits++
+			return []tak.Move{te.m}, te.value
+		}
+	}
 	if len(pv) > 0 {
 		j := 1
 		for i, m := range moves {
@@ -161,6 +212,10 @@ func (ai *MinimaxAI) minimax(
 				if m.Type < tak.SlideLeft {
 					break
 				}
+
+			} else if te != nil && j < len(moves) && te.m.Equal(&m) {
+				moves[j], moves[i] = moves[i], moves[j]
+				j++
 			} else if j < len(moves) && m.X == pv[0].X && m.Y == pv[0].Y {
 				moves[j], moves[i] = moves[i], moves[j]
 				j++
@@ -200,6 +255,23 @@ func (ai *MinimaxAI) minimax(
 				break
 			}
 		}
+	}
+
+	if depth > 1 {
+		te := tableEntry{
+			hash:  p.Hash(),
+			depth: depth,
+			m:     best[0],
+			value: max,
+		}
+		if max <= α {
+			te.bound = upperBound
+		} else if max >= β {
+			te.bound = lowerBound
+		} else {
+			te.bound = exactBound
+		}
+		ai.ttPut(&te)
 	}
 	return best, max
 }
