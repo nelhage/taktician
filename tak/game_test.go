@@ -212,4 +212,23 @@ func TestHash(t *testing.T) {
 	if d.Hash() != a.Hash() {
 		t.Fatalf("hash fail")
 	}
+
+	e := moves([]Move{
+		Move{X: 0, Y: 0, Type: PlaceFlat},
+		Move{X: 1, Y: 1, Type: PlaceFlat},
+
+		Move{X: 1, Y: 2, Type: PlaceFlat},
+		Move{X: 2, Y: 1, Type: PlaceStanding},
+	})
+	f := moves([]Move{
+		Move{X: 0, Y: 0, Type: PlaceFlat},
+		Move{X: 1, Y: 1, Type: PlaceFlat},
+
+		Move{X: 1, Y: 2, Type: PlaceStanding},
+		Move{X: 2, Y: 1, Type: PlaceFlat},
+	})
+
+	if e.Hash() == f.Hash() {
+		t.Fatalf("hash fail when swapping flat/standing")
+	}
 }

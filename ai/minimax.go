@@ -40,6 +40,7 @@ type tableEntry struct {
 	value int64
 	bound boundType
 	m     tak.Move
+	p     *tak.Position
 }
 
 type boundType byte
@@ -169,6 +170,8 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	return ms, v, m.st
 }
 
+const debugTable = false
+
 func (ai *MinimaxAI) minimax(
 	p *tak.Position,
 	ply, depth int,
@@ -198,6 +201,7 @@ func (ai *MinimaxAI) minimax(
 				return []tak.Move{te.m}, te.value
 			}
 		}
+
 		if te.bound == exactBound &&
 			(te.value > winThreshold || te.value < -winThreshold) {
 			ai.st.TTHits++
@@ -260,12 +264,28 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 
+	if debugTable && te != nil &&
+		te.depth == depth &&
+		te.bound == exactBound &&
+		!best[0].Equal(&te.m) {
+		log.Printf("? ply=%d depth=%d found=[%s, %v] t=[%s, %v]",
+			ply, depth,
+			ptn.FormatMove(&best[0]), α,
+			ptn.FormatMove(&te.m), te.value,
+		)
+		log.Printf(" p> %#v", p)
+		log.Printf("tp> %#v", te.p)
+	}
+
 	if depth > 1 {
 		te := tableEntry{
 			hash:  p.Hash(),
 			depth: depth,
 			m:     best[0],
 			value: α,
+		}
+		if debugTable {
+			te.p = p
 		}
 		if !improved {
 			te.bound = upperBound

@@ -132,8 +132,8 @@ func (p *Position) hashAt(i int) uint64 {
 	}
 	s := posHashes[i]
 	for _, c := range p.board[i] {
-		s *= prime64
 		s ^= uint64(c)
+		s *= prime64
 	}
 	return s
 }
