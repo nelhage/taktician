@@ -19,6 +19,8 @@ type Weights struct {
 
 	Liberties int
 
+	Tempo int
+
 	Groups [8]int
 }
 
@@ -31,6 +33,8 @@ var DefaultWeights = Weights{
 	Liberties: 25,
 
 	Captured: 25,
+
+	Tempo: 250,
 
 	Groups: [8]int{
 		0,   // 0
@@ -76,6 +80,7 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 			theirs += w
 		}
 	}
+	addw(p.ToMove(), w.Tempo)
 	analysis := p.Analysis()
 	for x := 0; x < p.Size(); x++ {
 		for y := 0; y < p.Size(); y++ {
