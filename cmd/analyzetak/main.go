@@ -24,6 +24,7 @@ var (
 	white     = flag.Bool("white", false, "only analyze white's move")
 	seed      = flag.Int64("seed", 0, "specify a seed")
 	sort      = flag.Bool("sort", true, "sort moves via history heuristic")
+	table     = flag.Bool("table", true, "use the transposition table")
 	debug     = flag.Int("debug", 1, "debug level")
 	quiet     = flag.Bool("quiet", false, "don't print board diagrams")
 	explain   = flag.Bool("explain", false, "explain scoring")
@@ -94,7 +95,8 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		Seed:  *seed,
 		Debug: *debug,
 
-		NoSort: !*sort,
+		NoSort:  !*sort,
+		NoTable: !*table,
 	})
 }
 
