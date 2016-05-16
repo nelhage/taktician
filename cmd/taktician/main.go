@@ -22,6 +22,7 @@ var (
 	accept   = flag.String("accept", "", "accept a game from specified user")
 	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
 	size     = flag.Int("size", 5, "size of game to offer")
+	limit    = flag.Duration("limit", time.Minute, "time limit per move")
 	once     = flag.Bool("once", false, "play a single game and exit")
 	debug    = flag.Int("debug", 1, "debug level")
 	takbot   = flag.String("takbot", "", "challenge TakBot AI")
@@ -97,7 +98,7 @@ func main() {
 }
 
 func timeBound(remaining time.Duration) time.Duration {
-	return time.Minute
+	return *limit
 }
 
 func playGame(c *playtak.Client, line string) {
