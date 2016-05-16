@@ -5,7 +5,7 @@
 [Player2 "TakticianBot"]
 [Result "R-0"]
 [Id "26271"]
-
+[Move "29 black"]
 
 1. a1 b4
 2. c4 c3
@@ -49,4 +49,3 @@
 40. 5d4-14 e3
 41. 2d3>
 R-0
-
