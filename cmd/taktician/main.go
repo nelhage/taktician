@@ -16,16 +16,19 @@ import (
 
 var (
 	server   = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
-	depth    = flag.Int("depth", 5, "minimax depth")
 	user     = flag.String("user", "", "username for login")
 	pass     = flag.String("pass", "", "password for login")
 	accept   = flag.String("accept", "", "accept a game from specified user")
 	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
 	size     = flag.Int("size", 5, "size of game to offer")
-	limit    = flag.Duration("limit", time.Minute, "time limit per move")
 	once     = flag.Bool("once", false, "play a single game and exit")
-	debug    = flag.Int("debug", 1, "debug level")
 	takbot   = flag.String("takbot", "", "challenge TakBot AI")
+
+	debug = flag.Int("debug", 1, "debug level")
+	depth = flag.Int("depth", 5, "minimax depth")
+	limit = flag.Duration("limit", time.Minute, "time limit per move")
+	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
+	table = flag.Bool("table", true, "use the transposition table")
 )
 
 const ClientName = "Taktician AI"
@@ -109,6 +112,9 @@ func playGame(c *playtak.Client, line string) {
 		Size:  size,
 		Depth: *depth,
 		Debug: *debug,
+
+		NoSort:  !*sort,
+		NoTable: !*table,
 	})
 	p := tak.New(tak.Config{Size: size})
 	gameStr := fmt.Sprintf("Game#%s", bits[2])
