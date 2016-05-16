@@ -204,6 +204,8 @@ func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 	r := rand.New(rand.NewSource(seed))
 	for g := 0; g < *games; g++ {
 		var white, black ai.TakPlayer
+		w1 := w1
+		w2 := w2
 		if *perturb != 0.0 {
 			w1 = perturbWeights(*perturb, w1)
 			w2 = perturbWeights(*perturb, w2)
