@@ -1,4 +1,7 @@
 language: go
 
+install: go get -t ./...
+script: go test -v ./...
+
 go:
   - 1.6.2
