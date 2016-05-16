@@ -19,7 +19,16 @@ const (
 	tableSize uint64 = (1 << 20)
 
 	maxStack = 15
+
+	lmrBound = 5
 )
+
+func lmrReduce(d int) int {
+	if d <= 2 {
+		return 0
+	}
+	return d / 3
+}
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
 
@@ -75,6 +84,7 @@ type Stats struct {
 	Cut1      uint64
 	CutSearch uint64
 
+	LMR      uint64
 	ReSearch uint64
 
 	AllNodes uint64
@@ -90,6 +100,7 @@ type MinimaxConfig struct {
 
 	NoSort  bool
 	NoTable bool
+	NoLMR   bool
 
 	Evaluate EvaluationFunc
 }
@@ -194,7 +205,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d scout=%d evaluated=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d",
+			log.Printf("[minimax]  stats: visited=%d scout=%d evaluated=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d lmr=%d research=%d",
 				m.st.Visited,
 				m.st.Scout,
 				m.st.Evaluated,
@@ -206,6 +217,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
 				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
 				m.st.AllNodes,
+				m.st.LMR,
 				m.st.ReSearch)
 		}
 		if i > 1 {
@@ -312,7 +324,12 @@ func (ai *MinimaxAI) minimax(
 		}
 		ai.stack[ply].m = m
 		if i > 1 {
-			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -α-1, -α)
+			d := depth - 1
+			if β == α+1 && i > lmrBound && !ai.cfg.NoLMR {
+				ai.st.LMR++
+				d -= lmrReduce(depth)
+			}
+			ms, v = ai.minimax(child, ply+1, d, newpv, -α-1, -α)
 			if -v > α && -v < β {
 				ai.st.ReSearch++
 				ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)

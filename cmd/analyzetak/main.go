@@ -32,6 +32,7 @@ var (
 	seed  = flag.Int64("seed", 0, "specify a seed")
 	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
 	table = flag.Bool("table", true, "use the transposition table")
+	lmr   = flag.Bool("lmr", true, "use late-move reduction")
 
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 )
@@ -113,6 +114,7 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 
 		NoSort:  !*sort,
 		NoTable: !*table,
+		NoLMR:   !*lmr,
 	})
 }
 
