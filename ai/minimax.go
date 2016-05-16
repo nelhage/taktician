@@ -74,7 +74,8 @@ type MinimaxConfig struct {
 	Debug int
 	Seed  int64
 
-	NoSort bool
+	NoSort  bool
+	NoTable bool
 
 	Evaluate EvaluationFunc
 }
@@ -92,6 +93,9 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 }
 
 func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
+	if m.cfg.NoTable {
+		return nil
+	}
 	te := &m.table[h%tableSize]
 	if te.hash != h {
 		return nil
