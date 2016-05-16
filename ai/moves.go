@@ -7,9 +7,10 @@ import (
 )
 
 type moveGenerator struct {
-	ai  *MinimaxAI
-	ply int
-	p   *tak.Position
+	ai    *MinimaxAI
+	ply   int
+	depth int
+	p     *tak.Position
 
 	te *tableEntry
 	pv []tak.Move
@@ -59,7 +60,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 					j := mg.ai.rand.Int31n(int32(i))
 					mg.ms[j], mg.ms[i] = mg.ms[i], mg.ms[j]
 				}
-			} else {
+			} else if mg.depth > 1 && !mg.ai.cfg.NoSort {
 				sort.Sort(sortMoves{mg})
 			}
 			fallthrough

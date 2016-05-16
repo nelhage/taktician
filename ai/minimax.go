@@ -74,6 +74,8 @@ type MinimaxConfig struct {
 	Debug int
 	Seed  int64
 
+	NoSort bool
+
 	Evaluate EvaluationFunc
 }
 
@@ -247,11 +249,12 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 	mg := moveGenerator{
-		ai:  ai,
-		ply: ply,
-		p:   p,
-		te:  te,
-		pv:  pv,
+		ai:    ai,
+		ply:   ply,
+		depth: depth,
+		p:     p,
+		te:    te,
+		pv:    pv,
 	}
 
 	best := make([]tak.Move, 0, depth)
