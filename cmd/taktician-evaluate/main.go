@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"reflect"
 	"sync"
 
 	"github.com/nelhage/taktician/ai"
@@ -17,13 +18,14 @@ import (
 )
 
 var (
-	size   = flag.Int("size", 5, "board size")
-	zero   = flag.Bool("zero", false, "start with zero weights, not defaults")
-	w1     = flag.String("w1", "", "first set of weights")
-	w2     = flag.String("w2", "", "second set of weights")
-	seed   = flag.Int64("seed", 1, "starting seed")
-	games  = flag.Int("games", 10, "number of games")
-	cutoff = flag.Int("cutoff", 81, "cut games off after how many plies")
+	size    = flag.Int("size", 5, "board size")
+	zero    = flag.Bool("zero", false, "start with zero weights, not defaults")
+	w1      = flag.String("w1", "", "first set of weights")
+	w2      = flag.String("w2", "", "second set of weights")
+	perturb = flag.Float64("perturb", 0.0, "perturb weights")
+	seed    = flag.Int64("seed", 1, "starting seed")
+	games   = flag.Int("games", 10, "number of games")
+	cutoff  = flag.Int("cutoff", 81, "cut games off after how many plies")
 
 	depth = flag.Int("depth", 3, "depth to search")
 	limit = flag.Duration("limit", 0, "search duration")
@@ -169,6 +171,26 @@ func worker(games <-chan gameSpec, out chan<- gameResult) {
 	}
 }
 
+func perturbWeights(p float64, w ai.Weights) ai.Weights {
+	r := reflect.Indirect(reflect.ValueOf(&w))
+	typ := r.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if f.Type.Kind() != reflect.Int {
+			continue
+		}
+		v := r.Field(i).Interface().(int)
+		adj := rand.NormFloat64() * p
+		v = int(float64(v) * (1 + adj))
+		r.Field(i).SetInt(int64(v))
+	}
+
+	j, _ := json.Marshal(&w)
+	log.Printf("perturb: %s", j)
+
+	return w
+}
+
 func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 	gc := make(chan gameSpec)
 	var wg sync.WaitGroup
@@ -182,6 +204,10 @@ func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 	r := rand.New(rand.NewSource(seed))
 	for g := 0; g < *games; g++ {
 		var white, black ai.TakPlayer
+		if *perturb != 0.0 {
+			w1 = perturbWeights(*perturb, w1)
+			w2 = perturbWeights(*perturb, w2)
+		}
 		p1 := ai.NewMinimax(ai.MinimaxConfig{
 			Depth:    *depth,
 			Seed:     r.Int63(),
