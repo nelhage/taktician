@@ -12,7 +12,7 @@ func TestHasRoad(t *testing.T) {
 	}
 
 	for y := 0; y < 5; y++ {
-		p.set(2, y, Square{MakePiece(Black, Flat)})
+		set(p, 2, y, Square{MakePiece(Black, Flat)})
 	}
 
 	p.analyze()
@@ -21,9 +21,9 @@ func TestHasRoad(t *testing.T) {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
-	p.set(2, 0, nil)
-	p.set(1, 0, Square{MakePiece(Black, Flat)})
-	p.set(1, 1, Square{MakePiece(Black, Flat)})
+	set(p, 2, 0, nil)
+	set(p, 1, 0, Square{MakePiece(Black, Flat)})
+	set(p, 1, 1, Square{MakePiece(Black, Flat)})
 
 	p.analyze()
 	c, ok = p.hasRoad()
@@ -31,22 +31,22 @@ func TestHasRoad(t *testing.T) {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
-	p.set(1, 1, Square{MakePiece(Black, Standing)})
+	set(p, 1, 1, Square{MakePiece(Black, Standing)})
 	p.analyze()
 	c, ok = p.hasRoad()
 	if ok {
 		t.Errorf("c=%v hasRoad=%v\n", c, ok)
 	}
 
-	p.board = make([]Square, 5*5)
-	p.set(0, 1, Square{MakePiece(White, Flat)})
-	p.set(1, 1, Square{MakePiece(White, Flat)})
-	p.set(1, 2, Square{MakePiece(White, Flat)})
-	p.set(2, 2, Square{MakePiece(White, Flat)})
-	p.set(2, 3, Square{MakePiece(White, Flat)})
-	p.set(3, 3, Square{MakePiece(White, Flat)})
-	p.set(3, 4, Square{MakePiece(White, Flat)})
-	p.set(4, 4, Square{MakePiece(White, Flat)})
+	p = New(Config{Size: 5})
+	set(p, 0, 1, Square{MakePiece(White, Flat)})
+	set(p, 1, 1, Square{MakePiece(White, Flat)})
+	set(p, 1, 2, Square{MakePiece(White, Flat)})
+	set(p, 2, 2, Square{MakePiece(White, Flat)})
+	set(p, 2, 3, Square{MakePiece(White, Flat)})
+	set(p, 3, 3, Square{MakePiece(White, Flat)})
+	set(p, 3, 4, Square{MakePiece(White, Flat)})
+	set(p, 4, 4, Square{MakePiece(White, Flat)})
 
 	p.analyze()
 	c, ok = p.hasRoad()
@@ -57,14 +57,14 @@ func TestHasRoad(t *testing.T) {
 
 func TestHasRoadRegression(t *testing.T) {
 	p := New(Config{Size: 5})
-	p.set(1, 4, Square{MakePiece(White, Flat)})
-	p.set(1, 3, Square{MakePiece(White, Flat)})
-	p.set(1, 2, Square{MakePiece(White, Flat)})
-	p.set(2, 2, Square{MakePiece(White, Flat)})
-	p.set(3, 2, Square{MakePiece(White, Flat)})
-	p.set(4, 2, Square{MakePiece(White, Flat)})
-	p.set(4, 1, Square{MakePiece(White, Flat)})
-	p.set(4, 0, Square{MakePiece(White, Flat)})
+	set(p, 1, 4, Square{MakePiece(White, Flat)})
+	set(p, 1, 3, Square{MakePiece(White, Flat)})
+	set(p, 1, 2, Square{MakePiece(White, Flat)})
+	set(p, 2, 2, Square{MakePiece(White, Flat)})
+	set(p, 3, 2, Square{MakePiece(White, Flat)})
+	set(p, 4, 2, Square{MakePiece(White, Flat)})
+	set(p, 4, 1, Square{MakePiece(White, Flat)})
+	set(p, 4, 0, Square{MakePiece(White, Flat)})
 	p.analyze()
 	c, ok := p.hasRoad()
 	if !ok || c != White {
@@ -74,19 +74,20 @@ func TestHasRoadRegression(t *testing.T) {
 
 func TestFlatsWinner(t *testing.T) {
 	p := New(Config{Size: 5})
-	p.set(0, 0, Square{MakePiece(White, Flat)})
+	set(p, 0, 0, Square{MakePiece(White, Flat)})
 	w := p.flatsWinner()
 	if w != White {
 		t.Fatal("flats winner", p)
 	}
-	p.set(1, 1, Square{MakePiece(Black, Flat),
+	set(p, 1, 1, Square{MakePiece(Black, Flat),
 		MakePiece(White, Flat)})
-	p.set(1, 2, Square{MakePiece(Black, Flat)})
+
+	set(p, 1, 2, Square{MakePiece(Black, Flat)})
 	w = p.flatsWinner()
 	if w != Black {
 		t.Fatal("flats winner", p)
 	}
-	p.set(1, 3, Square{MakePiece(White, Flat)})
+	set(p, 1, 3, Square{MakePiece(White, Flat)})
 	w = p.flatsWinner()
 	if w != NoColor {
 		t.Fatal("flats winner", p)
@@ -121,7 +122,7 @@ func BenchmarkFullHasRoad(b *testing.B) {
 			} else {
 				piece = MakePiece(Black, Flat)
 			}
-			p.set(i, j, Square{piece})
+			set(p, i, j, Square{piece})
 		}
 	}
 	b.ResetTimer()
@@ -134,10 +135,10 @@ func BenchmarkFullHasRoad(b *testing.B) {
 func BenchmarkHasRoadWindy(b *testing.B) {
 	p := New(Config{Size: 5})
 	for y := 0; y < 4; y++ {
-		p.set(3, y, Square{MakePiece(White, Flat)})
+		set(p, 3, y, Square{MakePiece(White, Flat)})
 	}
 	for x := 0; x < 4; x++ {
-		p.set(x, 3, Square{MakePiece(White, Flat)})
+		set(p, x, 3, Square{MakePiece(White, Flat)})
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

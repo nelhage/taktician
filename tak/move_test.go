@@ -7,16 +7,10 @@ import (
 )
 
 func TestMove(t *testing.T) {
-	g := &Config{Size: 5}
-	p := &Position{
-		cfg:         g,
-		whiteStones: 5,
-		whiteCaps:   1,
-		blackStones: 5,
-		blackCaps:   1,
-		move:        2,
-		board:       make([]Square, 5*5),
-	}
+	p := New(Config{Size: 5})
+	p.move = 2
+	p.whiteStones = 5
+	p.blackStones = 5
 
 	t.Log("Place a flat stone")
 	n, e := p.Move(&Move{3, 3, PlaceFlat, nil})
@@ -119,11 +113,12 @@ func TestMove(t *testing.T) {
 func TestMoveSlideStacks(t *testing.T) {
 	p := New(Config{Size: 5})
 	p.move = 4
-	p.set(3, 3, Square{
+	set(p, 3, 3, Square{
 		MakePiece(White, Capstone),
 		MakePiece(White, Flat),
 		MakePiece(Black, Flat),
 	})
+
 	next, e := p.Move(&Move{
 		X: 3, Y: 3,
 		Type:   SlideLeft,
@@ -201,7 +196,7 @@ func TestAllMovesBasicSlides(t *testing.T) {
 		p := New(Config{Size: 5})
 		// fake skip the opening moves
 		p.move = 4
-		p.set(tc.x, tc.y, Square{MakePiece(White, Flat)})
+		set(p, tc.x, tc.y, Square{MakePiece(White, Flat)})
 		var dirs []MoveType
 		for _, m := range p.AllMoves() {
 			if m.X != tc.x || m.Y != tc.y {

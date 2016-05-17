@@ -81,8 +81,11 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		if len(p.At(m.X, m.Y)) != 0 {
 			return nil, ErrOccupied
 		}
-		next.board = make([]Square, len(p.board))
-		copy(next.board, p.board)
+		next.Height = make([]uint8, len(p.Height))
+		copy(next.Height, p.Height)
+		next.Stacks = make([]uint64, len(p.Stacks))
+		copy(next.Stacks, p.Stacks)
+
 		var stones *byte
 		if place.Kind() == Capstone {
 			if p.ToMove() == Black {
@@ -101,7 +104,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 			return nil, ErrNoCapstone
 		}
 		*stones--
-		next.set(m.X, m.Y, []Piece{place})
+		set(&next, m.X, m.Y, []Piece{place})
 		next.analyze()
 		return &next, nil
 	}
@@ -117,9 +120,12 @@ func (p *Position) Move(m *Move) (*Position, error) {
 	if stack[0].Color() != p.ToMove() {
 		return nil, ErrIllegalSlide
 	}
-	next.board = make([]Square, len(p.board))
-	copy(next.board, p.board)
-	next.set(m.X, m.Y, stack[ct:])
+	next.Height = make([]uint8, len(p.Height))
+	copy(next.Height, p.Height)
+	next.Stacks = make([]uint64, len(p.Stacks))
+	copy(next.Stacks, p.Stacks)
+
+	set(&next, m.X, m.Y, stack[ct:])
 	stack = stack[:ct:ct]
 	x, y := m.X, m.Y
 	for _, c := range m.Slides {
@@ -151,7 +157,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		if len(tmp) > int(c) {
 			tmp[c] = MakePiece(tmp[c].Color(), Flat)
 		}
-		next.set(x, y, tmp)
+		set(&next, x, y, tmp)
 	}
 
 	next.analyze()
@@ -182,7 +188,7 @@ func calculateSlides(stack int) [][]byte {
 }
 
 func (p *Position) AllMoves() []Move {
-	moves := make([]Move, 0, len(p.board))
+	moves := make([]Move, 0, len(p.Stacks))
 	next := p.ToMove()
 	cap := false
 	if next == White {

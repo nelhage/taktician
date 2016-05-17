@@ -32,7 +32,8 @@ func New(g Config) *Position {
 		blackStones: byte(g.Pieces),
 		blackCaps:   byte(g.Capstones),
 		move:        0,
-		board:       make([]Square, g.Size*g.Size),
+		Height:      make([]uint8, g.Size*g.Size),
+		Stacks:      make([]uint64, g.Size*g.Size),
 	}
 	return p
 }
@@ -46,17 +47,19 @@ type Position struct {
 	blackStones byte
 	blackCaps   byte
 
-	move     int
-	board    []Square
+	move int
+
+	White    uint64
+	Black    uint64
+	Standing uint64
+	Caps     uint64
+	Height   []uint8
+	Stacks   []uint64
+
 	analysis Analysis
-	hash     uint64
 }
 
 type Analysis struct {
-	WhiteRoad   uint64
-	BlackRoad   uint64
-	White       uint64
-	Black       uint64
 	WhiteGroups []uint64
 	BlackGroups []uint64
 }
@@ -67,10 +70,26 @@ type Analysis struct {
 func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
 	p := New(cfg)
 	p.move = move
-	for x := 0; x < p.Size(); x++ {
-		for y := 0; y < p.Size(); y++ {
-			p.set(x, y, board[y][x])
-			for _, piece := range board[y][x] {
+	for y := 0; y < p.Size(); y++ {
+		for x := 0; x < p.Size(); x++ {
+			sq := board[y][x]
+			if len(sq) == 0 {
+				continue
+			}
+			i := uint(x + y*p.Size())
+			switch sq[0].Color() {
+			case White:
+				p.White |= (1 << i)
+			case Black:
+				p.Black |= (1 << i)
+			}
+			switch sq[0].Kind() {
+			case Capstone:
+				p.Caps |= (1 << i)
+			case Standing:
+				p.Standing |= (1 << i)
+			}
+			for j, piece := range sq {
 				switch piece {
 				case MakePiece(White, Capstone):
 					p.whiteCaps--
@@ -83,7 +102,14 @@ func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
 				default:
 					return nil, errors.New("bad stone")
 				}
+				if j == 0 {
+					continue
+				}
+				if piece.Color() == Black {
+					p.Stacks[i] |= 1 << uint(j-1)
+				}
 			}
+			p.Height[i] = uint8(len(sq) - 1)
 		}
 	}
 	p.analyze()
@@ -95,12 +121,66 @@ func (p *Position) Size() int {
 }
 
 func (p *Position) At(x, y int) Square {
-	return p.board[y*p.cfg.Size+x]
+	i := uint(x + y*p.Size())
+	var c Color
+	var k Kind
+	switch {
+	case p.White&(1<<i) != 0:
+		c = White
+	case p.Black&(1<<i) != 0:
+		c = Black
+	default:
+		return nil
+	}
+	sq := make(Square, p.Height[i]+1)
+	switch {
+	case p.Standing&(1<<i) != 0:
+		k = Standing
+	case p.Caps&(1<<i) != 0:
+		k = Capstone
+	default:
+		k = Flat
+	}
+	sq[0] = MakePiece(c, k)
+	for j := uint8(0); j < p.Height[i]; j++ {
+		if p.Stacks[i]&(1<<j) != 0 {
+			sq[j+1] = MakePiece(Black, Flat)
+		} else {
+			sq[j+1] = MakePiece(White, Flat)
+		}
+	}
+	return sq
 }
 
-func (p *Position) set(x, y int, s Square) {
-	i := y*p.cfg.Size + x
-	p.board[i] = s
+func set(p *Position, x, y int, s Square) {
+	i := uint(y*p.cfg.Size + x)
+	p.White &= ^(1 << i)
+	p.Black &= ^(1 << i)
+	p.Standing &= ^(1 << i)
+	p.Caps &= ^(1 << i)
+	if len(s) == 0 {
+		p.Height[i] = 0
+		return
+	}
+	p.Height[i] = uint8(len(s) - 1)
+	switch s[0].Color() {
+	case White:
+		p.White |= (1 << i)
+	case Black:
+		p.Black |= (1 << i)
+	}
+	switch s[0].Kind() {
+	case Standing:
+		p.Standing |= (1 << i)
+	case Capstone:
+		p.Caps |= (1 << i)
+	}
+	p.Stacks[i] = 0
+	for j, piece := range s[1:] {
+		if piece.Color() == Black {
+			p.Stacks[i] |= (1 << uint(j))
+		}
+	}
 }
 
 func (p *Position) Hash() uint64 {
@@ -133,7 +213,7 @@ func (p *Position) GameOver() (over bool, winner Color) {
 
 	if (p.whiteStones+p.whiteCaps) != 0 &&
 		(p.blackStones+p.blackCaps) != 0 &&
-		(p.analysis.White|p.analysis.Black) != p.cfg.c.Mask {
+		(p.White|p.Black) != p.cfg.c.Mask {
 		return false, NoColor
 	}
 
@@ -187,32 +267,8 @@ func (p *Position) Analysis() *Analysis {
 }
 
 func (p *Position) analyze() {
-	var br uint64
-	var wr uint64
-	var b uint64
-	var w uint64
-	for i, sq := range p.board {
-		if len(sq) == 0 {
-			continue
-		}
-		if sq[0].Color() == White {
-			w |= 1 << uint(i)
-		} else {
-			b |= 1 << uint(i)
-		}
-		if sq[0].IsRoad() {
-			if sq[0].Color() == White {
-				wr |= 1 << uint(i)
-			} else {
-				br |= 1 << uint(i)
-			}
-		}
-	}
-	p.analysis.WhiteRoad = wr
-	p.analysis.BlackRoad = br
-	p.analysis.White = w
-	p.analysis.Black = b
-
+	wr := p.White &^ p.Standing
+	br := p.Black &^ p.Standing
 	alloc := make([]uint64, 0, 2*p.Size())
 	p.analysis.WhiteGroups = bitboard.FloodGroups(&p.cfg.c, wr, alloc)
 	alloc = p.analysis.WhiteGroups
@@ -221,20 +277,9 @@ func (p *Position) analyze() {
 }
 
 func (p *Position) countFlats() (w int, b int) {
-	cw, cb := 0, 0
-	for i := 0; i < p.cfg.Size*p.cfg.Size; i++ {
-		stack := p.board[i]
-		if len(stack) > 0 {
-			if stack[0].Kind() == Flat {
-				if stack[0].Color() == White {
-					cw++
-				} else {
-					cb++
-				}
-			}
-		}
-	}
-	return cw, cb
+	w = bitboard.Popcount(p.White &^ (p.Standing | p.Caps))
+	b = bitboard.Popcount(p.Black &^ (p.Standing | p.Caps))
+	return w, b
 }
 
 func (p *Position) flatsWinner() Color {
