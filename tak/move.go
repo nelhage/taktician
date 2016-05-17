@@ -77,8 +77,8 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		}
 		place = MakePiece(place.Color().Flip(), place.Kind())
 	}
+	i := uint(m.X + m.Y*p.Size())
 	if place != 0 {
-		i := uint(m.X + m.Y*p.Size())
 		if (p.White|p.Black)&(1<<i) != 0 {
 			return nil, ErrOccupied
 		}
@@ -111,19 +111,24 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		} else {
 			next.Black |= (1 << i)
 		}
+		next.Height = make([]uint8, len(p.Height))
+		copy(next.Height, p.Height)
+		next.Height[i]++
 		next.analyze()
 		return &next, nil
 	}
 
-	stack := p.At(m.X, m.Y)
-	ct := 0
+	ct := uint(0)
 	for _, c := range m.Slides {
-		ct += int(c)
+		ct += uint(c)
 	}
-	if ct > p.cfg.Size || ct < 1 || ct > len(stack) {
+	if ct > uint(p.cfg.Size) || ct < 1 || ct > uint(p.Height[i]) {
 		return nil, ErrIllegalSlide
 	}
-	if stack[0].Color() != p.ToMove() {
+	if p.ToMove() == White && p.White&(1<<i) == 0 {
+		return nil, ErrIllegalSlide
+	}
+	if p.ToMove() == Black && p.Black&(1<<i) == 0 {
 		return nil, ErrIllegalSlide
 	}
 	next.Height = make([]uint8, len(p.Height))
@@ -131,8 +136,29 @@ func (p *Position) Move(m *Move) (*Position, error) {
 	next.Stacks = make([]uint64, len(p.Stacks))
 	copy(next.Stacks, p.Stacks)
 
-	set(&next, m.X, m.Y, stack[ct:])
-	stack = stack[:ct:ct]
+	top := p.Top(m.X, m.Y)
+	stack := p.Stacks[i] << 1
+	if top.Color() == Black {
+		stack |= 1
+	}
+
+	next.Caps &= ^(1 << i)
+	next.Standing &= ^(1 << i)
+	if uint(next.Height[i]) == ct {
+		next.White &= ^(1 << i)
+		next.Black &= ^(1 << i)
+	} else {
+		if stack&(1<<ct) == 0 {
+			next.White |= (1 << i)
+			next.Black &= ^(1 << i)
+		} else {
+			next.Black |= (1 << i)
+			next.White &= ^(1 << i)
+		}
+	}
+	next.Stacks[i] >>= ct
+	next.Height[i] -= uint8(ct)
+
 	x, y := m.X, m.Y
 	for _, c := range m.Slides {
 		x += dx
@@ -141,29 +167,44 @@ func (p *Position) Move(m *Move) (*Position, error) {
 			y < 0 || y >= next.cfg.Size {
 			return nil, ErrIllegalSlide
 		}
-		if int(c) < 1 || int(c) > len(stack) {
+		if int(c) < 1 || uint(c) > ct {
 			return nil, ErrIllegalSlide
 		}
-		base := next.At(x, y)
-		if len(base) > 0 {
-			switch base[0].Kind() {
-			case Flat:
-			case Capstone:
+		i = uint(x + y*p.Size())
+		switch {
+		case next.Caps&(1<<i) != 0:
+			return nil, ErrIllegalSlide
+		case next.Standing&(1<<i) != 0:
+			if ct != 1 || top.Kind() != Capstone {
 				return nil, ErrIllegalSlide
+			}
+			next.Standing &= ^(1 << i)
+		}
+		if next.White&(1<<i) != 0 {
+			next.Stacks[i] <<= 1
+		} else if next.Black&(1<<i) != 0 {
+			next.Stacks[i] <<= 1
+			next.Stacks[i] |= 1
+		}
+		drop := (stack >> (ct - uint(c-1))) & ((1 << (c - 1)) - 1)
+		next.Stacks[i] = next.Stacks[i]<<(c-1) | drop
+		next.Height[i] += c
+		if stack&(1<<(ct-uint(c))) != 0 {
+			next.Black |= (1 << i)
+			next.White &= ^(1 << i)
+		} else {
+			next.Black &= ^(1 << i)
+			next.White |= (1 << i)
+		}
+		ct -= uint(c)
+		if ct == 0 {
+			switch top.Kind() {
+			case Capstone:
+				next.Caps |= (1 << i)
 			case Standing:
-				if len(stack) != 1 || stack[0].Kind() != Capstone {
-					return nil, ErrIllegalSlide
-				}
+				next.Standing |= (1 << i)
 			}
 		}
-		cut := len(stack) - int(c)
-		var drop Square
-		drop, stack = stack[cut:len(stack):len(stack)], stack[:cut:cut]
-		tmp := append(drop, base...)
-		if len(tmp) > int(c) {
-			tmp[c] = MakePiece(tmp[c].Color(), Flat)
-		}
-		set(&next, x, y, tmp)
 	}
 
 	next.analyze()

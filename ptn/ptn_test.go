@@ -197,7 +197,7 @@ func TestPositionAtMove(t *testing.T) {
 		}
 		tps := FormatTPS(pos)
 		if tps != tc.tps {
-			t.Errorf("AtMove(%d, %s) =\n  %s\n!= %s",
+			t.Errorf("AtMove(%d, %s) =\n   %s\n!= %s",
 				tc.move, tc.color, tps, tc.tps,
 			)
 		}

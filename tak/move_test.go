@@ -98,10 +98,10 @@ func TestMove(t *testing.T) {
 	if e != ErrIllegalSlide {
 		t.Fatalf("slide onto a capstone")
 	}
-	t.Log("Slide a capstone onto a flat")
+	t.Log("Slide a capstone to flatten a wall")
 	n, e = n.Move(&Move{3, 3, SlideUp, []byte{1}})
 	if e != nil {
-		t.Fatalf("cap onto flat: %v", e)
+		t.Fatalf("cap onto wall: %v", e)
 	}
 	if sq := n.At(3, 4); !reflect.DeepEqual(sq,
 		Square{MakePiece(Black, Capstone),
@@ -127,16 +127,52 @@ func TestMoveSlideStacks(t *testing.T) {
 		t.Fatalf("slide: %v", e)
 	}
 	if sq := next.At(3, 3); len(sq) != 0 {
-		t.Errorf("(3,3)=%#v", sq)
+		t.Errorf("(3,3)=%v", sq)
 	}
 	if sq := next.At(2, 3); len(sq) != 1 || sq[0] != MakePiece(Black, Flat) {
-		t.Errorf("(2,3)=%#v", sq)
+		t.Errorf("(2,3)=%v", sq)
 	}
 	if sq := next.At(1, 3); len(sq) != 1 || sq[0] != MakePiece(White, Flat) {
-		t.Errorf("(1,3)=%#v", sq)
+		t.Errorf("(1,3)=%v", sq)
 	}
 	if sq := next.At(0, 3); len(sq) != 1 || sq[0] != MakePiece(White, Capstone) {
-		t.Errorf("(0,3)=%#v", sq)
+		t.Errorf("(0,3)=%v", sq)
+	}
+}
+
+func TestMoveMultiDrop(t *testing.T) {
+	p := New(Config{Size: 5})
+	p.move = 4
+	set(p, 1, 3, Square{
+		MakePiece(White, Capstone),
+		MakePiece(White, Flat),
+		MakePiece(Black, Flat),
+		MakePiece(Black, Flat),
+		MakePiece(White, Flat),
+		MakePiece(Black, Flat),
+		MakePiece(Black, Flat),
+	})
+
+	next, e := p.Move(&Move{
+		X: 1, Y: 3,
+		Type:   SlideRight,
+		Slides: []byte{2, 1, 2}})
+	if e != nil {
+		t.Fatalf("slide: %v", e)
+	}
+	expect := []struct {
+		x, y int
+		sq   Square
+	}{
+		{1, 3, Square{MakePiece(Black, Flat), MakePiece(Black, Flat)}},
+		{2, 3, Square{MakePiece(Black, Flat), MakePiece(White, Flat)}},
+		{3, 3, Square{MakePiece(Black, Flat)}},
+		{4, 3, Square{MakePiece(White, Capstone), MakePiece(White, Flat)}},
+	}
+	for _, e := range expect {
+		if sq := next.At(e.x, e.y); !reflect.DeepEqual(sq, e.sq) {
+			t.Errorf("%d,%d=%v!=%v", e.x, e.y, sq, e.sq)
+		}
 	}
 }
 

@@ -109,7 +109,7 @@ func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
 					p.Stacks[i] |= 1 << uint(j-1)
 				}
 			}
-			p.Height[i] = uint8(len(sq) - 1)
+			p.Height[i] = uint8(len(sq))
 		}
 	}
 	p.analyze()
@@ -122,6 +122,23 @@ func (p *Position) Size() int {
 
 func (p *Position) At(x, y int) Square {
 	i := uint(x + y*p.Size())
+	if (p.White|p.Black)&(1<<i) == 0 {
+		return nil
+	}
+	sq := make(Square, p.Height[i])
+	sq[0] = p.Top(x, y)
+	for j := uint8(1); j < p.Height[i]; j++ {
+		if p.Stacks[i]&(1<<(j-1)) != 0 {
+			sq[j] = MakePiece(Black, Flat)
+		} else {
+			sq[j] = MakePiece(White, Flat)
+		}
+	}
+	return sq
+}
+
+func (p *Position) Top(x, y int) Piece {
+	i := uint(x + y*p.Size())
 	var c Color
 	var k Kind
 	switch {
@@ -130,9 +147,8 @@ func (p *Position) At(x, y int) Square {
 	case p.Black&(1<<i) != 0:
 		c = Black
 	default:
-		return nil
+		return 0
 	}
-	sq := make(Square, p.Height[i]+1)
 	switch {
 	case p.Standing&(1<<i) != 0:
 		k = Standing
@@ -141,15 +157,7 @@ func (p *Position) At(x, y int) Square {
 	default:
 		k = Flat
 	}
-	sq[0] = MakePiece(c, k)
-	for j := uint8(0); j < p.Height[i]; j++ {
-		if p.Stacks[i]&(1<<j) != 0 {
-			sq[j+1] = MakePiece(Black, Flat)
-		} else {
-			sq[j+1] = MakePiece(White, Flat)
-		}
-	}
-	return sq
+	return MakePiece(c, k)
 }
 
 func set(p *Position, x, y int, s Square) {
@@ -162,7 +170,7 @@ func set(p *Position, x, y int, s Square) {
 		p.Height[i] = 0
 		return
 	}
-	p.Height[i] = uint8(len(s) - 1)
+	p.Height[i] = uint8(len(s))
 	switch s[0].Color() {
 	case White:
 		p.White |= (1 << i)
