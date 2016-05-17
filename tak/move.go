@@ -78,23 +78,25 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		place = MakePiece(place.Color().Flip(), place.Kind())
 	}
 	if place != 0 {
-		if len(p.At(m.X, m.Y)) != 0 {
+		i := uint(m.X + m.Y*p.Size())
+		if (p.White|p.Black)&(1<<i) != 0 {
 			return nil, ErrOccupied
 		}
-		next.Height = make([]uint8, len(p.Height))
-		copy(next.Height, p.Height)
-		next.Stacks = make([]uint64, len(p.Stacks))
-		copy(next.Stacks, p.Stacks)
 
 		var stones *byte
-		if place.Kind() == Capstone {
+		switch place.Kind() {
+		case Capstone:
 			if p.ToMove() == Black {
 				stones = &next.blackCaps
 			} else {
 				stones = &next.whiteCaps
 			}
-		} else {
-			if p.ToMove() == Black {
+			next.Caps |= (1 << i)
+		case Standing:
+			next.Standing |= (1 << i)
+			fallthrough
+		case Flat:
+			if place.Color() == Black {
 				stones = &next.blackStones
 			} else {
 				stones = &next.whiteStones
@@ -104,7 +106,11 @@ func (p *Position) Move(m *Move) (*Position, error) {
 			return nil, ErrNoCapstone
 		}
 		*stones--
-		set(&next, m.X, m.Y, []Piece{place})
+		if place.Color() == White {
+			next.White |= (1 << i)
+		} else {
+			next.Black |= (1 << i)
+		}
 		next.analyze()
 		return &next, nil
 	}
