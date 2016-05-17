@@ -176,7 +176,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d evaluated=%d terminal=%d cut=%d cut0=%d(%2.2f) m/cut=%2.2f all=%d",
+			log.Printf("[minimax]  stats: visited=%d evaluated=%d terminal=%d cut=%d cut0=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d",
 				m.st.Visited,
 				m.st.Evaluated,
 				m.st.Terminal,
@@ -184,6 +184,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 				m.st.Cut0,
 				float64(m.st.Cut0)/float64(m.st.CutNodes+1),
 				float64(m.st.CutSearch)/float64(m.st.CutNodes+1),
+				float64(m.st.Evaluated)/float64(timeMove.Seconds()*1000),
 				m.st.AllNodes)
 		}
 		if i > 1 {
