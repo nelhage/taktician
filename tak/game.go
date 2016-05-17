@@ -1,10 +1,7 @@
 package tak
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
-	"fmt"
 
 	"github.com/nelhage/taktician/bitboard"
 )
@@ -19,24 +16,6 @@ type Config struct {
 
 var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
 var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
-
-const (
-	offset64 = 14695981039346656037
-	prime64  = 1099511628211
-)
-
-var posHashes []uint64
-
-func init() {
-	for i := 0; i < 64; i++ {
-		var b [8]byte
-		_, e := rand.Read(b[:])
-		if e != nil {
-			panic(fmt.Sprintf("rand: %v", e))
-		}
-		posHashes = append(posHashes, binary.BigEndian.Uint64(b[:]))
-	}
-}
 
 func New(g Config) *Position {
 	if g.Pieces == 0 {
@@ -121,25 +100,11 @@ func (p *Position) At(x, y int) Square {
 
 func (p *Position) set(x, y int, s Square) {
 	i := y*p.cfg.Size + x
-	p.hash ^= p.hashAt(i)
 	p.board[i] = s
-	p.hash ^= p.hashAt(i)
-}
-
-func (p *Position) hashAt(i int) uint64 {
-	if len(p.board[i]) == 0 {
-		return 0
-	}
-	s := posHashes[i]
-	for _, c := range p.board[i] {
-		s ^= uint64(c)
-		s *= prime64
-	}
-	return s
 }
 
 func (p *Position) Hash() uint64 {
-	return p.hash
+	return 0
 }
 
 func (p *Position) ToMove() Color {

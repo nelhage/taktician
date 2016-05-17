@@ -96,6 +96,7 @@ func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
 	if m.cfg.NoTable {
 		return nil
 	}
+	return nil
 	te := &m.table[h%tableSize]
 	if te.hash != h {
 		return nil
