@@ -25,7 +25,7 @@ type Weights struct {
 }
 
 var DefaultWeights = Weights{
-	TopFlat:  300,
+	TopFlat:  400,
 	Standing: 200,
 	Capstone: 300,
 
@@ -71,54 +71,53 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 			return minEval + int64(p.MoveNumber()) - pieces
 		}
 	}
-	mine, theirs := 0, 0
-	me := p.ToMove()
-	addw := func(c tak.Color, w int) {
-		if c == me {
-			mine += w
-		} else {
-			theirs += w
-		}
+
+	var ws, bs int64
+
+	if p.ToMove() == tak.White {
+		ws += int64(w.Tempo)
+	} else {
+		bs += int64(w.Tempo)
 	}
-	addw(p.ToMove(), w.Tempo)
 	analysis := p.Analysis()
-	for x := 0; x < p.Size(); x++ {
-		for y := 0; y < p.Size(); y++ {
-			sq := p.At(x, y)
-			if len(sq) == 0 {
-				continue
-			}
-			switch sq[0].Kind() {
-			case tak.Standing:
-				addw(sq[0].Color(), w.Standing)
-			case tak.Flat:
-				addw(sq[0].Color(), w.TopFlat)
-			case tak.Capstone:
-				addw(sq[0].Color(), w.Capstone)
-			}
 
-			for i, stone := range sq {
-				if i > 0 && i < p.Size() {
-					addw(sq[0].Color(), w.Captured)
-				}
-				if stone.Kind() == tak.Flat {
-					addw(stone.Color(), w.Flat)
-				}
-			}
+	ws += int64(bitboard.Popcount(p.White&^p.Caps&^p.Standing) * w.TopFlat)
+	bs += int64(bitboard.Popcount(p.Black&^p.Caps&^p.Standing) * w.TopFlat)
+	ws += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
+	bs += int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
+	ws += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
+	bs += int64(bitboard.Popcount(p.Black&p.Caps) * w.Capstone)
+
+	for i, h := range p.Height {
+		if h == 0 {
+			continue
+		}
+		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
+		bf := bitboard.Popcount(s)
+		wf := int(h) - bf - 1
+		ws += int64(wf * w.Flat)
+		bs += int64(bf * w.Flat)
+		if p.White&(1<<uint(i)) != 0 {
+			ws += int64(int(h-1) * w.Captured)
+		} else {
+			bs += int64(int(h-1) * w.Captured)
 		}
 	}
 
-	addw(tak.White, m.scoreGroups(analysis.WhiteGroups, w))
-	addw(tak.Black, m.scoreGroups(analysis.BlackGroups, w))
+	ws += int64(m.scoreGroups(analysis.WhiteGroups, w))
+	bs += int64(m.scoreGroups(analysis.BlackGroups, w))
 
 	wr := p.White &^ p.Standing
 	br := p.Black &^ p.Standing
 	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ wr)
 	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ br)
-	addw(tak.White, w.Liberties*wl)
-	addw(tak.Black, w.Liberties*bl)
+	ws += int64(w.Liberties * wl)
+	bs += int64(w.Liberties * bl)
 
-	return int64(mine - theirs)
+	if p.ToMove() == tak.White {
+		return ws - bs
+	}
+	return bs - ws
 }
 
 func (ai *MinimaxAI) scoreGroups(gs []uint64, ws *Weights) int {
@@ -144,55 +143,35 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 		stones   int
 		captured int
 	}
-	for x := 0; x < p.Size(); x++ {
-		for y := 0; y < p.Size(); y++ {
-			sq := p.At(x, y)
-			if len(sq) == 0 {
-				continue
-			}
-			switch sq[0].Kind() {
-			case tak.Standing:
-				if sq[0].Color() == tak.White {
-					scores[0].standing++
-				} else {
-					scores[1].standing++
-				}
-			case tak.Flat:
-				if sq[0].Color() == tak.White {
-					scores[0].flats++
-				} else {
-					scores[1].flats++
-				}
-			case tak.Capstone:
-				if sq[0].Color() == tak.White {
-					scores[0].caps++
-				} else {
-					scores[1].caps++
-				}
-			}
 
-			for i, stone := range sq {
-				if i > 0 && i < p.Size() {
-					if sq[0].Color() == tak.White {
-						scores[0].captured++
-					} else {
-						scores[1].captured++
-					}
-				}
-				if stone.Kind() == tak.Flat {
-					if sq[0].Color() == tak.White {
-						scores[0].stones++
-					} else {
-						scores[1].stones++
-					}
-				}
-			}
+	scores[0].flats = bitboard.Popcount(p.White &^ p.Caps &^ p.Standing)
+	scores[1].flats = bitboard.Popcount(p.Black &^ p.Caps &^ p.Standing)
+	scores[0].standing = bitboard.Popcount(p.White & p.Standing)
+	scores[1].standing = bitboard.Popcount(p.Black & p.Standing)
+	scores[0].caps = bitboard.Popcount(p.White & p.Caps)
+	scores[1].caps = bitboard.Popcount(p.Black & p.Caps)
+
+	for i, h := range p.Height {
+		if h == 0 {
+			continue
+		}
+		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
+		bf := bitboard.Popcount(s)
+		wf := int(h) - bf - 1
+		scores[0].stones += wf
+		scores[1].stones += bf
+
+		if p.White&(1<<uint(i)) != 0 {
+			scores[0].captured += int(h - 1)
+		} else {
+			scores[1].captured += int(h - 1)
 		}
 	}
+
 	fmt.Fprintf(tw, "flats\t%d\t%d\n", scores[0].flats, scores[1].flats)
 	fmt.Fprintf(tw, "standing\t%d\t%d\n", scores[0].standing, scores[1].standing)
 	fmt.Fprintf(tw, "caps\t%d\t%d\n", scores[0].caps, scores[1].caps)
-	fmt.Fprintf(tw, "capured\t%d\t%d\n", scores[0].captured, scores[1].captured)
+	fmt.Fprintf(tw, "captured\t%d\t%d\n", scores[0].captured, scores[1].captured)
 	fmt.Fprintf(tw, "stones\t%d\t%d\n", scores[0].stones, scores[1].stones)
 
 	analysis := p.Analysis()
