@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/nelhage/taktician/ai"
@@ -14,20 +15,25 @@ import (
 )
 
 var (
-	depth     = flag.Int("depth", 5, "minimax depth")
-	all       = flag.Bool("all", false, "show all possible moves")
-	tps       = flag.Bool("tps", false, "render position in tps")
-	move      = flag.Int("move", 0, "PTN move number to analyze")
-	final     = flag.Bool("final", false, "analyze final position only")
-	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
-	black     = flag.Bool("black", false, "only analyze black's move")
-	white     = flag.Bool("white", false, "only analyze white's move")
-	seed      = flag.Int64("seed", 0, "specify a seed")
-	sort      = flag.Bool("sort", true, "sort moves via history heuristic")
-	table     = flag.Bool("table", true, "use the transposition table")
+	all     = flag.Bool("all", false, "show all possible moves")
+	tps     = flag.Bool("tps", false, "render position in tps")
+	quiet   = flag.Bool("quiet", false, "don't print board diagrams")
+	explain = flag.Bool("explain", false, "explain scoring")
+
+	move  = flag.Int("move", 0, "PTN move number to analyze")
+	final = flag.Bool("final", false, "analyze final position only")
+	black = flag.Bool("black", false, "only analyze black's move")
+	white = flag.Bool("white", false, "only analyze white's move")
+
 	debug     = flag.Int("debug", 1, "debug level")
-	quiet     = flag.Bool("quiet", false, "don't print board diagrams")
-	explain   = flag.Bool("explain", false, "explain scoring")
+	depth     = flag.Int("depth", 5, "minimax depth")
+	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
+
+	seed  = flag.Int64("seed", 0, "specify a seed")
+	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
+	table = flag.Bool("table", true, "use the transposition table")
+
+	cpuProfile = flag.String("cpu-profile", "", "write CPU profile")
 )
 
 func main() {
@@ -52,6 +58,16 @@ func main() {
 	case *move != 0:
 		color = tak.White
 	}
+
+	if *cpuProfile != "" {
+		f, e := os.OpenFile(*cpuProfile, os.O_WRONLY|os.O_CREATE, 0644)
+		if e != nil {
+			log.Fatalf("open cpu-profile: %s: %v", *cpuProfile, e)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	if *move != 0 || *final {
 		p, e := parsed.PositionAtMove(*move, color)
 		if e != nil {
