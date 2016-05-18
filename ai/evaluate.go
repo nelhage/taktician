@@ -89,7 +89,7 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 	bs += int64(bitboard.Popcount(p.Black&p.Caps) * w.Capstone)
 
 	for i, h := range p.Height {
-		if h == 0 {
+		if h <= 1 {
 			continue
 		}
 		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
@@ -97,10 +97,14 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		wf := int(h) - bf - 1
 		ws += int64(wf * w.Flat)
 		bs += int64(bf * w.Flat)
+		captured := int(h - 1)
+		if captured > p.Size()-1 {
+			captured = p.Size() - 1
+		}
 		if p.White&(1<<uint(i)) != 0 {
-			ws += int64(int(h-1) * w.Captured)
+			ws += int64(captured * w.Captured)
 		} else {
-			bs += int64(int(h-1) * w.Captured)
+			bs += int64(captured * w.Captured)
 		}
 	}
 
@@ -152,7 +156,7 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 	scores[1].caps = bitboard.Popcount(p.Black & p.Caps)
 
 	for i, h := range p.Height {
-		if h == 0 {
+		if h <= 1 {
 			continue
 		}
 		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
@@ -161,10 +165,14 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 		scores[0].stones += wf
 		scores[1].stones += bf
 
+		captured := int(h - 1)
+		if captured > p.Size()-1 {
+			captured = p.Size() - 1
+		}
 		if p.White&(1<<uint(i)) != 0 {
-			scores[0].captured += int(h - 1)
+			scores[0].captured += captured
 		} else {
-			scores[1].captured += int(h - 1)
+			scores[1].captured += captured
 		}
 	}
 
