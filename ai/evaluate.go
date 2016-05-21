@@ -30,7 +30,7 @@ var DefaultWeights = Weights{
 	Capstone: 300,
 
 	Flat:      100,
-	Liberties: 25,
+	Liberties: 20,
 
 	Captured: 25,
 
