@@ -32,6 +32,8 @@ func New(g Config) *Position {
 		blackStones: byte(g.Pieces),
 		blackCaps:   byte(g.Capstones),
 		move:        0,
+
+		hash: fnvBasis,
 	})
 	return p
 }
@@ -55,6 +57,8 @@ type Position struct {
 	Stacks   []uint64
 
 	analysis Analysis
+
+	hash uint64
 }
 
 type Analysis struct {
@@ -108,6 +112,7 @@ func FromSquares(cfg Config, board [][]Square, move int) (*Position, error) {
 				}
 			}
 			p.Height[i] = uint8(len(sq))
+			p.hash ^= p.hashAt(i)
 		}
 	}
 	p.analyze()
@@ -168,7 +173,6 @@ func set(p *Position, x, y int, s Square) {
 		p.Height[i] = 0
 		return
 	}
-	p.Height[i] = uint8(len(s))
 	switch s[0].Color() {
 	case White:
 		p.White |= (1 << i)
@@ -181,16 +185,15 @@ func set(p *Position, x, y int, s Square) {
 	case Capstone:
 		p.Caps |= (1 << i)
 	}
+	p.hash ^= p.hashAt(i)
+	p.Height[i] = uint8(len(s))
 	p.Stacks[i] = 0
 	for j, piece := range s[1:] {
 		if piece.Color() == Black {
 			p.Stacks[i] |= (1 << uint(j))
 		}
 	}
-}
-
-func (p *Position) Hash() uint64 {
-	return 0
+	p.hash ^= p.hashAt(i)
 }
 
 func (p *Position) ToMove() Color {

@@ -150,8 +150,10 @@ func (p *Position) Move(m *Move) (*Position, error) {
 			next.White &= ^(1 << i)
 		}
 	}
+	next.hash ^= next.hashAt(i)
 	next.Stacks[i] >>= ct
 	next.Height[i] -= uint8(ct)
+	next.hash ^= next.hashAt(i)
 
 	x, y := m.X, m.Y
 	for _, c := range m.Slides {
@@ -174,6 +176,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 			}
 			next.Standing &= ^(1 << i)
 		}
+		next.hash ^= next.hashAt(i)
 		if next.White&(1<<i) != 0 {
 			next.Stacks[i] <<= 1
 		} else if next.Black&(1<<i) != 0 {
@@ -183,6 +186,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		drop := (stack >> (ct - uint(c-1))) & ((1 << (c - 1)) - 1)
 		next.Stacks[i] = next.Stacks[i]<<(c-1) | drop
 		next.Height[i] += c
+		next.hash ^= next.hashAt(i)
 		if stack&(1<<(ct-uint(c))) != 0 {
 			next.Black |= (1 << i)
 			next.White &= ^(1 << i)

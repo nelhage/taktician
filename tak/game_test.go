@@ -160,7 +160,7 @@ func moves(ms []Move) *Position {
 }
 
 func TestHash(t *testing.T) {
-	t.SkipNow()
+	// t.SkipNow()
 	a := moves([]Move{
 		Move{X: 0, Y: 0, Type: PlaceFlat},
 		Move{X: 1, Y: 1, Type: PlaceFlat},
@@ -195,7 +195,11 @@ func TestHash(t *testing.T) {
 		Move{X: 3, Y: 1, Type: PlaceFlat},
 	})
 	if c.Hash() == a.Hash() {
-		t.Fatalf("collision")
+		t.Fatalf("collision ah=%x ch=%x aH=%x cH=%x\na=%x %x %x %x\nb=%x %x %x %x",
+			a.hash, c.hash, a.Hash(), c.Hash(),
+			a.White, a.Black, a.Standing, a.Caps,
+			c.White, c.Black, c.Standing, c.Caps,
+		)
 	}
 
 	d := moves([]Move{
