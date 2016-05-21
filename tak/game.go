@@ -25,16 +25,14 @@ func New(g Config) *Position {
 		g.Capstones = defaultCaps[g.Size]
 	}
 	g.c = bitboard.Precompute(uint(g.Size))
-	p := &Position{
+	p := alloc(&Position{
 		cfg:         &g,
 		whiteStones: byte(g.Pieces),
 		whiteCaps:   byte(g.Capstones),
 		blackStones: byte(g.Pieces),
 		blackCaps:   byte(g.Capstones),
 		move:        0,
-		Height:      make([]uint8, g.Size*g.Size),
-		Stacks:      make([]uint64, g.Size*g.Size),
-	}
+	})
 	return p
 }
 
@@ -277,7 +275,7 @@ func (p *Position) Analysis() *Analysis {
 func (p *Position) analyze() {
 	wr := p.White &^ p.Standing
 	br := p.Black &^ p.Standing
-	alloc := make([]uint64, 0, 2*p.Size())
+	alloc := p.analysis.WhiteGroups
 	p.analysis.WhiteGroups = bitboard.FloodGroups(&p.cfg.c, wr, alloc)
 	alloc = p.analysis.WhiteGroups
 	alloc = alloc[len(alloc):len(alloc):cap(alloc)]

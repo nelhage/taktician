@@ -69,7 +69,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 	case SlideDown:
 		dy = -1
 	}
-	next := *p
+	next := alloc(p)
 	next.move++
 	if p.move < 2 {
 		if place.Kind() != Flat {
@@ -111,11 +111,9 @@ func (p *Position) Move(m *Move) (*Position, error) {
 		} else {
 			next.Black |= (1 << i)
 		}
-		next.Height = make([]uint8, len(p.Height))
-		copy(next.Height, p.Height)
 		next.Height[i]++
 		next.analyze()
-		return &next, nil
+		return next, nil
 	}
 
 	ct := uint(0)
@@ -131,10 +129,6 @@ func (p *Position) Move(m *Move) (*Position, error) {
 	if p.ToMove() == Black && p.Black&(1<<i) == 0 {
 		return nil, ErrIllegalSlide
 	}
-	next.Height = make([]uint8, len(p.Height))
-	copy(next.Height, p.Height)
-	next.Stacks = make([]uint64, len(p.Stacks))
-	copy(next.Stacks, p.Stacks)
 
 	top := p.Top(m.X, m.Y)
 	stack := p.Stacks[i] << 1
@@ -208,7 +202,7 @@ func (p *Position) Move(m *Move) (*Position, error) {
 	}
 
 	next.analyze()
-	return &next, nil
+	return next, nil
 }
 
 var slides [][][]byte
