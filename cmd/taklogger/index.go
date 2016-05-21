@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,7 +15,7 @@ import (
 	"github.com/nelhage/taktician/ptn"
 )
 
-const createTable = `
+const createGameTable = `
 CREATE TABLE games (
   day string not null,
   id integer not null,
@@ -25,12 +26,31 @@ CREATE TABLE games (
   result string,
   winner string,
   moves int
+)`
+
+const createPlayerTable = `
+CREATE TABLE player_games (
+  day string not null,
+  id integer not null,
+  player varchar,
+  opponent varchar,
+  win varchar
 )
 `
 
 const insertStmt = `
 INSERT INTO games (day, id, time, size, player1, player2, result, winner, moves)
 VALUES (?,?,?,?,?,?,?,?,?)
+`
+
+const transformStmt = `
+INSERT INTO player_games
+ (day, id, player, opponent, win)
+SELECT day, id, player2, player1,
+ CASE winner WHEN 'white' THEN 'lose' WHEN 'black' THEN 'win' ELSE 'tie' END FROM games
+UNION
+SELECT day, id, player1, player2,
+ CASE winner WHEN 'white' THEN 'win' WHEN 'black' THEN 'lose' ELSE 'tie' END FROM games
 `
 
 func indexPTN(dir string, db string) error {
@@ -45,9 +65,13 @@ func indexPTN(dir string, db string) error {
 		return err
 	}
 	defer sql.Close()
-	_, err = sql.Exec(createTable)
+	_, err = sql.Exec(createGameTable)
 	if err != nil {
-		return err
+		return fmt.Errorf("create game table: %v", err)
+	}
+	_, err = sql.Exec(createPlayerTable)
+	if err != nil {
+		return fmt.Errorf("create player_game table: %v", err)
 	}
 	tx, err := sql.Begin()
 	if err != nil {
@@ -78,7 +102,16 @@ func indexPTN(dir string, db string) error {
 			return e
 		}
 	}
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit: %v", err)
+	}
+
+	_, err = sql.Exec(transformStmt)
+	if err != nil {
+		return fmt.Errorf("transform: %v", err)
+	}
+	return nil
 }
 
 func countMoves(g *ptn.PTN) int {
