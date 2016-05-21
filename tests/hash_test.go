@@ -63,11 +63,19 @@ func reportCollisions(t *testing.T, tbl map[uint64][]*tak.Position) {
 }
 
 func TestHash(t *testing.T) {
-	tbl := make(map[uint64][]*tak.Position)
 	if !*hashTests {
 		t.SkipNow()
 	}
-	p := tak.New(tak.Config{Size: 5})
+	testCollisions(t, tak.New(tak.Config{Size: 5}))
+	p, e := ptn.ParseTPS("112S,12,1112S,x2/x2,121C,12S,x/1,21,2,2,2/x,2,1,1,1/2,x3,21 2 24")
+	if e != nil {
+		panic("bad tps")
+	}
+	testCollisions(t, p)
+}
+
+func testCollisions(t *testing.T, p *tak.Position) {
+	tbl := make(map[uint64][]*tak.Position)
 	ai := ai.NewMinimax(ai.MinimaxConfig{
 		Size:     5,
 		Depth:    6,
