@@ -239,19 +239,26 @@ func (ai *MinimaxAI) minimax(
 
 	te := ai.ttGet(p.Hash())
 	if te != nil {
+		teSuffices := false
 		if te.depth >= depth {
 			if te.bound == exactBound ||
 				(te.value < α && te.bound == upperBound) ||
 				(te.value > β && te.bound == lowerBound) {
-				ai.st.TTHits++
-				return []tak.Move{te.m}, te.value
+				teSuffices = true
 			}
 		}
 
 		if te.bound == exactBound &&
 			(te.value > WinThreshold || te.value < -WinThreshold) {
-			ai.st.TTHits++
-			return []tak.Move{te.m}, te.value
+			teSuffices = true
+		}
+		if teSuffices {
+			_, e := p.Move(&te.m)
+			if e == nil {
+				ai.st.TTHits++
+				return []tak.Move{te.m}, te.value
+			}
+			te = nil
 		}
 	}
 	mg := moveGenerator{
