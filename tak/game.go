@@ -38,6 +38,10 @@ func New(g Config) *Position {
 	return p
 }
 
+func (p *Position) Clone() *Position {
+	return alloc(p)
+}
+
 type Square []Piece
 
 type Position struct {

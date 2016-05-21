@@ -51,6 +51,16 @@ var (
 )
 
 func (p *Position) Move(m *Move) (*Position, error) {
+	return p.MoveToAllocated(m, nil)
+}
+
+func (p *Position) MoveToAllocated(m *Move, next *Position) (*Position, error) {
+	if next == nil {
+		next = alloc(p)
+	} else {
+		copyPosition(p, next)
+	}
+	next.move++
 	var place Piece
 	dx, dy := 0, 0
 	switch m.Type {
@@ -69,8 +79,6 @@ func (p *Position) Move(m *Move) (*Position, error) {
 	case SlideDown:
 		dy = -1
 	}
-	next := alloc(p)
-	next.move++
 	if p.move < 2 {
 		if place.Kind() != Flat {
 			return nil, ErrIllegalOpening

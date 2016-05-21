@@ -17,6 +17,8 @@ const (
 	WinThreshold       = 1 << 29
 
 	tableSize uint64 = (1 << 20)
+
+	maxStack = 10
 )
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
@@ -33,6 +35,7 @@ type MinimaxAI struct {
 	evaluate EvaluationFunc
 
 	table []tableEntry
+	stack [maxStack]*tak.Position
 }
 
 type tableEntry struct {
@@ -89,6 +92,9 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	}
 	m.heatMap = make([]uint64, m.cfg.Size*m.cfg.Size)
 	m.table = make([]tableEntry, tableSize)
+	for i := range m.stack {
+		m.stack[i] = tak.Alloc(m.cfg.Size)
+	}
 	return m
 }
 

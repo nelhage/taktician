@@ -78,7 +78,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 				continue
 			}
 		}
-		child, e := mg.p.Move(&m)
+		child, e := mg.p.MoveToAllocated(&m, mg.ai.stack[mg.ply])
 		if e == nil {
 			return m, child
 		}

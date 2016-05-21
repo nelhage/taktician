@@ -1,6 +1,8 @@
 package tak
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type position3 struct {
 	Position
@@ -115,4 +117,23 @@ func alloc(tpl *Position) *Position {
 	default:
 		panic(fmt.Sprintf("illegal size: %d", tpl.Size()))
 	}
+}
+
+func copyPosition(p *Position, out *Position) {
+	h := out.Height
+	s := out.Stacks
+	g := out.analysis.WhiteGroups
+
+	*out = *p
+	out.Height = h
+	out.Stacks = s
+	out.analysis.WhiteGroups = g[:0]
+
+	copy(out.Height, p.Height)
+	copy(out.Stacks, p.Stacks)
+}
+
+func Alloc(size int) *Position {
+	p := Position{cfg: &Config{Size: 5}}
+	return alloc(&p)
 }
