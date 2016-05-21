@@ -78,10 +78,16 @@ func testCollisions(t *testing.T, p *tak.Position) {
 	tbl := make(map[uint64][]*tak.Position)
 	ai := ai.NewMinimax(ai.MinimaxConfig{
 		Size:     5,
-		Depth:    6,
+		Depth:    5,
 		Evaluate: wrapHash(tbl, ai.DefaultEvaluate),
 		NoTable:  true,
 	})
-	ai.GetMove(p, 0)
+	for i := 0; i < 4; i++ {
+		m := ai.GetMove(p, 0)
+		p, _ = p.Move(&m)
+		if ok, _ := p.GameOver(); ok {
+			break
+		}
+	}
 	reportCollisions(t, tbl)
 }
