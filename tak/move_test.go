@@ -179,7 +179,7 @@ func TestMoveMultiDrop(t *testing.T) {
 func TestAllMovesEmptyBoard(t *testing.T) {
 	type coord struct{ x, y int }
 	p := New(Config{Size: 6})
-	moves := p.AllMoves()
+	moves := p.AllMoves(nil)
 	lookup := make(map[coord]struct{}, 6*6)
 	for _, m := range moves {
 		if m.Type != PlaceFlat {
@@ -234,7 +234,7 @@ func TestAllMovesBasicSlides(t *testing.T) {
 		p.move = 4
 		set(p, tc.x, tc.y, Square{MakePiece(White, Flat)})
 		var dirs []MoveType
-		for _, m := range p.AllMoves() {
+		for _, m := range p.AllMoves(nil) {
 			if m.X != tc.x || m.Y != tc.y {
 				continue
 			}

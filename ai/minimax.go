@@ -35,7 +35,10 @@ type MinimaxAI struct {
 	evaluate EvaluationFunc
 
 	table []tableEntry
-	stack [maxStack]*tak.Position
+	stack [maxStack]struct {
+		p     *tak.Position
+		moves [100]tak.Move
+	}
 }
 
 type tableEntry struct {
@@ -93,7 +96,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m.heatMap = make([]uint64, m.cfg.Size*m.cfg.Size)
 	m.table = make([]tableEntry, tableSize)
 	for i := range m.stack {
-		m.stack[i] = tak.Alloc(m.cfg.Size)
+		m.stack[i].p = tak.Alloc(m.cfg.Size)
 	}
 	return m
 }

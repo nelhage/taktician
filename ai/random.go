@@ -12,7 +12,7 @@ type RandomAI struct {
 }
 
 func (r *RandomAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
-	moves := p.AllMoves()
+	moves := p.AllMoves(nil)
 	i := r.r.Int31n(int32(len(moves)))
 	return moves[i]
 }

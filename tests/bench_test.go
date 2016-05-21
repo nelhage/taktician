@@ -10,7 +10,7 @@ import (
 func BenchmarkMoveEmpty(b *testing.B) {
 	p := tak.New(tak.Config{Size: 5})
 	n := tak.New(tak.Config{Size: 5})
-	ms := p.AllMoves()
+	ms := p.AllMoves(nil)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for {
@@ -28,7 +28,7 @@ func BenchmarkMoveComplex(b *testing.B) {
 	if e != nil {
 		panic("bad tps")
 	}
-	ms := p.AllMoves()
+	ms := p.AllMoves(nil)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		j := i

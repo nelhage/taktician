@@ -140,7 +140,7 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 	}
 	if *all {
 		fmt.Printf(" all moves:")
-		for _, m := range p.AllMoves() {
+		for _, m := range p.AllMoves(nil) {
 			fmt.Printf(" %s", ptn.FormatMove(&m))
 		}
 		fmt.Printf("\n")

@@ -240,8 +240,7 @@ func calculateSlides(stack int) [][]byte {
 	return out
 }
 
-func (p *Position) AllMoves() []Move {
-	moves := make([]Move, 0, len(p.Stacks))
+func (p *Position) AllMoves(moves []Move) []Move {
 	next := p.ToMove()
 	cap := false
 	if next == White {

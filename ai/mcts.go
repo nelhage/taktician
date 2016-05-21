@@ -72,7 +72,7 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 }
 
 func (ai *MonteCarloAI) populate(t *tree) {
-	moves := t.position.AllMoves()
+	moves := t.position.AllMoves(nil)
 	t.children = make([]*tree, 0, len(moves))
 	for _, m := range moves {
 		child, e := t.position.Move(&m)
@@ -114,7 +114,7 @@ const maxMoves = 300
 func (ai *MonteCarloAI) evaluate(t *tree) bool {
 	p := t.position
 	for i := 0; i < maxMoves; i++ {
-		moves := p.AllMoves()
+		moves := p.AllMoves(nil)
 		var next *tak.Position
 		for {
 			r := ai.r.Int31n(int32(len(moves)))
