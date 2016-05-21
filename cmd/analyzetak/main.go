@@ -148,7 +148,15 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 	fmt.Println()
 
 	for _, m := range pv {
-		p, _ = p.Move(&m)
+		n, e := p.Move(&m)
+		if e != nil {
+			log.Printf("illegal move in pv: %s: %v", ptn.FormatMove(&m), e)
+			if val < ai.WinThreshold && val > -ai.WinThreshold {
+				log.Fatal("illegal move in non-terminal pv!")
+			}
+			return
+		}
+		p = n
 	}
 
 	if !*quiet {

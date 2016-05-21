@@ -14,7 +14,7 @@ import (
 const (
 	maxEval      int64 = 1 << 30
 	minEval            = -maxEval
-	winThreshold       = 1 << 29
+	WinThreshold       = 1 << 29
 
 	tableSize uint64 = (1 << 20)
 )
@@ -192,7 +192,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			branchSum += m.st.Evaluated / (prevEval + 1)
 		}
 		prevEval = m.st.Evaluated
-		if v > winThreshold || v < -winThreshold {
+		if v > WinThreshold || v < -WinThreshold {
 			break
 		}
 		if i+base != m.cfg.Depth && limit != 0 {
@@ -249,7 +249,7 @@ func (ai *MinimaxAI) minimax(
 		}
 
 		if te.bound == exactBound &&
-			(te.value > winThreshold || te.value < -winThreshold) {
+			(te.value > WinThreshold || te.value < -WinThreshold) {
 			ai.st.TTHits++
 			return []tak.Move{te.m}, te.value
 		}
