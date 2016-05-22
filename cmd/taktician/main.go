@@ -29,6 +29,8 @@ var (
 	limit = flag.Duration("limit", time.Minute, "time limit per move")
 	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
 	table = flag.Bool("table", true, "use the transposition table")
+
+	debugClient = flag.Bool("debug-client", false, "log debug output for playtak connection")
 )
 
 const ClientName = "Taktician AI"
@@ -42,7 +44,7 @@ func main() {
 	backoff := 1 * time.Second
 	for {
 		client := &playtak.Client{
-			Debug: true,
+			Debug: *debugClient,
 		}
 		err := client.Connect(*server)
 		if err != nil {
@@ -58,6 +60,7 @@ func main() {
 		if err != nil {
 			log.Fatal("login: ", err)
 		}
+		log.Printf("login OK")
 		for {
 			if *accept != "" {
 				for line := range client.Recv {
@@ -72,6 +75,7 @@ func main() {
 				}
 			} else {
 				client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
+				log.Printf("Seek OK")
 				if *takbot != "" {
 					client.SendCommand("Shout", "takbot: play", *takbot)
 				}
@@ -105,7 +109,6 @@ func timeBound(remaining time.Duration) time.Duration {
 }
 
 func playGame(c *playtak.Client, line string) {
-	log.Println("New Game", line)
 	bits := strings.Split(line, " ")
 	size, _ := strconv.Atoi(bits[3])
 	ai := ai.NewMinimax(ai.MinimaxConfig{
@@ -117,7 +120,8 @@ func playGame(c *playtak.Client, line string) {
 		NoTable: !*table,
 	})
 	p := tak.New(tak.Config{Size: size})
-	gameStr := fmt.Sprintf("Game#%s", bits[2])
+	id := bits[2]
+	gameStr := fmt.Sprintf("Game#%s", id)
 	var color tak.Color
 	switch bits[7] {
 	case "white":
@@ -127,6 +131,9 @@ func playGame(c *playtak.Client, line string) {
 	default:
 		panic(fmt.Sprintf("bad color: %s", bits[7]))
 	}
+	log.Printf("new game game-id=%q size=%s player1=%q player2=%q color=%q time=%q",
+		bits[2], bits[3], bits[4], bits[6], bits[7], bits[8],
+	)
 	timeLeft := *gameTime
 	for {
 		over, _ := p.GameOver()
@@ -140,6 +147,12 @@ func playGame(c *playtak.Client, line string) {
 			}
 			p = next
 			c.SendCommand(gameStr, playtak.FormatServer(&move))
+			log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
+				id,
+				p.MoveNumber(),
+				p.MoveNumber()/2+1,
+				strings.ToUpper(color.String()[:1]),
+				ptn.FormatMove(&move))
 		} else {
 			var timeout <-chan time.Time
 		theirMove:
@@ -165,8 +178,20 @@ func playGame(c *playtak.Client, line string) {
 					if err != nil {
 						panic(err)
 					}
+					log.Printf("their-move game-id=%s ply=%d ptn=%d%s move=%q",
+						id,
+						p.MoveNumber(),
+						p.MoveNumber()/2+1,
+						strings.ToUpper(color.Flip().String()[:1]),
+						ptn.FormatMove(&move))
 					timeout = time.NewTimer(500 * time.Millisecond).C
-				case "Abandoned.", "Over":
+				case "Abandoned.":
+					log.Printf("game-over game-id=%s ply=%d result=abandoned",
+						id, p.MoveNumber())
+					return
+				case "Over":
+					log.Printf("game-over game-id=%s ply=%d result=%q",
+						id, p.MoveNumber(), bits[2])
 					return
 				case "Time":
 					w, b := bits[2], bits[3]
