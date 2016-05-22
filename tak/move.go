@@ -51,10 +51,10 @@ var (
 )
 
 func (p *Position) Move(m *Move) (*Position, error) {
-	return p.MoveToAllocated(m, nil)
+	return p.MovePreallocated(m, nil)
 }
 
-func (p *Position) MoveToAllocated(m *Move, next *Position) (*Position, error) {
+func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) {
 	if next == nil {
 		next = alloc(p)
 	} else {
