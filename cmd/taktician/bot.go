@@ -49,8 +49,7 @@ func playGame(c *playtak.Client, b Bot, line string) {
 	p := tak.New(tak.Config{Size: g.size})
 	b.NewGame(&g)
 
-	moves := make(chan tak.Move)
-	defer close(moves)
+	moves := make(chan tak.Move, 1)
 
 	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
 		g.id, g.size, g.opponent, g.color, g.time)
@@ -65,10 +64,7 @@ func playGame(c *playtak.Client, b Bot, line string) {
 		over, _ := p.GameOver()
 		if g.color == p.ToMove() && !over {
 			go func() {
-				select {
-				case moves <- b.GetMove(p, times.mine, times.theirs):
-				default:
-				}
+				moves <- b.GetMove(p, times.mine, times.theirs)
 			}()
 		}
 
