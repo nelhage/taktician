@@ -37,7 +37,7 @@ type MinimaxAI struct {
 	table []tableEntry
 	stack [maxStack]struct {
 		p     *tak.Position
-		moves [100]tak.Move
+		moves [500]tak.Move
 	}
 }
 
