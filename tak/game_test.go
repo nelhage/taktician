@@ -106,6 +106,8 @@ func TestFlatsWinnerCapLeft(t *testing.T) {
 
 func BenchmarkEmptyHasRoad(b *testing.B) {
 	p := New(Config{Size: 5})
+	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		p.analyze()
 		p.hasRoad()
@@ -125,6 +127,7 @@ func BenchmarkFullHasRoad(b *testing.B) {
 			set(p, i, j, Square{piece})
 		}
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		p.analyze()
@@ -140,6 +143,7 @@ func BenchmarkHasRoadWindy(b *testing.B) {
 	for x := 0; x < 4; x++ {
 		set(p, x, 3, Square{MakePiece(White, Flat)})
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		p.analyze()

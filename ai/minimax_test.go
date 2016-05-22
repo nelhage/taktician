@@ -19,6 +19,9 @@ func BenchmarkMinimax(b *testing.B) {
 	p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
 	ai := NewMinimax(MinimaxConfig{Size: *size, Depth: *depth})
 
+	b.ReportAllocs()
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		var e error
 		m := ai.GetMove(p, time.Minute)
