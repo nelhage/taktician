@@ -42,5 +42,6 @@ func (p *Position) Hash() uint64 {
 	h = hash64(h, p.Black)
 	h = hash64(h, p.Standing)
 	h = hash64(h, p.Caps)
+	h = hash8(h, byte(p.ToMove()))
 	return h
 }
