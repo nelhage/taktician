@@ -282,7 +282,7 @@ func (p *Position) Analysis() *Analysis {
 func (p *Position) analyze() {
 	wr := p.White &^ p.Standing
 	br := p.Black &^ p.Standing
-	alloc := p.analysis.WhiteGroups
+	alloc := p.analysis.WhiteGroups[:0]
 	p.analysis.WhiteGroups = bitboard.FloodGroups(&p.cfg.c, wr, alloc)
 	alloc = p.analysis.WhiteGroups
 	alloc = alloc[len(alloc):len(alloc):cap(alloc)]
