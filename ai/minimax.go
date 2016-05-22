@@ -67,6 +67,7 @@ type Stats struct {
 
 	CutNodes  uint64
 	Cut0      uint64
+	Cut1      uint64
 	CutSearch uint64
 
 	AllNodes uint64
@@ -185,15 +186,17 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d evaluated=%d terminal=%d cut=%d cut0=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d",
+			log.Printf("[minimax]  stats: visited=%d evaluated=%d terminal=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d",
 				m.st.Visited,
 				m.st.Evaluated,
 				m.st.Terminal,
 				m.st.CutNodes,
 				m.st.Cut0,
 				float64(m.st.Cut0)/float64(m.st.CutNodes+1),
-				float64(m.st.CutSearch)/float64(m.st.CutNodes+1),
-				float64(m.st.Evaluated)/float64(timeMove.Seconds()*1000),
+				m.st.Cut1,
+				float64(m.st.Cut0+m.st.Cut1)/float64(m.st.CutNodes+1),
+				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
+				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
 				m.st.AllNodes)
 		}
 		if i > 1 {
@@ -314,10 +317,14 @@ func (ai *MinimaxAI) minimax(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.st.CutSearch += uint64(i + 1)
 				ai.st.CutNodes++
-				if i == 1 {
+				switch i {
+				case 1:
 					ai.st.Cut0++
+				case 2:
+					ai.st.Cut1++
+				default:
+					ai.st.CutSearch += uint64(i + 1)
 				}
 				ai.heatMap[m.X+m.Y*ai.cfg.Size] += (1 << uint(depth))
 				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
