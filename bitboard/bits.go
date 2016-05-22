@@ -32,7 +32,12 @@ func Popcount(x uint64) int {
 
 func Flood(c *Constants, within uint64, seed uint64) uint64 {
 	for {
-		next := Grow(c, within, seed)
+		// This is an inlined copy of Grow below. For whatever reason,
+		// this results in a measurable performance improvement in 1.6.
+		// As of mid May 2016, Go tip (i.e., with SSA) appears to be
+		// able to inline Grow correctly, so this code can likely be
+		// removed when 1.7 is released.
+		next := (seed | seed<<1 | seed>>1 | seed<<c.Size | seed>>c.Size) & within & c.Mask
 		if next == seed {
 			return next
 		}
@@ -41,12 +46,7 @@ func Flood(c *Constants, within uint64, seed uint64) uint64 {
 }
 
 func Grow(c *Constants, within uint64, seed uint64) uint64 {
-	next := seed
-	next |= (seed << 1) &^ c.R
-	next |= (seed >> 1) &^ c.L
-	next |= (seed >> c.Size)
-	next |= (seed << c.Size)
-	return next & within & c.Mask
+	return (seed | seed<<1 | seed>>1 | seed<<c.Size | seed>>c.Size) & within & c.Mask
 }
 
 func FloodGroups(c *Constants, bits uint64, out []uint64) []uint64 {
