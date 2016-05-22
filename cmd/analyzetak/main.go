@@ -33,7 +33,7 @@ var (
 	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
 	table = flag.Bool("table", true, "use the transposition table")
 
-	cpuProfile = flag.String("cpu-profile", "", "write CPU profile")
+	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 )
 
 func main() {
