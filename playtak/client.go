@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -134,4 +135,14 @@ func (c *Client) Shutdown() {
 	close(c.shutdown)
 	c.wg.Wait()
 	c.conn.Close()
+}
+
+var shoutRE = regexp.MustCompile(`^Shout <([^> ]+)> (.+)$`)
+
+func ParseShout(line string) (string, string) {
+	gs := shoutRE.FindStringSubmatch(line)
+	if gs == nil {
+		return "", ""
+	}
+	return gs[1], gs[2]
 }
