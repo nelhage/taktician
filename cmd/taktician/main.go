@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
-	"github.com/nelhage/taktician/tak"
 )
 
 var (
@@ -39,6 +40,9 @@ func main() {
 		*once = true
 	}
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM)
+
 	backoff := 1 * time.Second
 	for {
 		client := &playtak.Client{
@@ -60,8 +64,21 @@ func main() {
 		}
 		log.Printf("login OK")
 		for {
-			if *accept != "" {
-				for line := range client.Recv {
+			if *accept == "" {
+				client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
+				log.Printf("Seek OK")
+				if *takbot != "" {
+					client.SendCommand("Shout", "takbot: play", *takbot)
+				}
+			}
+
+		recvLoop:
+			for {
+				select {
+				case line, ok := <-client.Recv:
+					if !ok {
+						break recvLoop
+					}
 					if strings.HasPrefix(line, "Seek new") {
 						bits := strings.Split(line, " ")
 						if bits[3] == *accept {
@@ -70,18 +87,12 @@ func main() {
 							break
 						}
 					}
-				}
-			} else {
-				client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
-				log.Printf("Seek OK")
-				if *takbot != "" {
-					client.SendCommand("Shout", "takbot: play", *takbot)
-				}
-			}
-			for line := range client.Recv {
-				if strings.HasPrefix(line, "Game Start") {
-					playGame(client, &Taktician{}, line)
-					break
+					if strings.HasPrefix(line, "Game Start") {
+						playGame(client, &Taktician{}, line)
+						break recvLoop
+					}
+				case <-sigs:
+					return
 				}
 			}
 			if *once {
@@ -101,28 +112,3 @@ func main() {
 		}
 	}
 }
-
-func timeBound(remaining time.Duration) time.Duration {
-	return *limit
-}
-
-type Taktician struct {
-	ai *ai.MinimaxAI
-}
-
-func (t *Taktician) NewGame(g *Game) {
-	t.ai = ai.NewMinimax(ai.MinimaxConfig{
-		Size:  g.size,
-		Depth: *depth,
-		Debug: *debug,
-
-		NoSort:  !*sort,
-		NoTable: !*table,
-	})
-}
-
-func (t *Taktician) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
-	return t.ai.GetMove(p, timeBound(mine))
-}
-
-func (t *Taktician) HandleChat(string, string) {}
