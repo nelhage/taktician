@@ -250,8 +250,8 @@ func (p *Position) AllMoves(moves []Move) []Move {
 	}
 	for x := 0; x < p.cfg.Size; x++ {
 		for y := 0; y < p.cfg.Size; y++ {
-			stack := p.At(x, y)
-			if len(stack) == 0 {
+			i := uint(y*p.cfg.Size + x)
+			if p.Height[i] == 0 {
 				moves = append(moves, Move{x, y, PlaceFlat, nil})
 				if p.move >= 2 {
 					moves = append(moves, Move{x, y, PlaceStanding, nil})
@@ -264,9 +264,12 @@ func (p *Position) AllMoves(moves []Move) []Move {
 			if p.move < 2 {
 				continue
 			}
-			if stack[0].Color() != next {
+			if next == White && p.White&(1<<i) == 0 {
+				continue
+			} else if next == Black && p.Black&(1<<i) == 0 {
 				continue
 			}
+
 			type dircnt struct {
 				d MoveType
 				c int
@@ -278,9 +281,9 @@ func (p *Position) AllMoves(moves []Move) []Move {
 				{SlideUp, p.cfg.Size - y - 1},
 			}
 			for _, d := range dirs {
-				h := len(stack)
-				if h > p.cfg.Size {
-					h = p.cfg.Size
+				h := p.Height[i]
+				if h > uint8(p.cfg.Size) {
+					h = uint8(p.cfg.Size)
 				}
 				for _, s := range slides[h] {
 					if len(s) <= d.c {
