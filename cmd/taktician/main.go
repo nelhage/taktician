@@ -109,101 +109,117 @@ func timeBound(remaining time.Duration) time.Duration {
 }
 
 func playGame(c *playtak.Client, line string) {
+	var g Game
 	bits := strings.Split(line, " ")
-	size, _ := strconv.Atoi(bits[3])
+	g.size, _ = strconv.Atoi(bits[3])
+	g.id = bits[2]
+	switch bits[7] {
+	case "white":
+		g.color = tak.White
+		g.opponent = bits[6]
+	case "black":
+		g.color = tak.Black
+		g.opponent = bits[4]
+	default:
+		panic(fmt.Sprintf("bad color: %s", bits[7]))
+	}
+
+	secs, _ := strconv.Atoi(bits[8])
+	g.time = time.Duration(secs) * time.Second
+
+	gameStr := fmt.Sprintf("Game#%s", g.id)
+	p := tak.New(tak.Config{Size: g.size})
 	ai := ai.NewMinimax(ai.MinimaxConfig{
-		Size:  size,
+		Size:  g.size,
 		Depth: *depth,
 		Debug: *debug,
 
 		NoSort:  !*sort,
 		NoTable: !*table,
 	})
-	p := tak.New(tak.Config{Size: size})
-	id := bits[2]
-	gameStr := fmt.Sprintf("Game#%s", id)
-	var color tak.Color
-	switch bits[7] {
-	case "white":
-		color = tak.White
-	case "black":
-		color = tak.Black
-	default:
-		panic(fmt.Sprintf("bad color: %s", bits[7]))
-	}
-	log.Printf("new game game-id=%q size=%s player1=%q player2=%q color=%q time=%q",
-		bits[2], bits[3], bits[4], bits[6], bits[7], bits[8],
-	)
+
+	moves := make(chan tak.Move)
+	defer close(moves)
+
+	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
+		g.id, g.size, g.opponent, g.color, g.time)
 	timeLeft := *gameTime
+
 	for {
 		over, _ := p.GameOver()
-		if color == p.ToMove() && !over {
-			move := ai.GetMove(p, timeBound(timeLeft))
-			next, err := p.Move(&move)
-			if err != nil {
-				log.Printf("ai returned bad move: %s: %s",
-					ptn.FormatMove(&move), err)
+		if g.color == p.ToMove() && !over {
+			go func() {
+				select {
+				case moves <- ai.GetMove(p, timeBound(timeLeft)):
+				default:
+				}
+			}()
+		}
+
+		var timeout <-chan time.Time
+	eventLoop:
+		for {
+			var line string
+			select {
+			case line = <-c.Recv:
+			case move := <-moves:
+				next, err := p.Move(&move)
+				if err != nil {
+					log.Printf("ai returned bad move: %s: %s",
+						ptn.FormatMove(&move), err)
+					break eventLoop
+				}
+				p = next
+				c.SendCommand(gameStr, playtak.FormatServer(&move))
+				log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
+					g.id,
+					p.MoveNumber(),
+					p.MoveNumber()/2+1,
+					strings.ToUpper(g.color.String()[:1]),
+					ptn.FormatMove(&move))
+			case <-timeout:
+				break eventLoop
+			}
+
+			if !strings.HasPrefix(line, gameStr) {
 				continue
 			}
-			p = next
-			c.SendCommand(gameStr, playtak.FormatServer(&move))
-			log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
-				id,
-				p.MoveNumber(),
-				p.MoveNumber()/2+1,
-				strings.ToUpper(color.String()[:1]),
-				ptn.FormatMove(&move))
-		} else {
-			var timeout <-chan time.Time
-		theirMove:
-			for {
-				var line string
-				select {
-				case line = <-c.Recv:
-				case <-timeout:
-					break theirMove
+			bits = strings.Split(line, " ")
+			switch bits[1] {
+			case "P", "M":
+				move, err := playtak.ParseServer(strings.Join(bits[1:], " "))
+				if err != nil {
+					panic(err)
 				}
-
-				if !strings.HasPrefix(line, gameStr) {
-					continue
+				p, err = p.Move(&move)
+				if err != nil {
+					panic(err)
 				}
-				bits = strings.Split(line, " ")
-				switch bits[1] {
-				case "P", "M":
-					move, err := playtak.ParseServer(strings.Join(bits[1:], " "))
-					if err != nil {
-						panic(err)
-					}
-					p, err = p.Move(&move)
-					if err != nil {
-						panic(err)
-					}
-					log.Printf("their-move game-id=%s ply=%d ptn=%d%s move=%q",
-						id,
-						p.MoveNumber(),
-						p.MoveNumber()/2+1,
-						strings.ToUpper(color.Flip().String()[:1]),
-						ptn.FormatMove(&move))
-					timeout = time.NewTimer(500 * time.Millisecond).C
-				case "Abandoned.":
-					log.Printf("game-over game-id=%s ply=%d result=abandoned",
-						id, p.MoveNumber())
-					return
-				case "Over":
-					log.Printf("game-over game-id=%s ply=%d result=%q",
-						id, p.MoveNumber(), bits[2])
-					return
-				case "Time":
-					w, b := bits[2], bits[3]
-					var secsLeft int
-					if color == tak.White {
-						secsLeft, _ = strconv.Atoi(w)
-					} else {
-						secsLeft, _ = strconv.Atoi(b)
-					}
-					timeLeft = time.Duration(secsLeft) * time.Second
-					break theirMove
+				log.Printf("their-move game-id=%s ply=%d ptn=%d%s move=%q",
+					g.id,
+					p.MoveNumber(),
+					p.MoveNumber()/2+1,
+					strings.ToUpper(g.color.Flip().String()[:1]),
+					ptn.FormatMove(&move))
+				timeout = time.NewTimer(500 * time.Millisecond).C
+			case "Abandoned.":
+				log.Printf("game-over game-id=%s ply=%d result=abandoned",
+					g.id, p.MoveNumber())
+				return
+			case "Over":
+				log.Printf("game-over game-id=%s ply=%d result=%q",
+					g.id, p.MoveNumber(), bits[2])
+				return
+			case "Time":
+				w, b := bits[2], bits[3]
+				var secsLeft int
+				if g.color == tak.White {
+					secsLeft, _ = strconv.Atoi(w)
+				} else {
+					secsLeft, _ = strconv.Atoi(b)
 				}
+				timeLeft = time.Duration(secsLeft) * time.Second
+				break eventLoop
 			}
 		}
 	}
