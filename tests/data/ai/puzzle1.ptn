@@ -2,6 +2,7 @@
 [Size "5"]
 [TPS "2,x2,121C,1/x2,2,12,1/x2,2,12S,2/x3,1,1/x4,1 1 2"]
 [Depth "5"]
+[Move "0"]
 [GoodMove "2d5-"]
 [GoodMove "2d5-11"]
 [GoodMove "d1"]

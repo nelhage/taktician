@@ -1,0 +1,22 @@
+[Size "5"]
+[Date "2016-05-22"]
+[Time "2016-05-22T19:48:11Z"]
+[Player1 "RTJR"]
+[Player2 "TakticianBot"]
+[Result "R-0"]
+[Id "34759"]
+[Depth "5"]
+[Seed "1463955533"]
+[Move "3 black"]
+[Move "4 black"]
+[Move "5 black"]
+[BadMove "d1"]
+
+
+1. a1 e1
+2. d4 c1
+3. d3 c4
+4. d5 e3
+5. d2 d1
+6. e1<
+R-0

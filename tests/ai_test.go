@@ -19,18 +19,22 @@ import (
 var debug = flag.Int("debug", 0, "debug level")
 var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
 
-type TestCase struct {
-	p          *ptn.PTN
-	id         string
-	name       string
-	moveNumber int
-	color      tak.Color
-
-	cfg ai.MinimaxConfig
-
+type moveSpec struct {
+	number    int
+	color     tak.Color
 	maxEval   uint64
 	badMoves  []tak.Move
 	goodMoves []tak.Move
+}
+
+type TestCase struct {
+	p    *ptn.PTN
+	id   string
+	name string
+
+	cfg ai.MinimaxConfig
+
+	moves []moveSpec
 
 	speed string
 
@@ -64,6 +68,7 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 		limit: time.Minute,
 	}
 	var e error
+	var spec *moveSpec
 	for _, t := range p.Tags {
 		if t.Value == "" {
 			continue
@@ -71,22 +76,27 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 		switch t.Name {
 		case "Move":
 			bits := strings.Split(t.Value, " ")
-			tc.moveNumber, e = strconv.Atoi(bits[0])
+			tc.moves = append(tc.moves, moveSpec{})
+			spec = &tc.moves[len(tc.moves)-1]
+			spec.number, e = strconv.Atoi(bits[0])
 			if e != nil {
 				return nil, fmt.Errorf("bad move: `%s`", t.Value)
 			}
 			if len(bits) > 1 {
 				switch bits[1] {
 				case "white":
-					tc.color = tak.White
+					spec.color = tak.White
 				case "black":
-					tc.color = tak.Black
+					spec.color = tak.Black
 				default:
 					return nil, fmt.Errorf("bad color: `%s`", t.Value)
 				}
 			}
 		case "MaxEval":
-			tc.maxEval, e = strconv.ParseUint(t.Value, 10, 64)
+			if spec == nil {
+				return nil, fmt.Errorf("MaxEval before Move")
+			}
+			spec.maxEval, e = strconv.ParseUint(t.Value, 10, 64)
 			if e != nil {
 				return nil, fmt.Errorf("bad MaxEval: %s", t.Value)
 			}
@@ -96,17 +106,23 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 				return nil, fmt.Errorf("bad depth: %s", t.Value)
 			}
 		case "BadMove":
+			if spec == nil {
+				return nil, fmt.Errorf("BadMove before Move")
+			}
 			move, e := ptn.ParseMove(t.Value)
 			if e != nil {
 				return nil, fmt.Errorf("bad move: `%s': %v", t.Value, e)
 			}
-			tc.badMoves = append(tc.badMoves, move)
+			spec.badMoves = append(spec.badMoves, move)
 		case "GoodMove":
+			if spec == nil {
+				return nil, fmt.Errorf("BadMove before Move")
+			}
 			move, e := ptn.ParseMove(t.Value)
 			if e != nil {
 				return nil, fmt.Errorf("bad move: `%s': %v", t.Value, e)
 			}
-			tc.goodMoves = append(tc.goodMoves, move)
+			spec.goodMoves = append(spec.goodMoves, move)
 		case "Limit":
 			tc.limit, e = time.ParseDuration(t.Value)
 			if e != nil {
@@ -123,6 +139,12 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 			tc.id = t.Value
 		case "Name":
 			tc.name = t.Value
+		case "Size":
+			sz, e := strconv.ParseInt(t.Value, 10, 64)
+			if e != nil {
+				return nil, fmt.Errorf("bad Size: %v", e)
+			}
+			tc.cfg.Size = int(sz)
 		}
 	}
 	return &tc, nil
@@ -135,56 +157,58 @@ func runTest(t *testing.T, tc *TestCase) {
 	}
 	name = fmt.Sprintf("%s%s", name, tc.name)
 	t.Logf("considering %s...", name)
-	p, e := tc.p.PositionAtMove(tc.moveNumber, tc.color)
-	if e != nil {
-		t.Errorf("!! %s: find move: %v", name, e)
-		return
-	}
-	var buf bytes.Buffer
-	cli.RenderBoard(&buf, p)
-	t.Log(buf.String())
 	cfg := tc.cfg
-	cfg.Size = p.Size()
 	cfg.Debug = *debug
 	ai := ai.NewMinimax(cfg)
-	start := time.Now()
-	pv, v, st := ai.Analyze(p, tc.limit)
-	elapsed := time.Now().Sub(start)
-	if *dumpPerf {
-		log.Printf("%s move=%d color=%s depth=%d evaluated=%d time=%s",
-			tc.id, tc.moveNumber, tc.color, st.Depth, st.Evaluated, elapsed,
-		)
-	}
-	if len(pv) == 0 {
-		t.Errorf("!! %s: did not return a move!", name)
-		return
-	}
-	var ms []string
-	for _, m := range pv {
-		ms = append(ms, ptn.FormatMove(&m))
-	}
-	t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
-	_, e = p.Move(&pv[0])
-	if e != nil {
-		t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
-	}
-	for _, m := range tc.badMoves {
-		if pv[0].Equal(&m) {
-			t.Errorf("!! %s: bad move: `%s'", name, ptn.FormatMove(&pv[0]))
+	for _, spec := range tc.moves {
+		t.Logf("evaluating %d. %s", spec.number, spec.color)
+		p, e := tc.p.PositionAtMove(spec.number, spec.color)
+		if e != nil {
+			t.Errorf("!! %s: find move: %v", name, e)
+			return
 		}
-	}
-	found := false
-	for _, m := range tc.goodMoves {
-		if pv[0].Equal(&m) {
-			found = true
-			break
+		var buf bytes.Buffer
+		cli.RenderBoard(&buf, p)
+		t.Log(buf.String())
+		start := time.Now()
+		pv, v, st := ai.Analyze(p, tc.limit)
+		elapsed := time.Now().Sub(start)
+		if *dumpPerf {
+			log.Printf("%s move=%d color=%s depth=%d evaluated=%d time=%s",
+				tc.id, spec.number, spec.color, st.Depth, st.Evaluated, elapsed,
+			)
 		}
-	}
-	if len(tc.goodMoves) != 0 && !found {
-		t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(&pv[0]))
-	}
-	if tc.maxEval != 0 && st.Evaluated > tc.maxEval {
-		t.Errorf("!! %s: evaluated %d > %d positions",
-			name, st.Evaluated, tc.maxEval)
+		if len(pv) == 0 {
+			t.Errorf("!! %s: did not return a move!", name)
+			return
+		}
+		var ms []string
+		for _, m := range pv {
+			ms = append(ms, ptn.FormatMove(&m))
+		}
+		t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
+		_, e = p.Move(&pv[0])
+		if e != nil {
+			t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
+		}
+		for _, m := range spec.badMoves {
+			if pv[0].Equal(&m) {
+				t.Errorf("!! %s: bad move: `%s'", name, ptn.FormatMove(&pv[0]))
+			}
+		}
+		found := false
+		for _, m := range spec.goodMoves {
+			if pv[0].Equal(&m) {
+				found = true
+				break
+			}
+		}
+		if len(spec.goodMoves) != 0 && !found {
+			t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(&pv[0]))
+		}
+		if spec.maxEval != 0 && st.Evaluated > spec.maxEval {
+			t.Errorf("!! %s: evaluated %d > %d positions",
+				name, st.Evaluated, spec.maxEval)
+		}
 	}
 }

@@ -4,10 +4,11 @@
 [Player2 "TakticianBot"]
 [Result "R-0"]
 [Id "6454"]
-[Move "3 black"]
 [Depth "5"]
-[BadMove "a3"]
 [Name "BenWo-v1"]
+[Move "3 black"]
+[BadMove "a3"]
+
 
 1. a1 e1
 2. e2 a2
