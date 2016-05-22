@@ -38,6 +38,7 @@ type MinimaxAI struct {
 	stack [maxStack]struct {
 		p     *tak.Position
 		moves [500]tak.Move
+		pv    [10]tak.Move
 	}
 }
 
@@ -227,7 +228,9 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			}
 		}
 	}
-	return ms, v, m.st
+	r := make([]tak.Move, len(ms))
+	copy(r, ms)
+	return r, v, m.st
 }
 
 func (ai *MinimaxAI) minimax(
@@ -279,7 +282,7 @@ func (ai *MinimaxAI) minimax(
 		pv:    pv,
 	}
 
-	best := make([]tak.Move, 0, depth)
+	best := ai.stack[ply].pv[:0]
 	best = append(best, pv...)
 	improved := false
 	var i int
