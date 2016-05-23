@@ -97,9 +97,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		if f.g == nil || who != f.g.opponent {
 			f.client.SendCommand("Shout",
 				fmt.Sprintf("OK! I'll play at level %d for future games.", l))
-		}
-
-		if f.g != nil {
+		} else if f.g != nil {
 			f.ai = ai.NewMinimax(f.Config())
 			f.client.SendCommand("Shout",
 				fmt.Sprintf("OK! I'll play at level %d, starting right now.", l))
