@@ -18,6 +18,8 @@ const (
 	maxThink = time.Minute
 
 	defaultLevel = 2
+
+	docURL = "https://github.com/nelhage/taktician/blob/master/doc/friendly.md"
 )
 
 var commandRE = regexp.MustCompile(`^([^ :]+):\s*([^ ]+)\s*(.*)$`)
@@ -29,9 +31,14 @@ type Friendly struct {
 
 	level    int
 	levelSet time.Time
+
+	greeted map[string]time.Time
 }
 
 func (f *Friendly) NewGame(g *Game) {
+	if f.greeted == nil {
+		f.greeted = make(map[string]time.Time)
+	}
 	if time.Now().Sub(f.levelSet) > 1*time.Hour {
 		f.level = defaultLevel
 	}
@@ -41,6 +48,12 @@ func (f *Friendly) NewGame(g *Game) {
 		fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
 			f.level, g.opponent,
 		))
+	if g := f.greeted[g.opponent]; time.Now().Sub(g) > time.Hour {
+		f.client.SendCommand("Shout",
+			fmt.Sprintf("Learn more about me: %s",
+				docURL))
+	}
+	f.greeted[g.opponent] = time.Now()
 }
 
 func (f *Friendly) GameOver() {
@@ -56,9 +69,6 @@ func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
 
 func (f *Friendly) HandleChat(who string, msg string) {
 	log.Printf("chat from=%q msg=%q", who, msg)
-	if f.g != nil && who != f.g.opponent {
-		return
-	}
 	gs := commandRE.FindStringSubmatch(msg)
 	if gs == nil {
 		return
@@ -84,10 +94,19 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		}
 		f.level = int(l)
 		f.levelSet = time.Now()
-		f.client.SendCommand("Shout", fmt.Sprintf("OK! I'll play at level %d from now on.", l))
+		if f.g == nil || who != f.g.opponent {
+			f.client.SendCommand("Shout",
+				fmt.Sprintf("OK! I'll play at level %d for future games.", l))
+		}
+
 		if f.g != nil {
 			f.ai = ai.NewMinimax(f.Config())
+			f.client.SendCommand("Shout",
+				fmt.Sprintf("OK! I'll play at level %d, starting right now.", l))
 		}
+	case "help":
+		f.client.SendCommand("Shout",
+			fmt.Sprintf("Learn more: %s", docURL))
 	}
 }
 
@@ -125,8 +144,10 @@ var levels = []struct {
 }{
 	{2, easyWeights},
 	{2, medWeights},
+	{3, easyWeights},
 	{2, ai.DefaultWeights},
 	{3, medWeights},
+	{3, easyWeights},
 	{4, medWeights},
 	{3, ai.DefaultWeights},
 	{5, easyWeights},
