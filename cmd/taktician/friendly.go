@@ -129,7 +129,7 @@ var (
 	medWeights = ai.Weights{
 		TopFlat:  200,
 		Standing: 100,
-		Capstone: 200,
+		Capstone: 150,
 		Flat:     100,
 		Tempo:    100,
 		Groups:   [8]int{0, 0, 0, 100, 200},
