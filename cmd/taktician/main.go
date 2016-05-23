@@ -68,10 +68,7 @@ func main() {
 		for {
 			var bot Bot
 			if *friendly {
-				bot = &Friendly{
-					client: client,
-					level:  3,
-				}
+				bot = &Friendly{client: client}
 			} else {
 				bot = &Taktician{}
 			}

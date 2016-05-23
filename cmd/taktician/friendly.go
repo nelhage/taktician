@@ -16,6 +16,8 @@ import (
 const (
 	minThink = 2 * time.Second
 	maxThink = time.Minute
+
+	defaultLevel = 2
 )
 
 var commandRE = regexp.MustCompile(`^([^ :]+):\s*([^ ]+)\s*(.*)$`)
@@ -25,10 +27,14 @@ type Friendly struct {
 	ai     *ai.MinimaxAI
 	g      *Game
 
-	level int
+	level    int
+	levelSet time.Time
 }
 
 func (f *Friendly) NewGame(g *Game) {
+	if time.Now().Sub(f.levelSet) > 1*time.Hour {
+		f.level = defaultLevel
+	}
 	f.g = g
 	f.ai = ai.NewMinimax(f.Config())
 	f.client.SendCommand("Shout",
@@ -64,6 +70,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 	case "level":
 		if gs[3] == "max" {
 			f.level = 100
+			f.levelSet = time.Now()
 			f.client.SendCommand("Shout", "OK! I'll play as best as I can!")
 			break
 		}
@@ -76,6 +83,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 			f.client.SendCommand("Shout", fmt.Sprintf("I only know about levels up to %d", len(levels)+1))
 		}
 		f.level = int(l)
+		f.levelSet = time.Now()
 		f.client.SendCommand("Shout", fmt.Sprintf("OK! I'll play at level %d from now on.", l))
 		if f.g != nil {
 			f.ai = ai.NewMinimax(f.Config())
