@@ -123,8 +123,8 @@ var levels = []struct {
 	depth   int
 	weights ai.Weights
 }{
-	{3, easyWeights},
-	{4, easyWeights},
+	{2, easyWeights},
+	{2, medWeights},
 	{2, ai.DefaultWeights},
 	{3, medWeights},
 	{4, medWeights},
