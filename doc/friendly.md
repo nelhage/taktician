@@ -25,3 +25,14 @@ struggling with one.
 
 If you're playing the bot, you can even change the difficulty level
 mid-game.
+
+# Resources
+
+New to Tak? Here are some links that might help you out.
+
+- [asgard's guide](https://www.reddit.com/r/Tak/wiki/asgardsguide) has
+  much valuable information and strategy
+- [BenWo's lecture on influence](https://www.youtube.com/watch?v=z57rLl51VCc)
+  explains a valuable Tak concept.
+- [/r/tak](https://www.reddit.com/r/Tak/) is full of wonderful
+  friendly people who are happy to give you advice or just chat.
