@@ -19,7 +19,7 @@ const (
 
 	defaultLevel = 2
 
-	docURL = "https://github.com/nelhage/taktician/blob/master/doc/friendly.md"
+	docURL = "http://bit.ly/25h33rC"
 )
 
 var commandRE = regexp.MustCompile(`^([^ :]+):\s*([^ ]+)\s*(.*)$`)
