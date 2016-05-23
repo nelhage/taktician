@@ -111,7 +111,7 @@ var (
 	}
 	medWeights = ai.Weights{
 		TopFlat:  200,
-		Standing: 200,
+		Standing: 100,
 		Capstone: 200,
 		Flat:     100,
 		Tempo:    100,
