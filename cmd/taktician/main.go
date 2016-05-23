@@ -46,6 +46,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	backoff := 1 * time.Second
+	var bot Bot
 	for {
 		client := &playtak.Client{
 			Debug: *debugClient,
@@ -65,13 +66,12 @@ func main() {
 			log.Fatal("login: ", err)
 		}
 		log.Printf("login OK")
+		if *friendly {
+			bot = &Friendly{client: client}
+		} else {
+			bot = &Taktician{}
+		}
 		for {
-			var bot Bot
-			if *friendly {
-				bot = &Friendly{client: client}
-			} else {
-				bot = &Taktician{}
-			}
 			if *accept == "" {
 				client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
 				log.Printf("Seek OK")
