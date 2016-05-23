@@ -16,8 +16,10 @@ levels.
 
 To change the difficulty level, just say
 
-"FriendlyBot: level <level>" in chat. It supports a number of levels,
-from 1 up through 9 or higher (I will still be tweaking the levels).
+    FriendlyBot: level <level>"
+
+in chat. It supports a number of levels, from 1 up through 9 or
+higher (I am still be tweaking the levels).
 
 The levels have somewhat different styles of play, in addition to
 being harder or easier, so try a few different levels, even if you're
