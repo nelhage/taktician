@@ -74,8 +74,12 @@ func playGame(c *playtak.Client, b Bot, line string) {
 	eventLoop:
 		for {
 			var line string
+			var ok bool
 			select {
-			case line = <-c.Recv:
+			case line, ok = <-c.Recv:
+				if !ok {
+					return
+				}
 			case move := <-moves:
 				next, err := p.Move(&move)
 				if err != nil {
@@ -91,6 +95,7 @@ func playGame(c *playtak.Client, b Bot, line string) {
 					p.MoveNumber()/2+1,
 					strings.ToUpper(g.color.String()[:1]),
 					ptn.FormatMove(&move))
+				continue eventLoop
 			case <-timeout:
 				break eventLoop
 			}
