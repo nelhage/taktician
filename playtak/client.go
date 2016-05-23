@@ -120,6 +120,9 @@ func (c *Client) Login(user, pass string) error {
 		if line == "Login or Register" {
 			return errors.New("bad password")
 		}
+		if line == "You're already logged in" {
+			return errors.New("user is already logged in")
+		}
 		if strings.HasPrefix(line, "Welcome ") {
 			return nil
 		}
