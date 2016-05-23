@@ -1,8 +1,6 @@
 package tak
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type position3 struct {
 	Position
@@ -134,6 +132,6 @@ func copyPosition(p *Position, out *Position) {
 }
 
 func Alloc(size int) *Position {
-	p := Position{cfg: &Config{Size: 5}}
+	p := Position{cfg: &Config{Size: size}}
 	return alloc(&p)
 }
