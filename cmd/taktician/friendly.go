@@ -44,15 +44,17 @@ func (f *Friendly) NewGame(g *Game) {
 	}
 	f.g = g
 	f.ai = ai.NewMinimax(f.Config())
-	f.client.SendCommand("Shout",
-		fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
-			f.level, g.opponent,
-		))
+	/*
+		f.client.SendCommand("Shout",
+			fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
+				f.level, g.opponent,
+			))
+	*/
 	if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
 		log.Printf("greeting user=%q greeted=%s", g.opponent, t)
 		f.client.SendCommand("Shout",
-			fmt.Sprintf("Learn more about me: %s",
-				docURL))
+			fmt.Sprintf("FriendlyBot@level %d: %s",
+				f.level, docURL))
 		f.greeted[g.opponent] = time.Now()
 	}
 }
