@@ -30,4 +30,5 @@ func (t *Taktician) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Mov
 	return t.ai.GetMove(p, timeBound(mine))
 }
 
+func (t *Taktician) GameOver()                 {}
 func (t *Taktician) HandleChat(string, string) {}

@@ -22,6 +22,7 @@ type Game struct {
 
 type Bot interface {
 	NewGame(g *Game)
+	GameOver()
 	GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
 	HandleChat(who, msg string)
 }
@@ -48,6 +49,7 @@ func playGame(c *playtak.Client, b Bot, line string) {
 	gameStr := fmt.Sprintf("Game#%s", g.id)
 	p := tak.New(tak.Config{Size: g.size})
 	b.NewGame(&g)
+	defer b.GameOver()
 
 	moves := make(chan tak.Move, 1)
 

@@ -22,6 +22,8 @@ var (
 	zero    = flag.Bool("zero", false, "start with zero weights, not defaults")
 	w1      = flag.String("w1", "", "first set of weights")
 	w2      = flag.String("w2", "", "second set of weights")
+	d1      = flag.Int("d1", 0, "override depth 1")
+	d2      = flag.Int("d2", 0, "override depth 2")
 	perturb = flag.Float64("perturb", 0.0, "perturb weights")
 	seed    = flag.Int64("seed", 1, "starting seed")
 	games   = flag.Int("games", 10, "number of games")
@@ -69,6 +71,12 @@ func main() {
 		if err != nil {
 			log.Fatal("w2:", err)
 		}
+	}
+	if *d1 == 0 {
+		*d1 = *depth
+	}
+	if *d2 == 0 {
+		*d2 = *depth
 	}
 
 	var stats [2]struct {
@@ -211,13 +219,13 @@ func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 			w2 = perturbWeights(*perturb, w2)
 		}
 		p1 := ai.NewMinimax(ai.MinimaxConfig{
-			Depth:    *depth,
+			Depth:    *d1,
 			Seed:     r.Int63(),
 			Evaluate: ai.MakeEvaluator(&w1),
 			Size:     *size,
 		})
 		p2 := ai.NewMinimax(ai.MinimaxConfig{
-			Depth:    *depth,
+			Depth:    *d2,
 			Seed:     r.Int63(),
 			Evaluate: ai.MakeEvaluator(&w2),
 			Size:     *size,

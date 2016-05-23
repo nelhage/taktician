@@ -23,6 +23,8 @@ var (
 	once     = flag.Bool("once", false, "play a single game and exit")
 	takbot   = flag.String("takbot", "", "challenge TakBot AI")
 
+	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
+
 	debug = flag.Int("debug", 1, "debug level")
 	depth = flag.Int("depth", 5, "minimax depth")
 	limit = flag.Duration("limit", time.Minute, "time limit per move")
@@ -64,6 +66,15 @@ func main() {
 		}
 		log.Printf("login OK")
 		for {
+			var bot Bot
+			if *friendly {
+				bot = &Friendly{
+					client: client,
+					level:  3,
+				}
+			} else {
+				bot = &Taktician{}
+			}
 			if *accept == "" {
 				client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
 				log.Printf("Seek OK")
@@ -88,8 +99,14 @@ func main() {
 						}
 					}
 					if strings.HasPrefix(line, "Game Start") {
-						playGame(client, &Taktician{}, line)
+						playGame(client, bot, line)
 						break recvLoop
+					}
+					if strings.HasPrefix(line, "Shout") {
+						who, msg := playtak.ParseShout(line)
+						if who != "" {
+							bot.HandleChat(who, msg)
+						}
 					}
 				case <-sigs:
 					return
