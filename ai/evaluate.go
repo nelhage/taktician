@@ -113,8 +113,8 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 
 	wr := p.White &^ p.Standing
 	br := p.Black &^ p.Standing
-	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ wr)
-	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ br)
+	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ p.White)
+	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ p.Black)
 	ws += int64(w.Liberties * wl)
 	bs += int64(w.Liberties * bl)
 
@@ -186,8 +186,8 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 
 	wr := p.White &^ p.Standing
 	br := p.Black &^ p.Standing
-	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ wr)
-	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ br)
+	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ p.White)
+	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ p.Black)
 
 	fmt.Fprintf(tw, "liberties\t%d\t%d\n", wl, bl)
 
