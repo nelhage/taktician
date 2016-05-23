@@ -119,7 +119,11 @@ func main() {
 		}
 	reconnect:
 		log.Printf("sleeping %s before reconnect...", backoff)
-		time.Sleep(backoff)
+		select {
+		case <-time.After(backoff):
+		case <-sigs:
+			return
+		}
 		backoff = backoff * 2
 		if backoff > time.Minute {
 			backoff = time.Minute
