@@ -5,11 +5,9 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -19,6 +17,8 @@ type MCTSConfig struct {
 	Limit time.Duration
 	C     float64
 	Seed  int64
+
+	Policy func(r *rand.Rand, p *tak.Position, next *tak.Position) *tak.Position
 }
 
 type MonteCarloAI struct {
@@ -48,7 +48,7 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 	}
 	for time.Now().Sub(start) < limit {
 		node := ai.descend(tree)
-		if ai.cfg.Debug > 3 {
+		if ai.cfg.Debug > 4 {
 			var s []string
 			t := node
 			for t.parent != nil {
@@ -64,7 +64,7 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 	best := tree.children[0]
 	i := 0
 	for _, c := range tree.children {
-		if ai.cfg.Debug > 2 {
+		if ai.cfg.Debug > 3 {
 			log.Printf("[mcts][%s]: n=%d w=%d", ptn.FormatMove(&c.move), c.simulations, c.wins)
 		}
 		if c.simulations > best.simulations {
@@ -74,6 +74,7 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 			i++
 			if ai.r.Intn(i) == 0 {
 				best = c
+				i = 1
 			}
 		}
 	}
@@ -105,6 +106,7 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 	}
 	var best *tree
 	var val float64
+	i := 0
 	for _, c := range t.children {
 		var s float64
 		if c.simulations == 0 {
@@ -116,6 +118,14 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 		if s > val {
 			best = c
 			val = s
+			i = 1
+		} else if s == val {
+			i++
+			if ai.r.Intn(i) == 0 {
+				best = c
+				val = s
+				i = 1
+			}
 		}
 	}
 	return ai.descend(best)
@@ -125,32 +135,35 @@ const maxMoves = 300
 
 func (ai *MonteCarloAI) evaluate(t *tree) bool {
 	p := t.position
+	alloc := tak.Alloc(p.Size())
+
 	for i := 0; i < maxMoves; i++ {
-		moves := p.AllMoves(nil)
-		var next *tak.Position
-		for {
-			r := ai.r.Int31n(int32(len(moves)))
-			m := moves[r]
-			var e error
-			if next, e = p.Move(&m); e == nil {
-				break
-			}
-			moves[0], moves[r] = moves[r], moves[0]
-			moves = moves[1:]
-		}
+		next := ai.cfg.Policy(ai.r, p, alloc)
 		if next == nil {
-			if ai.cfg.Debug > 3 {
-				log.Printf("[mcts][aborted due looping]")
-				cli.RenderBoard(os.Stderr, p)
-			}
 			return false
 		}
-		p = next
+		p, alloc = next, p
 		if ok, c := p.GameOver(); ok {
 			return c == t.position.ToMove()
 		}
 	}
 	return false
+}
+
+func RandomPolicy(r *rand.Rand, p *tak.Position, alloc *tak.Position) *tak.Position {
+	moves := p.AllMoves(nil)
+	var next *tak.Position
+	for {
+		r := r.Int31n(int32(len(moves)))
+		m := moves[r]
+		var e error
+		if next, e = p.MovePreallocated(&m, alloc); e == nil {
+			break
+		}
+		moves[0], moves[r] = moves[r], moves[0]
+		moves = moves[1:]
+	}
+	return next
 }
 
 func (ai *MonteCarloAI) update(t *tree, win bool) {
@@ -172,6 +185,9 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 	}
 	if ai.cfg.Seed == 0 {
 		ai.cfg.Seed = time.Now().Unix()
+	}
+	if ai.cfg.Policy == nil {
+		ai.cfg.Policy = RandomPolicy
 	}
 	ai.r = rand.New(rand.NewSource(ai.cfg.Seed))
 	return ai
