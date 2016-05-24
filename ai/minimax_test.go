@@ -11,13 +11,18 @@ import (
 
 var size = flag.Int("size", 5, "board size to benchmark")
 var depth = flag.Int("depth", 4, "minimax search depth")
+var seed = flag.Int64("seed", 0, "random seed")
 
 func BenchmarkMinimax(b *testing.B) {
 	var cfg = tak.Config{Size: *size}
 	p := tak.New(cfg)
 	p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
 	p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
-	ai := NewMinimax(MinimaxConfig{Size: *size, Depth: *depth})
+	ai := NewMinimax(MinimaxConfig{
+		Size:  *size,
+		Depth: *depth,
+		Seed:  *seed,
+	})
 
 	b.ReportAllocs()
 	b.ResetTimer()
