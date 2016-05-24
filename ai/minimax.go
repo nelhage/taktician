@@ -266,7 +266,7 @@ func (ai *MinimaxAI) minimax(
 			teSuffices = true
 		}
 		if teSuffices {
-			_, e := p.Move(&te.m)
+			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
 			if e == nil {
 				ai.st.TTHits++
 				ai.stack[ply].pv[0] = te.m
