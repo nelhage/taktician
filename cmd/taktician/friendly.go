@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/nelhage/taktician/ai"
@@ -21,8 +19,6 @@ const (
 
 	docURL = "http://bit.ly/25h33rC"
 )
-
-var commandRE = regexp.MustCompile(`^([^ :]+):\s*([^ ]+)\s*(.*)$`)
 
 type Friendly struct {
 	client *playtak.Client
@@ -72,22 +68,20 @@ func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
 
 func (f *Friendly) HandleChat(who string, msg string) {
 	log.Printf("chat from=%q msg=%q", who, msg)
-	gs := commandRE.FindStringSubmatch(msg)
-	if gs == nil {
+	cmd, arg := parseCommand(msg)
+	if cmd == "" {
 		return
 	}
-	if !strings.EqualFold(gs[1], *user) {
-		return
-	}
-	switch gs[2] {
+
+	switch cmd {
 	case "level":
-		if gs[3] == "max" {
+		if arg == "max" {
 			f.level = 100
 			f.levelSet = time.Now()
 			f.client.SendCommand("Shout", "OK! I'll play as best as I can!")
 			break
 		}
-		l, e := strconv.ParseUint(strings.Trim(gs[3], " "), 10, 64)
+		l, e := strconv.ParseUint(arg, 10, 64)
 		if e != nil {
 			log.Printf("bad level: %v", e)
 			return
