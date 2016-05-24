@@ -87,14 +87,14 @@ func playGame(c *playtak.Client, b Bot, line string) {
 						ptn.FormatMove(&move), err)
 					break eventLoop
 				}
-				p = next
 				c.SendCommand(gameStr, playtak.FormatServer(&move))
 				log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
 					g.id,
 					p.MoveNumber(),
 					p.MoveNumber()/2+1,
-					strings.ToUpper(g.color.String()[:1]),
+					strings.ToUpper(p.ToMove().String()[:1]),
 					ptn.FormatMove(&move))
+				p = next
 				continue eventLoop
 			case <-timeout:
 				break eventLoop
@@ -118,7 +118,7 @@ func playGame(c *playtak.Client, b Bot, line string) {
 				if err != nil {
 					panic(err)
 				}
-				p, err = p.Move(&move)
+				next, err := p.Move(&move)
 				if err != nil {
 					panic(err)
 				}
@@ -126,8 +126,9 @@ func playGame(c *playtak.Client, b Bot, line string) {
 					g.id,
 					p.MoveNumber(),
 					p.MoveNumber()/2+1,
-					strings.ToUpper(g.color.Flip().String()[:1]),
+					strings.ToUpper(p.ToMove().String()[:1]),
 					ptn.FormatMove(&move))
+				p = next
 				timeout = time.NewTimer(500 * time.Millisecond).C
 			case "Abandoned.":
 				log.Printf("game-over game-id=%s ply=%d result=abandoned",
