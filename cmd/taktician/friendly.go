@@ -139,7 +139,6 @@ var levels = []struct {
 }{
 	{2, easyWeights},
 	{2, medWeights},
-	{3, easyWeights},
 	{2, ai.DefaultWeights},
 	{3, easyWeights},
 	{3, medWeights},
