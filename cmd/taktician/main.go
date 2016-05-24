@@ -69,7 +69,7 @@ func main() {
 		if *friendly {
 			bot = &Friendly{client: client}
 		} else {
-			bot = &Taktician{}
+			bot = &Taktician{client: client}
 		}
 		for {
 			if *accept == "" {
