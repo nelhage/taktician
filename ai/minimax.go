@@ -268,7 +268,8 @@ func (ai *MinimaxAI) minimax(
 			_, e := p.Move(&te.m)
 			if e == nil {
 				ai.st.TTHits++
-				return []tak.Move{te.m}, te.value
+				ai.stack[ply].pv[0] = te.m
+				return ai.stack[ply].pv[:1], te.value
 			}
 			te = nil
 		}
