@@ -37,8 +37,9 @@ type MinimaxAI struct {
 	table []tableEntry
 	stack [maxStack]struct {
 		p     *tak.Position
+		mg    moveGenerator
 		moves [500]tak.Move
-		pv    [10]tak.Move
+		pv    [maxStack]tak.Move
 	}
 }
 
@@ -274,7 +275,11 @@ func (ai *MinimaxAI) minimax(
 			te = nil
 		}
 	}
-	mg := moveGenerator{
+	// As of 1.6.2, Go's escape analysis can't tell that a
+	// stack-allocated object here doesn't escape. So we force it
+	// into our manual stack.
+	mg := &ai.stack[ply].mg
+	*mg = moveGenerator{
 		ai:    ai,
 		ply:   ply,
 		depth: depth,
