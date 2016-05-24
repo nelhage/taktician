@@ -1,0 +1,20 @@
+[Player1 "White"]
+[Player2 "Black"]
+[Result "R-0"]
+[Size "5"]
+[Depth "7"]
+[Move "12 white"]
+[GoodMove "b5-"]
+
+1. a1 e5
+2. d3 b2
+3. d2 a3
+4. d1 d4
+5. e4 e3
+6. Cc4 1d4-1
+7. c3 c2
+8. d4 2d3-2
+9. b4 a4
+10. a5 1a4>1
+11. b5 c5
+12.
