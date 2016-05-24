@@ -11,7 +11,7 @@ import (
 
 var size = flag.Int("size", 5, "board size to benchmark")
 var depth = flag.Int("depth", 4, "minimax search depth")
-var seed = flag.Int64("seed", 0, "random seed")
+var seed = flag.Int64("seed", 4, "random seed")
 
 func BenchmarkMinimax(b *testing.B) {
 	var cfg = tak.Config{Size: *size}
