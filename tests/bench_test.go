@@ -1,11 +1,15 @@
 package tests
 
 import (
+	"flag"
 	"testing"
 
+	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
+
+var seed = flag.Int64("seed", 4, "random seed")
 
 func BenchmarkMoveEmpty(b *testing.B) {
 	p := tak.New(tak.Config{Size: 5})
@@ -41,5 +45,25 @@ func BenchmarkMoveComplex(b *testing.B) {
 			}
 			j++
 		}
+	}
+}
+
+func BenchmarkPuzzle1(b *testing.B) {
+	p, e := ptn.ParseTPS("2,x2,121C,1/x2,2,12,1/x2,2,12S,2/x3,1,1/x4,1 1 2")
+	if e != nil {
+		panic("bad tps")
+	}
+
+	mm := ai.NewMinimax(ai.MinimaxConfig{
+		Depth: 7,
+		Seed:  *seed,
+		Size:  p.Size(),
+	})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mm.GetMove(p, 0)
 	}
 }
