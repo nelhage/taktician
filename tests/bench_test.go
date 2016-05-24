@@ -54,16 +54,15 @@ func BenchmarkPuzzle1(b *testing.B) {
 		panic("bad tps")
 	}
 
-	mm := ai.NewMinimax(ai.MinimaxConfig{
-		Depth: 7,
-		Seed:  *seed,
-		Size:  p.Size(),
-	})
-
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		mm := ai.NewMinimax(ai.MinimaxConfig{
+			Depth: 7,
+			Seed:  *seed,
+			Size:  p.Size(),
+		})
 		mm.GetMove(p, 0)
 	}
 }
