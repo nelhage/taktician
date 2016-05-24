@@ -14,12 +14,17 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type MonteCarloAI struct {
-	limit time.Duration
-	c     float64
-	r     *rand.Rand
-
+type MCTSConfig struct {
 	Debug int
+	Limit time.Duration
+	C     float64
+	Seed  int64
+}
+
+type MonteCarloAI struct {
+	cfg MCTSConfig
+
+	r *rand.Rand
 }
 
 type tree struct {
@@ -38,12 +43,12 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 	}
 	ai.populate(tree)
 	start := time.Now()
-	if ai.limit < limit {
-		limit = ai.limit
+	if ai.cfg.Limit < limit {
+		limit = ai.cfg.Limit
 	}
 	for time.Now().Sub(start) < limit {
 		node := ai.descend(tree)
-		if ai.Debug > 3 {
+		if ai.cfg.Debug > 3 {
 			var s []string
 			t := node
 			for t.parent != nil {
@@ -57,15 +62,22 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 		ai.populate(node)
 	}
 	best := tree.children[0]
+	i := 0
 	for _, c := range tree.children {
-		if ai.Debug > 2 {
+		if ai.cfg.Debug > 2 {
 			log.Printf("[mcts][%s]: n=%d w=%d", ptn.FormatMove(&c.move), c.simulations, c.wins)
 		}
 		if c.simulations > best.simulations {
 			best = c
+			i = 1
+		} else if c.simulations == best.simulations {
+			i++
+			if ai.r.Intn(i) == 0 {
+				best = c
+			}
 		}
 	}
-	if ai.Debug > 1 {
+	if ai.cfg.Debug > 1 {
 		fmt.Printf("[mcts] evaluated simulations=%d wins=%d", tree.simulations, tree.wins)
 	}
 	return best.move
@@ -99,7 +111,7 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 			s = 10
 		} else {
 			s = float64(c.wins)/float64(c.simulations) +
-				ai.c*math.Sqrt(math.Log(float64(t.simulations))/float64(c.simulations))
+				ai.cfg.C*math.Sqrt(math.Log(float64(t.simulations))/float64(c.simulations))
 		}
 		if s > val {
 			best = c
@@ -127,7 +139,7 @@ func (ai *MonteCarloAI) evaluate(t *tree) bool {
 			moves = moves[1:]
 		}
 		if next == nil {
-			if ai.Debug > 3 {
+			if ai.cfg.Debug > 3 {
 				log.Printf("[mcts][aborted due looping]")
 				cli.RenderBoard(os.Stderr, p)
 			}
@@ -151,10 +163,16 @@ func (ai *MonteCarloAI) update(t *tree, win bool) {
 	}
 }
 
-func NewMonteCarlo(limit time.Duration) *MonteCarloAI {
-	return &MonteCarloAI{
-		limit: limit,
-		c:     0.7,
-		r:     rand.New(rand.NewSource(0)),
+func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
+	ai := &MonteCarloAI{
+		cfg: cfg,
 	}
+	if ai.cfg.C == 0 {
+		ai.cfg.C = 0.7
+	}
+	if ai.cfg.Seed == 0 {
+		ai.cfg.Seed = time.Now().Unix()
+	}
+	ai.r = rand.New(rand.NewSource(ai.cfg.Seed))
+	return ai
 }

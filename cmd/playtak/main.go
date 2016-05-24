@@ -72,8 +72,10 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 				log.Fatal(err)
 			}
 		}
-		p := ai.NewMonteCarlo(limit)
-		p.Debug = *debug
+		p := ai.NewMonteCarlo(ai.MCTSConfig{
+			Limit: limit,
+			Debug: *debug,
+		})
 		return &aiWrapper{p}
 	}
 	log.Fatalf("unparseable player: %s", s)
