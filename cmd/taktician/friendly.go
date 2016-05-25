@@ -88,6 +88,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		}
 		if int(l) < 1 || int(l) > len(levels)+1 {
 			f.client.SendCommand("Shout", fmt.Sprintf("I only know about levels up to %d", len(levels)+1))
+			break
 		}
 		f.level = int(l)
 		f.levelSet = time.Now()
