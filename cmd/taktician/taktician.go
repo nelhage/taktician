@@ -53,7 +53,10 @@ func (t *Taktician) HandleChat(who string, msg string) {
 		}
 		if sz == 5 || sz == 6 {
 			*size = sz
-			t.client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
+			t.client.SendCommand("Seek",
+				strconv.Itoa(*size),
+				strconv.Itoa(int(gameTime.Seconds())),
+				strconv.Itoa(int(increment.Seconds())))
 		}
 	}
 }

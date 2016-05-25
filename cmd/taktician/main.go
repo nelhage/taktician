@@ -14,14 +14,15 @@ import (
 )
 
 var (
-	server   = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
-	user     = flag.String("user", "", "username for login")
-	pass     = flag.String("pass", "", "password for login")
-	accept   = flag.String("accept", "", "accept a game from specified user")
-	gameTime = flag.Duration("time", 20*time.Minute, "Length of game to offer")
-	size     = flag.Int("size", 5, "size of game to offer")
-	once     = flag.Bool("once", false, "play a single game and exit")
-	takbot   = flag.String("takbot", "", "challenge TakBot AI")
+	server    = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
+	user      = flag.String("user", "", "username for login")
+	pass      = flag.String("pass", "", "password for login")
+	accept    = flag.String("accept", "", "accept a game from specified user")
+	gameTime  = flag.Duration("time", 20*time.Minute, "Length of game to offer")
+	increment = flag.Duration("increment", 0, "time increment to offer")
+	size      = flag.Int("size", 5, "size of game to offer")
+	once      = flag.Bool("once", false, "play a single game and exit")
+	takbot    = flag.String("takbot", "", "challenge TakBot AI")
 
 	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
 
@@ -73,7 +74,10 @@ func main() {
 		}
 		for {
 			if *accept == "" {
-				client.SendCommand("Seek", strconv.Itoa(*size), strconv.Itoa(int(gameTime.Seconds())))
+				client.SendCommand("Seek",
+					strconv.Itoa(*size),
+					strconv.Itoa(int(gameTime.Seconds())),
+					strconv.Itoa(int(increment.Seconds())))
 				log.Printf("Seek OK")
 				if *takbot != "" {
 					client.SendCommand("Shout", "takbot: play", *takbot)
