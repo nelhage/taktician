@@ -18,7 +18,7 @@ const (
 
 	tableSize uint64 = (1 << 20)
 
-	maxStack = 10
+	maxStack = 15
 )
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
