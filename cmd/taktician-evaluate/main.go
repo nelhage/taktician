@@ -22,8 +22,8 @@ var (
 	zero    = flag.Bool("zero", false, "start with zero weights, not defaults")
 	w1      = flag.String("w1", "", "first set of weights")
 	w2      = flag.String("w2", "", "second set of weights")
-	d1      = flag.Int("d1", 0, "override depth 1")
-	d2      = flag.Int("d2", 0, "override depth 2")
+	c1      = flag.String("c1", "", "custom config 1")
+	c2      = flag.String("c2", "", "custom config 2")
 	perturb = flag.Float64("perturb", 0.0, "perturb weights")
 	seed    = flag.Int64("seed", 1, "starting seed")
 	games   = flag.Int("games", 10, "number of games")
@@ -61,22 +61,33 @@ func main() {
 		weights2 = ai.Weights{}
 	}
 	if *w1 != "" {
-		err := json.Unmarshal([]byte(*w1), &weights1)
-		if err != nil {
+		if err := json.Unmarshal([]byte(*w1), &weights1); err != nil {
 			log.Fatal("w1:", err)
 		}
 	}
 	if *w2 != "" {
-		err := json.Unmarshal([]byte(*w2), &weights2)
-		if err != nil {
+		if err := json.Unmarshal([]byte(*w2), &weights2); err != nil {
 			log.Fatal("w2:", err)
 		}
 	}
-	if *d1 == 0 {
-		*d1 = *depth
+
+	cfg1 := ai.MinimaxConfig{
+		Depth: *depth,
+		Size:  *size,
 	}
-	if *d2 == 0 {
-		*d2 = *depth
+	cfg2 := ai.MinimaxConfig{
+		Depth: *depth,
+		Size:  *size,
+	}
+	if *c1 != "" {
+		if err := json.Unmarshal([]byte(*c1), &cfg1); err != nil {
+			log.Fatal("c1:", err)
+		}
+	}
+	if *c2 != "" {
+		if err := json.Unmarshal([]byte(*c2), &cfg2); err != nil {
+			log.Fatal("c2:", err)
+		}
 	}
 
 	var stats [2]struct {
@@ -88,7 +99,7 @@ func main() {
 
 	rc := make(chan gameResult)
 
-	go runGames(weights1, weights2, *seed, rc)
+	go runGames(cfg1, cfg2, weights1, weights2, *seed, rc)
 	for r := range rc {
 		d := r.p.WinDetails()
 		if *verbose {
@@ -199,7 +210,8 @@ func perturbWeights(p float64, w ai.Weights) ai.Weights {
 	return w
 }
 
-func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
+func runGames(cfg1, cfg2 ai.MinimaxConfig,
+	w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 	gc := make(chan gameSpec)
 	var wg sync.WaitGroup
 	wg.Add(*threads)
@@ -218,18 +230,16 @@ func runGames(w1, w2 ai.Weights, seed int64, rc chan<- gameResult) {
 			w1 = perturbWeights(*perturb, w1)
 			w2 = perturbWeights(*perturb, w2)
 		}
-		p1 := ai.NewMinimax(ai.MinimaxConfig{
-			Depth:    *d1,
-			Seed:     r.Int63(),
-			Evaluate: ai.MakeEvaluator(&w1),
-			Size:     *size,
-		})
-		p2 := ai.NewMinimax(ai.MinimaxConfig{
-			Depth:    *d2,
-			Seed:     r.Int63(),
-			Evaluate: ai.MakeEvaluator(&w2),
-			Size:     *size,
-		})
+		cfg1 := cfg1
+		cfg1.Evaluate = ai.MakeEvaluator(&w1)
+		cfg1.Seed = r.Int63()
+
+		cfg2 := cfg2
+		cfg2.Evaluate = ai.MakeEvaluator(&w2)
+		cfg2.Seed = r.Int63()
+
+		p1 := ai.NewMinimax(cfg1)
+		p2 := ai.NewMinimax(cfg2)
 		seed++
 		var p1color tak.Color
 		if g%2 == 0 {
