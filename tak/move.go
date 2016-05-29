@@ -43,6 +43,22 @@ func (m *Move) Equal(rhs *Move) bool {
 	return true
 }
 
+func (m *Move) Dest() (int, int) {
+	switch m.Type {
+	case PlaceFlat, PlaceStanding, PlaceCapstone:
+		return m.X, m.Y
+	case SlideLeft:
+		return m.X - len(m.Slides), m.Y
+	case SlideRight:
+		return m.X + len(m.Slides), m.Y
+	case SlideUp:
+		return m.X, m.Y + len(m.Slides)
+	case SlideDown:
+		return m.X, m.Y - len(m.Slides)
+	}
+	panic("bad type")
+}
+
 var (
 	ErrOccupied       = errors.New("position is occupied")
 	ErrIllegalSlide   = errors.New("illegal slide")
