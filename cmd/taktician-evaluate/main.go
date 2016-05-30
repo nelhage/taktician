@@ -139,10 +139,15 @@ func main() {
 		}
 	}
 
-	j, _ := json.Marshal(&weights1)
-	log.Printf("p1=%s", j)
+	var j []byte
+	j, _ = json.Marshal(&weights1)
+	log.Printf("p1w=%s", j)
+	j, _ = json.Marshal(&cfg1)
+	log.Printf("p1c=%s", j)
 	j, _ = json.Marshal(&weights2)
 	log.Printf("p2=%s", j)
+	j, _ = json.Marshal(&cfg2)
+	log.Printf("p2c=%s", j)
 	log.Printf("done games=%d seed=%d ties=%d p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		*games, *seed, ties,
 		stats[0].wins, stats[0].roadWins, stats[0].flatWins,
