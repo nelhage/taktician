@@ -30,7 +30,7 @@ type MinimaxAI struct {
 	st Stats
 	c  bitboard.Constants
 
-	heatMap []uint64
+	history map[uint64]int
 
 	evaluate EvaluationFunc
 
@@ -99,7 +99,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	if m.evaluate == nil {
 		m.evaluate = DefaultEvaluate
 	}
-	m.heatMap = make([]uint64, m.cfg.Size*m.cfg.Size)
+	m.history = make(map[uint64]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
 	m.table = make([]tableEntry, tableSize)
 	for i := range m.stack {
 		m.stack[i].p = tak.Alloc(m.cfg.Size)
@@ -149,8 +149,8 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	if m.cfg.Size != p.Size() {
 		panic("Analyze: wrong size")
 	}
-	for i, v := range m.heatMap {
-		m.heatMap[i] = v / 2
+	for i, v := range m.history {
+		m.history[i] = v / 2
 	}
 
 	var seed = m.cfg.Seed
@@ -341,7 +341,7 @@ func (ai *MinimaxAI) minimax(
 				default:
 					ai.st.CutSearch += uint64(i + 1)
 				}
-				ai.heatMap[m.X+m.Y*ai.cfg.Size] += (1 << uint(depth))
+				ai.history[m.Hash()] += (1 << uint(depth))
 				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
 					var tm tak.Move
 					td := 0

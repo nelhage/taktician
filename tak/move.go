@@ -59,6 +59,20 @@ func (m *Move) Dest() (int, int) {
 	panic("bad type")
 }
 
+func (m *Move) Hash() uint64 {
+	var h uint64
+	for _, s := range m.Slides {
+		h = (h << 3) | uint64(s)
+	}
+	h <<= 3
+	h |= uint64(m.Type)
+	h <<= 3
+	h |= uint64(m.X)
+	h <<= 3
+	h |= uint64(m.Y)
+	return h
+}
+
 var (
 	ErrOccupied       = errors.New("position is occupied")
 	ErrIllegalSlide   = errors.New("illegal slide")

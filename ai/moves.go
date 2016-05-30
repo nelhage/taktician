@@ -23,9 +23,7 @@ type sortMoves struct{ m *moveGenerator }
 
 func (s sortMoves) Len() int { return len(s.m.ms) }
 func (s sortMoves) Less(i, j int) bool {
-	ii := s.m.ms[i].X + s.m.ms[i].Y*s.m.ai.cfg.Size
-	ji := s.m.ms[j].X + s.m.ms[j].Y*s.m.ai.cfg.Size
-	return s.m.ai.heatMap[ii] > s.m.ai.heatMap[ji]
+	return s.m.ai.history[s.m.ms[i].Hash()] > s.m.ai.history[s.m.ms[j].Hash()]
 }
 func (s sortMoves) Swap(i, j int) {
 	s.m.ms[i], s.m.ms[j] = s.m.ms[j], s.m.ms[i]
