@@ -64,6 +64,7 @@ type Stats struct {
 	Depth     int
 	Generated uint64
 	Evaluated uint64
+	Scout     uint64
 	Terminal  uint64
 	Visited   uint64
 
@@ -188,10 +189,10 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d evaluated=%d terminal=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d",
+			log.Printf("[minimax]  stats: visited=%d evaluated=%d scout=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d",
 				m.st.Visited,
 				m.st.Evaluated,
-				m.st.Terminal,
+				m.st.Scout,
 				m.st.CutNodes,
 				m.st.Cut0,
 				float64(m.st.Cut0)/float64(m.st.CutNodes+1),
@@ -249,6 +250,9 @@ func (ai *MinimaxAI) minimax(
 	}
 
 	ai.st.Visited++
+	if β == α+1 {
+		ai.st.Scout++
+	}
 
 	te := ai.ttGet(p.Hash())
 	if te != nil {
