@@ -102,7 +102,8 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		}
 	case "help":
 		f.client.SendCommand("Shout",
-			fmt.Sprintf("Learn more: %s", docURL))
+			fmt.Sprintf("[FriendlyBoy@level %d]: %s",
+				f.level, docURL))
 	}
 }
 
