@@ -73,6 +73,8 @@ type Stats struct {
 	Cut1      uint64
 	CutSearch uint64
 
+	ReSearch uint64
+
 	AllNodes uint64
 
 	TTHits uint64
@@ -189,7 +191,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d evaluated=%d scout=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d",
+			log.Printf("[minimax]  stats: visited=%d evaluated=%d scout=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d",
 				m.st.Visited,
 				m.st.Evaluated,
 				m.st.Scout,
@@ -200,7 +202,8 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 				float64(m.st.Cut0+m.st.Cut1)/float64(m.st.CutNodes+1),
 				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
 				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
-				m.st.AllNodes)
+				m.st.AllNodes,
+				m.st.ReSearch)
 		}
 		if i > 1 {
 			branchSum += m.st.Evaluated / (prevEval + 1)
@@ -307,6 +310,7 @@ func (ai *MinimaxAI) minimax(
 		if i > 1 {
 			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -α-1, -α)
 			if -v > α && -v < β {
+				ai.st.ReSearch++
 				ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
 			}
 		} else {
