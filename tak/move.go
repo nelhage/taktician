@@ -5,7 +5,8 @@ import "errors"
 type MoveType byte
 
 const (
-	PlaceFlat MoveType = 1 + iota
+	Pass MoveType = 1 + iota
+	PlaceFlat
 	PlaceStanding
 	PlaceCapstone
 	SlideLeft
@@ -94,6 +95,9 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	var place Piece
 	dx, dy := 0, 0
 	switch m.Type {
+	case Pass:
+		next.analyze()
+		return next, nil
 	case PlaceFlat:
 		place = MakePiece(p.ToMove(), Flat)
 	case PlaceStanding:

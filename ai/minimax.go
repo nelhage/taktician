@@ -70,10 +70,12 @@ type Stats struct {
 	Terminal  uint64
 	Visited   uint64
 
-	CutNodes  uint64
-	Cut0      uint64
-	Cut1      uint64
-	CutSearch uint64
+	CutNodes   uint64
+	NullSearch uint64
+	NullCut    uint64
+	Cut0       uint64
+	Cut1       uint64
+	CutSearch  uint64
 
 	ReSearch uint64
 
@@ -88,8 +90,9 @@ type MinimaxConfig struct {
 	Debug int
 	Seed  int64
 
-	NoSort  bool
-	NoTable bool
+	NoSort     bool
+	NoTable    bool
+	NoNullMove bool
 
 	Evaluate EvaluationFunc
 }
@@ -194,10 +197,12 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d scout=%d evaluated=%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d",
+			log.Printf("[minimax]  stats: visited=%d scout=%d evaluated=%d null=%d/%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d",
 				m.st.Visited,
 				m.st.Scout,
 				m.st.Evaluated,
+				m.st.NullCut,
+				m.st.NullSearch,
 				m.st.CutNodes,
 				m.st.Cut0,
 				float64(m.st.Cut0)/float64(m.st.CutNodes+1),
@@ -285,6 +290,21 @@ func (ai *MinimaxAI) minimax(
 			te = nil
 		}
 	}
+
+	if β == α+1 && ai.nullMoveOK(ply, depth, p) {
+		ai.stack[ply].m = tak.Move{Type: tak.Pass}
+		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
+		if e == nil {
+			ai.st.NullSearch++
+			_, v := ai.minimax(child, ply+1, depth-3, nil, -α-1, -α)
+			v = -v
+			if v >= β {
+				ai.st.NullCut++
+				return nil, v
+			}
+		}
+	}
+
 	// As of 1.6.2, Go's escape analysis can't tell that a
 	// stack-allocated object here doesn't escape. So we force it
 	// into our manual stack.
@@ -380,4 +400,20 @@ func (ai *MinimaxAI) minimax(
 	}
 
 	return best, α
+}
+
+func (ai *MinimaxAI) nullMoveOK(ply, depth int, p *tak.Position) bool {
+	if ai.cfg.NoNullMove {
+		return false
+	}
+	if ply == 0 || depth < 3 {
+		return false
+	}
+	if ai.stack[ply-1].m.Type == tak.Pass {
+		return false
+	}
+	if p.WhiteStones() < 3 || p.BlackStones() < 3 {
+		return false
+	}
+	return true
 }

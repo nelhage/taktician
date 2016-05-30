@@ -29,9 +29,10 @@ var (
 	depth     = flag.Int("depth", 5, "minimax depth")
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
 
-	seed  = flag.Int64("seed", 0, "specify a seed")
-	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
-	table = flag.Bool("table", true, "use the transposition table")
+	seed     = flag.Int64("seed", 0, "specify a seed")
+	sort     = flag.Bool("sort", true, "sort moves via history heuristic")
+	table    = flag.Bool("table", true, "use the transposition table")
+	nullMove = flag.Bool("nullMove", true, "use null-move pruning")
 
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 )
@@ -111,8 +112,9 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		Seed:  *seed,
 		Debug: *debug,
 
-		NoSort:  !*sort,
-		NoTable: !*table,
+		NoSort:     !*sort,
+		NoTable:    !*table,
+		NoNullMove: !*nullMove,
 	})
 }
 
