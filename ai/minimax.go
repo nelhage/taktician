@@ -20,14 +20,14 @@ const (
 
 	maxStack = 15
 
-	lmrBound = 5
+	lmrBound = 20
 )
 
 func lmrReduce(d int) int {
 	if d <= 2 {
 		return 0
 	}
-	return d / 3
+	return 2
 }
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
