@@ -52,6 +52,16 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 			fallthrough
 		case 2:
 			mg.i++
+			if mg.ply == 0 {
+				continue
+			}
+			if r, ok := mg.ai.response[mg.ai.stack[mg.ply-1].m.Hash()]; ok {
+				m = r
+				break
+			}
+			fallthrough
+		case 3:
+			mg.i++
 			mg.ms = mg.p.AllMoves(mg.ai.stack[mg.ply].moves[:0])
 			if mg.ply == 0 {
 				for i := len(mg.ms) - 1; i > 0; i-- {

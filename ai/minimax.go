@@ -30,7 +30,8 @@ type MinimaxAI struct {
 	st Stats
 	c  bitboard.Constants
 
-	history map[uint64]int
+	history  map[uint64]int
+	response map[uint64]tak.Move
 
 	evaluate EvaluationFunc
 
@@ -40,6 +41,7 @@ type MinimaxAI struct {
 		mg    moveGenerator
 		moves [500]tak.Move
 		pv    [maxStack]tak.Move
+		m     tak.Move
 	}
 }
 
@@ -100,6 +102,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 		m.evaluate = DefaultEvaluate
 	}
 	m.history = make(map[uint64]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
+	m.response = make(map[uint64]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)
 	m.table = make([]tableEntry, tableSize)
 	for i := range m.stack {
 		m.stack[i].p = tak.Alloc(m.cfg.Size)
@@ -307,6 +310,7 @@ func (ai *MinimaxAI) minimax(
 		if len(best) != 0 {
 			newpv = best[1:]
 		}
+		ai.stack[ply].m = m
 		if i > 1 {
 			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -α-1, -α)
 			if -v > α && -v < β {
@@ -342,6 +346,9 @@ func (ai *MinimaxAI) minimax(
 					ai.st.CutSearch += uint64(i + 1)
 				}
 				ai.history[m.Hash()] += (1 << uint(depth))
+				if ply > 0 {
+					ai.response[ai.stack[ply-1].m.Hash()] = m
+				}
 				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
 					var tm tak.Move
 					td := 0
