@@ -23,6 +23,12 @@ type Client struct {
 	send     chan string
 	shutdown chan struct{}
 	wg       sync.WaitGroup
+
+	last struct {
+		sync.Mutex
+		buf [5]string
+		i   int
+	}
 }
 
 func (c *Client) Error() error {
@@ -44,6 +50,26 @@ func (c *Client) Connect(host string) error {
 	return nil
 }
 
+func (c *Client) logSent(l string) {
+	c.last.Lock()
+	defer c.last.Unlock()
+	c.last.buf[c.last.i] = l
+	c.last.i = (c.last.i + 1) % len(c.last.buf)
+}
+
+func (c *Client) lastSent() []string {
+	out := make([]string, 0, len(c.last.buf))
+	c.last.Lock()
+	defer c.last.Unlock()
+	for i := 0; i < len(c.last.buf); i++ {
+		j := (c.last.i - i + len(c.last.buf)) % len(c.last.buf)
+		if c.last.buf[j] != "" {
+			out = append(out, c.last.buf[j])
+		}
+	}
+	return out
+}
+
 func (c *Client) recvThread() {
 	r := bufio.NewReader(c.conn)
 	defer c.wg.Done()
@@ -59,6 +85,12 @@ func (c *Client) recvThread() {
 		line = line[:len(line)-1]
 		if c.Debug {
 			log.Printf("< %s", line)
+		}
+		if line == "NOK" {
+			log.Printf("NOK! last messages:")
+			for _, m := range c.lastSent() {
+				log.Printf(" - `%s`", m)
+			}
 		}
 		select {
 		case c.Recv <- line:
@@ -90,6 +122,7 @@ func (c *Client) sendThread() {
 			if c.Debug {
 				log.Printf("> %s", line)
 			}
+			c.logSent(line)
 			fmt.Fprintf(c.conn, "%s\n", line)
 		case <-c.shutdown:
 			return
