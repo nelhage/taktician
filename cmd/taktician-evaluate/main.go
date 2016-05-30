@@ -95,6 +95,7 @@ func main() {
 		flatWins int
 		roadWins int
 	}
+	var white, black int
 	var ties int
 
 	rc := make(chan gameResult)
@@ -113,6 +114,11 @@ func main() {
 			)
 		}
 		if d.Over {
+			if d.Winner == tak.White {
+				white++
+			} else {
+				black++
+			}
 			st := &stats[0]
 			if d.Winner == r.spec.p1color.Flip() {
 				st = &stats[1]
@@ -145,6 +151,8 @@ func main() {
 	if a < b {
 		a, b = b, a
 	}
+	log.Printf("white=%d black=%d (%.2f)",
+		white, black, float64(white)/float64(white+black))
 	log.Printf("p[one-sided]=%f", binomTest(a, b, 0.5))
 }
 
