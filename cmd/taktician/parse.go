@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var commandRE = regexp.MustCompile(`^([^ :]+):\s*([^ ]+)\s*(.*)$`)
+var commandRE = regexp.MustCompile(`^([^ :]+):?\s*([^ :]+):?\s*(.*)$`)
 
 func parseCommand(msg string) (string, string) {
 	gs := commandRE.FindStringSubmatch(msg)
