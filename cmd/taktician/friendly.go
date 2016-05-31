@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	minThink = 2 * time.Second
+	minThink = 5 * time.Second
 	maxThink = time.Minute
 
 	defaultLevel = 2
