@@ -58,15 +58,13 @@ func (f *Friendly) NewGame(g *Game) {
 				f.level, g.opponent,
 			))
 	*/
-	/*
-		if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
-			log.Printf("greeting user=%q greeted=%s", g.opponent, t)
-			f.client.SendCommand("Shout",
-				fmt.Sprintf("FriendlyBot@level %d: %s",
-					f.level, docURL))
-			f.greeted[g.opponent] = time.Now()
-		}
-	*/
+	if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
+		log.Printf("greeting user=%q greeted=%s", g.opponent, t)
+		f.client.SendCommand("Shout",
+			fmt.Sprintf("FriendlyBot@level %d: %s",
+				f.level, docURL))
+		f.greeted[g.opponent] = time.Now()
+	}
 }
 
 func (f *Friendly) GameOver() {
