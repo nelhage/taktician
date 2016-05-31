@@ -116,7 +116,7 @@ func main() {
 		if d.Over {
 			if d.Winner == tak.White {
 				white++
-			} else {
+			} else if d.Winner == tak.Black {
 				black++
 			}
 			st := &stats[0]
