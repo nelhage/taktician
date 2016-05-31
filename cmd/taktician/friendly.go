@@ -15,6 +15,8 @@ const (
 	minThink = 5 * time.Second
 	maxThink = time.Minute
 
+	undoTimeout = 30 * time.Second
+
 	defaultLevel = 2
 
 	docURL = "http://bit.ly/25h33rC"
@@ -23,12 +25,15 @@ const (
 type Friendly struct {
 	client *playtak.Client
 	ai     *ai.MinimaxAI
+	check  *ai.MinimaxAI
 	g      *Game
 
 	level    int
 	levelSet time.Time
 
 	greeted map[string]time.Time
+
+	undo chan struct{}
 }
 
 func (f *Friendly) NewGame(g *Game) {
@@ -40,19 +45,28 @@ func (f *Friendly) NewGame(g *Game) {
 	}
 	f.g = g
 	f.ai = ai.NewMinimax(f.Config())
+	f.check = ai.NewMinimax(ai.MinimaxConfig{
+		Depth:    3,
+		Size:     g.size,
+		Debug:    0,
+		Evaluate: ai.EvaluateWinner,
+	})
+	f.undo = make(chan struct{}, 1)
 	/*
 		f.client.SendCommand("Shout",
 			fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
 				f.level, g.opponent,
 			))
 	*/
-	if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
-		log.Printf("greeting user=%q greeted=%s", g.opponent, t)
-		f.client.SendCommand("Shout",
-			fmt.Sprintf("FriendlyBot@level %d: %s",
-				f.level, docURL))
-		f.greeted[g.opponent] = time.Now()
-	}
+	/*
+		if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
+			log.Printf("greeting user=%q greeted=%s", g.opponent, t)
+			f.client.SendCommand("Shout",
+				fmt.Sprintf("FriendlyBot@level %d: %s",
+					f.level, docURL))
+			f.greeted[g.opponent] = time.Now()
+		}
+	*/
 }
 
 func (f *Friendly) GameOver() {
@@ -60,10 +74,35 @@ func (f *Friendly) GameOver() {
 }
 
 func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
-	deadline := time.After(minThink)
+	var deadline <-chan time.Time
+	if f.waitUndo(p) {
+		deadline = time.After(undoTimeout)
+	} else {
+		deadline = time.After(minThink)
+	}
 	m := f.ai.GetMove(p, maxThink)
-	<-deadline
+	select {
+	case <-deadline:
+	case <-f.undo:
+	}
+
+	select {
+	case <-f.undo:
+	default:
+	}
 	return m
+}
+
+func (f *Friendly) waitUndo(p *tak.Position) bool {
+	_, v, st := f.check.Analyze(p, 0)
+	if v < ai.WinThreshold || st.Depth > 1 {
+		return false
+	}
+	_, v, st = f.check.Analyze(f.g.positions[len(f.g.positions)-2], 0)
+	if v > -ai.WinThreshold {
+		return true
+	}
+	return false
 }
 
 func (f *Friendly) HandleChat(who string, msg string) {
@@ -164,5 +203,10 @@ func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
 }
 
 func (f *Friendly) AcceptUndo() bool {
+	select {
+	case f.undo <- struct{}{}:
+	default:
+	}
+
 	return true
 }

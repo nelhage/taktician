@@ -172,10 +172,10 @@ func playGame(c Client, b Bot, line string) {
 				if b.AcceptUndo() {
 					c.SendCommand(gameStr, "RequestUndo")
 				}
+				moves = nil
 			case "Undo":
 				g.positions = g.positions[:len(g.positions)-1]
 				g.moves = g.moves[:len(g.moves)-1]
-				moves = nil
 				p = g.positions[len(g.positions)-1]
 				break eventLoop
 			}
