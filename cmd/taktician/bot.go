@@ -174,6 +174,7 @@ func playGame(c Client, b Bot, line string) {
 				}
 				moves = nil
 			case "Undo":
+				log.Printf("undo game-id=%s ply=%d", g.id, p.MoveNumber())
 				g.positions = g.positions[:len(g.positions)-1]
 				g.moves = g.moves[:len(g.moves)-1]
 				p = g.positions[len(g.positions)-1]
