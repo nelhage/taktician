@@ -415,5 +415,8 @@ func (ai *MinimaxAI) nullMoveOK(ply, depth int, p *tak.Position) bool {
 	if p.WhiteStones() < 3 || p.BlackStones() < 3 {
 		return false
 	}
+	if bitboard.Popcount(p.White|p.Black)+3 >= len(p.Stacks) {
+		return false
+	}
 	return true
 }
