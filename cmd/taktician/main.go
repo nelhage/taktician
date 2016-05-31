@@ -87,7 +87,7 @@ func main() {
 		recvLoop:
 			for {
 				select {
-				case line, ok := <-client.Recv:
+				case line, ok := <-client.Recv():
 					if !ok {
 						break recvLoop
 					}

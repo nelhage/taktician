@@ -69,7 +69,7 @@ func logGames(client *playtak.Client, out string) error {
 		return e
 	}
 	games := make(map[string]*Game)
-	for line := range client.Recv {
+	for line := range client.Recv() {
 		if strings.HasPrefix(line, "GameList Add") {
 			if g := addGame(games, line); g != nil {
 				client.SendCommand("Observe", g.Id)

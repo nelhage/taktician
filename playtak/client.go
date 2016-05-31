@@ -19,7 +19,7 @@ type Client struct {
 
 	err error
 
-	Recv     chan string
+	recv     chan string
 	send     chan string
 	shutdown chan struct{}
 	wg       sync.WaitGroup
@@ -41,7 +41,7 @@ func (c *Client) Connect(host string) error {
 		return err
 	}
 	c.conn = conn
-	c.Recv = make(chan string)
+	c.recv = make(chan string)
 	c.send = make(chan string)
 	c.shutdown = make(chan struct{})
 	c.wg.Add(2)
@@ -76,7 +76,7 @@ func (c *Client) recvThread() {
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			close(c.Recv)
+			close(c.recv)
 			c.err = err
 			c.conn.Close()
 			return
@@ -93,7 +93,7 @@ func (c *Client) recvThread() {
 			}
 		}
 		select {
-		case c.Recv <- line:
+		case c.recv <- line:
 		case <-c.shutdown:
 			return
 		}
@@ -134,12 +134,16 @@ func (c *Client) SendCommand(words ...string) {
 	c.send <- strings.Join(words, " ")
 }
 
+func (c *Client) Recv() <-chan string {
+	return c.recv
+}
+
 func (c *Client) SendClient(name string) {
 	c.SendCommand("Client", name)
 }
 
 func (c *Client) Login(user, pass string) error {
-	for line := range c.Recv {
+	for line := range c.recv {
 		if strings.HasPrefix(line, "Login ") {
 			break
 		}
@@ -149,7 +153,7 @@ func (c *Client) Login(user, pass string) error {
 	} else {
 		c.SendCommand("Login", user, pass)
 	}
-	for line := range c.Recv {
+	for line := range c.recv {
 		if line == "Login or Register" {
 			return errors.New("bad password")
 		}

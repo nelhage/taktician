@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/nelhage/taktician/playtak"
@@ -18,16 +19,25 @@ type Game struct {
 	color    tak.Color
 	size     int
 	time     time.Duration
+
+	positions []*tak.Position
+	moves     []tak.Move
 }
 
 type Bot interface {
 	NewGame(g *Game)
 	GameOver()
 	GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
+	AcceptUndo() bool
 	HandleChat(who, msg string)
 }
 
-func playGame(c *playtak.Client, b Bot, line string) {
+type Client interface {
+	Recv() <-chan string
+	SendCommand(...string)
+}
+
+func playGame(c Client, b Bot, line string) {
 	var g Game
 	bits := strings.Split(line, " ")
 	g.size, _ = strconv.Atoi(bits[3])
@@ -48,10 +58,9 @@ func playGame(c *playtak.Client, b Bot, line string) {
 
 	gameStr := fmt.Sprintf("Game#%s", g.id)
 	p := tak.New(tak.Config{Size: g.size})
+	g.positions = append(g.positions, p)
 	b.NewGame(&g)
 	defer b.GameOver()
-
-	moves := make(chan tak.Move, 1)
 
 	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
 		g.id, g.size, g.opponent, g.color, g.time)
@@ -62,12 +71,18 @@ func playGame(c *playtak.Client, b Bot, line string) {
 	times.mine = g.time
 	times.theirs = g.time
 
+	var moves chan tak.Move
+	var moveLock sync.Mutex
+
 	for {
 		over, _ := p.GameOver()
 		if g.color == p.ToMove() && !over {
-			go func() {
-				moves <- b.GetMove(p, times.mine, times.theirs)
-			}()
+			moves = make(chan tak.Move, 1)
+			go func(mc chan<- tak.Move) {
+				moveLock.Lock()
+				defer moveLock.Unlock()
+				mc <- b.GetMove(p, times.mine, times.theirs)
+			}(moves)
 		}
 
 		var timeout <-chan time.Time
@@ -76,7 +91,7 @@ func playGame(c *playtak.Client, b Bot, line string) {
 			var line string
 			var ok bool
 			select {
-			case line, ok = <-c.Recv:
+			case line, ok = <-c.Recv():
 				if !ok {
 					return
 				}
@@ -95,6 +110,8 @@ func playGame(c *playtak.Client, b Bot, line string) {
 					strings.ToUpper(p.ToMove().String()[:1]),
 					ptn.FormatMove(&move))
 				p = next
+				g.positions = append(g.positions, p)
+				g.moves = append(g.moves, move)
 				continue eventLoop
 			case <-timeout:
 				break eventLoop
@@ -129,14 +146,16 @@ func playGame(c *playtak.Client, b Bot, line string) {
 					strings.ToUpper(p.ToMove().String()[:1]),
 					ptn.FormatMove(&move))
 				p = next
+				g.positions = append(g.positions, p)
+				g.moves = append(g.moves, move)
 				timeout = time.NewTimer(500 * time.Millisecond).C
 			case "Abandoned.":
-				log.Printf("game-over game-id=%s ply=%d result=abandoned",
-					g.id, p.MoveNumber())
+				log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",
+					g.id, g.opponent, p.MoveNumber())
 				return
 			case "Over":
-				log.Printf("game-over game-id=%s ply=%d result=%q",
-					g.id, p.MoveNumber(), bits[2])
+				log.Printf("game-over game-id=%s opponent=%s ply=%d result=%q",
+					g.id, g.opponent, p.MoveNumber(), bits[2])
 				return
 			case "Time":
 				w, _ := strconv.Atoi(bits[2])
@@ -148,6 +167,16 @@ func playGame(c *playtak.Client, b Bot, line string) {
 					times.theirs = time.Duration(w) * time.Second
 					times.mine = time.Duration(b) * time.Second
 				}
+				break eventLoop
+			case "RequestUndo":
+				if b.AcceptUndo() {
+					c.SendCommand(gameStr, "RequestUndo")
+				}
+			case "Undo":
+				g.positions = g.positions[:len(g.positions)-1]
+				g.moves = g.moves[:len(g.moves)-1]
+				moves = nil
+				p = g.positions[len(g.positions)-1]
 				break eventLoop
 			}
 		}

@@ -60,3 +60,7 @@ func (t *Taktician) HandleChat(who string, msg string) {
 		}
 	}
 }
+
+func (t *Taktician) AcceptUndo() bool {
+	return false
+}

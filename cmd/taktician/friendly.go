@@ -162,3 +162,7 @@ func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
 	s := levels[level-1]
 	return s.depth, ai.MakeEvaluator(&s.weights)
 }
+
+func (f *Friendly) AcceptUndo() bool {
+	return true
+}
