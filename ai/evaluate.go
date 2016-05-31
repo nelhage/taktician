@@ -54,22 +54,33 @@ func MakeEvaluator(w *Weights) EvaluationFunc {
 
 var DefaultEvaluate = MakeEvaluator(&DefaultWeights)
 
+func evaluateTerminal(p *tak.Position, winner tak.Color) int64 {
+	var pieces int64
+	if winner == tak.White {
+		pieces = int64(p.WhiteStones())
+	} else {
+		pieces = int64(p.BlackStones())
+	}
+	switch winner {
+	case tak.NoColor:
+		return 0
+	case p.ToMove():
+		return MaxEval - int64(p.MoveNumber()) + pieces
+	default:
+		return MinEval + int64(p.MoveNumber()) - pieces
+	}
+}
+
+func EvaluateWinner(m *MinimaxAI, p *tak.Position) int64 {
+	if over, winner := p.GameOver(); over {
+		return evaluateTerminal(p, winner)
+	}
+	return 0
+}
+
 func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
-		var pieces int64
-		if winner == tak.White {
-			pieces = int64(p.WhiteStones())
-		} else {
-			pieces = int64(p.BlackStones())
-		}
-		switch winner {
-		case tak.NoColor:
-			return 0
-		case p.ToMove():
-			return maxEval - int64(p.MoveNumber()) + pieces
-		default:
-			return minEval + int64(p.MoveNumber()) - pieces
-		}
+		return evaluateTerminal(p, winner)
 	}
 
 	var ws, bs int64

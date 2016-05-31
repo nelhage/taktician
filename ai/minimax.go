@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	maxEval      int64 = 1 << 30
-	minEval            = -maxEval
+	MaxEval      int64 = 1 << 30
+	MinEval            = -MaxEval
 	WinThreshold       = 1 << 29
 
 	tableSize uint64 = (1 << 20)
@@ -183,7 +183,7 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
-		ms, v = m.minimax(p, 0, i+base, ms, minEval-1, maxEval+1)
+		ms, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
