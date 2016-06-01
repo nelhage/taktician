@@ -166,7 +166,7 @@ var (
 		TopFlat:  200,
 		Standing: 100,
 		Capstone: 150,
-		Flat:     100,
+		HardFlat: 50,
 		Tempo:    100,
 		Groups:   [8]int{0, 0, 0, 100, 200},
 	}

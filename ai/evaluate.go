@@ -14,8 +14,8 @@ type Weights struct {
 	Standing int
 	Capstone int
 
-	Flat     int
-	Captured int
+	HardFlat int
+	SoftFlat int
 
 	Liberties int
 
@@ -29,10 +29,10 @@ var DefaultWeights = Weights{
 	Standing: 200,
 	Capstone: 300,
 
-	Flat:      100,
-	Liberties: 20,
+	HardFlat: 125,
+	SoftFlat: -75,
 
-	Captured: 25,
+	Liberties: 20,
 
 	Tempo: 250,
 
@@ -106,16 +106,12 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
 		bf := bitboard.Popcount(s)
 		wf := int(h) - bf - 1
-		ws += int64(wf * w.Flat)
-		bs += int64(bf * w.Flat)
-		captured := int(h - 1)
-		if captured > p.Size()-1 {
-			captured = p.Size() - 1
-		}
 		if p.White&(1<<uint(i)) != 0 {
-			ws += int64(captured * w.Captured)
+			ws += int64(wf * w.HardFlat)
+			ws += int64(bf * w.SoftFlat)
 		} else {
-			bs += int64(captured * w.Captured)
+			bs += int64(bf * w.HardFlat)
+			bs += int64(wf * w.SoftFlat)
 		}
 	}
 
