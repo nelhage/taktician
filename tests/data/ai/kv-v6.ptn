@@ -1,0 +1,26 @@
+[Size "5"]
+[Date "2016-05-30"]
+[Time "2016-05-30T18:01:37Z"]
+[Player1 "KvBloodless"]
+[Player2 "TakticianBot"]
+[Result "R-0"]
+[Id "42389"]
+[Depth "7"]
+[Move "4 black"]
+[Move "7 black"]
+
+1. a5 e5
+2. c3 c5
+3. c4 c2
+4. d3 b5
+5. d5 d4
+6. e4 b3
+7. e3 b4
+8. e2 e1
+9. d2 d1
+10. c1 d4>
+11. Cd4 c2-
+12. e2- c5>
+13. e5< d1+
+14. e2
+R-0
