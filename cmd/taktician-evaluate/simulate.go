@@ -116,11 +116,11 @@ func startGames(c *Config, rc chan<- Result) {
 			w2 = perturbWeights(c.Perturb, w2)
 		}
 		cfg1 := c.Cfg1
-		cfg1.Evaluate = ai.MakeEvaluator(&w1)
+		cfg1.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w1)
 		cfg1.Seed = r.Int63()
 
 		cfg2 := c.Cfg2
-		cfg2.Evaluate = ai.MakeEvaluator(&w2)
+		cfg2.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w2)
 		cfg2.Seed = r.Int63()
 
 		p1 := ai.NewMinimax(cfg1)

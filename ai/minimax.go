@@ -102,7 +102,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m.precompute()
 	m.evaluate = cfg.Evaluate
 	if m.evaluate == nil {
-		m.evaluate = DefaultEvaluate
+		m.evaluate = MakeEvaluator(cfg.Size, nil)
 	}
 	m.history = make(map[uint64]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
 	m.response = make(map[uint64]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)

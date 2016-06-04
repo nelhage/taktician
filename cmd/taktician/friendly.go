@@ -178,26 +178,27 @@ var levels = []struct {
 }{
 	{2, easyWeights},
 	{2, medWeights},
-	{2, ai.DefaultWeights},
+	{2, ai.DefaultWeights[5]},
 	{3, easyWeights},
 	{3, medWeights},
 	{4, medWeights},
-	{3, ai.DefaultWeights},
+	{3, ai.DefaultWeights[5]},
 	{5, easyWeights},
 	{5, medWeights},
-	{4, ai.DefaultWeights},
-	{5, ai.DefaultWeights},
+	{4, ai.DefaultWeights[5]},
+	{5, ai.DefaultWeights[5]},
+	{7, ai.DefaultWeights[5]},
 }
 
 func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
 	if level == 0 {
 		level = 3
 	}
-	if level > len(levels)+1 {
-		return 7, ai.DefaultEvaluate
+	if level > len(levels) {
+		level = len(levels)
 	}
 	s := levels[level-1]
-	return s.depth, ai.MakeEvaluator(&s.weights)
+	return s.depth, ai.MakeEvaluator(size, &s.weights)
 }
 
 func (f *Friendly) AcceptUndo() bool {

@@ -24,7 +24,7 @@ type Weights struct {
 	Groups [8]int
 }
 
-var DefaultWeights = Weights{
+var defaultWeights = Weights{
 	TopFlat:  400,
 	Standing: 200,
 	Capstone: 300,
@@ -46,13 +46,28 @@ var DefaultWeights = Weights{
 	},
 }
 
-func MakeEvaluator(w *Weights) EvaluationFunc {
+var defaultWeights6 = defaultWeights
+
+var DefaultWeights = []Weights{
+	defaultWeights,  // 0
+	defaultWeights,  // 1
+	defaultWeights,  // 2
+	defaultWeights,  // 3
+	defaultWeights,  // 4
+	defaultWeights,  // 5
+	defaultWeights6, // 6
+	defaultWeights,  // 7
+	defaultWeights,  // 8
+}
+
+func MakeEvaluator(size int, w *Weights) EvaluationFunc {
+	if w == nil {
+		w = &DefaultWeights[size]
+	}
 	return func(m *MinimaxAI, p *tak.Position) int64 {
 		return evaluate(w, m, p)
 	}
 }
-
-var DefaultEvaluate = MakeEvaluator(&DefaultWeights)
 
 func evaluateTerminal(p *tak.Position, winner tak.Color) int64 {
 	var pieces int64

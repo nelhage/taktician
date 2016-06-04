@@ -38,8 +38,8 @@ var (
 func main() {
 	flag.Parse()
 
-	weights1 := ai.DefaultWeights
-	weights2 := ai.DefaultWeights
+	weights1 := ai.DefaultWeights[*size]
+	weights2 := ai.DefaultWeights[*size]
 	if *zero {
 		weights1 = ai.Weights{}
 		weights2 = ai.Weights{}
