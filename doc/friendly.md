@@ -18,8 +18,8 @@ To change the difficulty level, just say
 
     FriendlyBot: level <level>"
 
-in chat. It supports a number of levels, from 1 up through 9 or
-higher (I am still be tweaking the levels).
+in chat. It supports a number of levels, from 1 up through 12, at the
+moment.
 
 The levels have somewhat different styles of play, in addition to
 being harder or easier, so try a few different levels, even if you're
@@ -27,6 +27,9 @@ struggling with one.
 
 If you're playing the bot, you can even change the difficulty level
 mid-game.
+
+Levels 10 and up are roughly equivalent to Taktician at various stages
+of its development, and so should be considered pretty challenging.
 
 # Resources
 
