@@ -87,6 +87,12 @@ func main() {
 		Perturb: *perturb,
 	})
 
+	if *out != "" {
+		for _, r := range st.Games {
+			writeGame(*out, &r)
+		}
+	}
+
 	var j []byte
 	j, _ = json.Marshal(&weights1)
 	log.Printf("p1w=%s", j)
