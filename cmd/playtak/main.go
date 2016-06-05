@@ -20,6 +20,7 @@ var (
 	black = flag.String("black", "human", "white player")
 	size  = flag.Int("size", 5, "game size")
 	debug = flag.Int("debug", 0, "debug level")
+	limit = flag.Duration("limit", time.Minute, "ai time limit")
 )
 
 type aiWrapper struct {
@@ -27,7 +28,7 @@ type aiWrapper struct {
 }
 
 func (a *aiWrapper) GetMove(p *tak.Position) tak.Move {
-	return a.p.GetMove(p, time.Minute)
+	return a.p.GetMove(p, *limit)
 }
 
 func parsePlayer(in *bufio.Reader, s string) cli.Player {

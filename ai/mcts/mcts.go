@@ -55,6 +55,7 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 	if ai.cfg.Limit < limit {
 		limit = ai.cfg.Limit
 	}
+	next := start.Add(10 * time.Second)
 	for time.Now().Sub(start) < limit {
 		node := ai.descend(tree)
 		if ai.cfg.Debug > 4 {
@@ -72,6 +73,10 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 			win = ai.evaluate(node)
 		}
 		ai.update(node, win)
+		if time.Now().After(next) && ai.cfg.Debug > 0 {
+			ai.printpv(tree)
+			next = time.Now().Add(10 * time.Second)
+		}
 	}
 	best := tree.children[0]
 	i := 0
@@ -94,6 +99,36 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 		fmt.Printf("[mcts] evaluated simulations=%d wins=%d", tree.simulations, tree.wins)
 	}
 	return best.move
+}
+
+func (mc *MonteCarloAI) printpv(t *tree) {
+	depth := 0
+	ts := []*tree{t}
+	for t.children != nil && t.simulations > visitThreshold {
+		best := t.children[0]
+		for _, c := range t.children {
+			if c.simulations > best.simulations {
+				best = c
+			}
+		}
+		t = best
+		ts = append(ts, best)
+		depth++
+	}
+	ms := make([]tak.Move, depth)
+	for t.parent != nil {
+		ms[depth-1] = t.move
+		t = t.parent
+		depth--
+	}
+	var ptns []string
+	for _, m := range ms {
+		ptns = append(ptns, ptn.FormatMove(&m))
+	}
+	log.Printf("pv=[%s] n=%d w=%d",
+		strings.Join(ptns, " "),
+		ts[1].simulations, ts[1].wins,
+	)
 }
 
 func (mc *MonteCarloAI) populate(t *tree) {
