@@ -24,11 +24,10 @@ var (
 	seed    = flag.Int64("seed", 1, "starting seed")
 	games   = flag.Int("games", 10, "number of games")
 	cutoff  = flag.Int("cutoff", 81, "cut games off after how many plies")
+	swap    = flag.Bool("swap", true, "swap colors each game")
 
 	depth = flag.Int("depth", 3, "depth to search")
 	limit = flag.Duration("limit", 0, "search duration")
-
-	verbose = flag.Bool("verbose", false, "log results per game")
 
 	threads = flag.Int("threads", 4, "number of parallel threads")
 
@@ -86,6 +85,7 @@ func main() {
 		Cfg2:    cfg2,
 		W1:      weights1,
 		W2:      weights2,
+		Swap:    *swap,
 		Games:   *games,
 		Threads: *threads,
 		Seed:    *seed,

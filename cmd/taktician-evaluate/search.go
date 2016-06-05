@@ -57,7 +57,9 @@ func doSearch(cfg ai.MinimaxConfig, w ai.Weights) {
 			Cfg1: cfg, Cfg2: cfg,
 			W1: prev, W2: w,
 
-			Seed:    r.Int63(),
+			Seed: r.Int63(),
+
+			Swap:    true,
 			Games:   *games,
 			Threads: *threads,
 			Cutoff:  *cutoff,

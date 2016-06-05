@@ -19,6 +19,7 @@ type Config struct {
 	Cfg1, Cfg2 ai.MinimaxConfig
 	W1, W2     ai.Weights
 
+	Swap    bool
 	Threads int
 	Seed    int64
 	Cutoff  int
@@ -126,7 +127,7 @@ func startGames(c *Config, rc chan<- Result) {
 		p1 := ai.NewMinimax(cfg1)
 		p2 := ai.NewMinimax(cfg2)
 		var p1color tak.Color
-		if g%2 == 0 {
+		if g%2 == 0 || !c.Swap {
 			white, black = p1, p2
 			p1color = tak.White
 		} else {
