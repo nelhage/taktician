@@ -18,7 +18,7 @@ const (
 
 	tableSize uint64 = (1 << 20)
 
-	maxStack = 15
+	maxDepth = 15
 )
 
 type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
@@ -36,11 +36,11 @@ type MinimaxAI struct {
 	evaluate EvaluationFunc
 
 	table []tableEntry
-	stack [maxStack]struct {
+	stack [maxDepth]struct {
 		p     *tak.Position
 		mg    moveGenerator
 		moves [500]tak.Move
-		pv    [maxStack]tak.Move
+		pv    [maxDepth]tak.Move
 		m     tak.Move
 	}
 }
@@ -99,6 +99,9 @@ type MinimaxConfig struct {
 
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m := &MinimaxAI{cfg: cfg}
+	if m.cfg.Depth == 0 {
+		m.cfg.Depth = maxDepth
+	}
 	m.precompute()
 	m.evaluate = cfg.Evaluate
 	if m.evaluate == nil {
