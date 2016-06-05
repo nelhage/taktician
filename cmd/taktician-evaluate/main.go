@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime/pprof"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
@@ -34,10 +35,23 @@ var (
 	out = flag.String("out", "", "directory to write ptns to")
 
 	search = flag.Bool("search", false, "search for a good set of weights")
+
+	memProfile = flag.String("mem-profile", "", "write memory profile")
 )
 
 func main() {
 	flag.Parse()
+	if *memProfile != "" {
+		defer func() {
+			f, e := os.OpenFile(*memProfile,
+				os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+			if e != nil {
+				log.Printf("open memory profile: %v", e)
+				return
+			}
+			pprof.Lookup("heap").WriteTo(f, 0)
+		}()
+	}
 
 	weights1 := ai.DefaultWeights[*size]
 	weights2 := ai.DefaultWeights[*size]

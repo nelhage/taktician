@@ -42,7 +42,7 @@ type Stats struct {
 type gameSpec struct {
 	c            *Config
 	i            int
-	white, black ai.TakPlayer
+	white, black *ai.MinimaxConfig
 	p1color      tak.Color
 }
 
@@ -109,7 +109,7 @@ func startGames(c *Config, rc chan<- Result) {
 	}
 	r := rand.New(rand.NewSource(c.Seed))
 	for g := 0; g < c.Games; g++ {
-		var white, black ai.TakPlayer
+		var white, black *ai.MinimaxConfig
 		w1 := c.W1
 		w2 := c.W2
 		if c.Perturb != 0.0 {
@@ -124,14 +124,12 @@ func startGames(c *Config, rc chan<- Result) {
 		cfg2.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w2)
 		cfg2.Seed = r.Int63()
 
-		p1 := ai.NewMinimax(cfg1)
-		p2 := ai.NewMinimax(cfg2)
 		var p1color tak.Color
 		if g%2 == 0 || !c.Swap {
-			white, black = p1, p2
+			white, black = &cfg1, &cfg2
 			p1color = tak.White
 		} else {
-			black, white = p1, p2
+			black, white = &cfg1, &cfg2
 			p1color = tak.Black
 		}
 
@@ -151,14 +149,16 @@ func startGames(c *Config, rc chan<- Result) {
 
 func worker(games <-chan gameSpec, out chan<- Result) {
 	for g := range games {
+		white := ai.NewMinimax(*g.white)
+		black := ai.NewMinimax(*g.black)
 		var ms []tak.Move
 		p := tak.New(tak.Config{Size: g.c.Cfg1.Size})
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
 			if p.ToMove() == tak.White {
-				m = g.white.GetMove(p, g.c.Limit)
+				m = white.GetMove(p, g.c.Limit)
 			} else {
-				m = g.black.GetMove(p, g.c.Limit)
+				m = black.GetMove(p, g.c.Limit)
 			}
 			p, _ = p.Move(&m)
 			ms = append(ms, m)
