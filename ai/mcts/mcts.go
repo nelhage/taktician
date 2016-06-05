@@ -266,7 +266,7 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 		mc.cfg.Seed = time.Now().Unix()
 	}
 	if mc.cfg.Policy == nil {
-		mc.cfg.Policy = NewMinimaxPolicy(&mc.cfg, 2)
+		mc.cfg.Policy = NewMinimaxPolicy(&mc.cfg, 1)
 	}
 	mc.r = rand.New(rand.NewSource(mc.cfg.Seed))
 	mc.mm = ai.NewMinimax(ai.MinimaxConfig{
