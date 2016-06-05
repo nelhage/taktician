@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/tak"
 )
@@ -72,7 +73,7 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 				log.Fatal(err)
 			}
 		}
-		p := ai.NewMonteCarlo(ai.MCTSConfig{
+		p := mcts.NewMonteCarlo(mcts.MCTSConfig{
 			Limit: limit,
 			Debug: *debug,
 		})
