@@ -51,7 +51,7 @@ func (t *Taktician) HandleChat(who string, msg string) {
 			log.Printf("bad size size=%q", arg)
 			return
 		}
-		if sz == 5 || sz == 6 {
+		if sz >= 4 && sz <= 6 {
 			*size = sz
 			t.client.SendCommand("Seek",
 				strconv.Itoa(*size),
