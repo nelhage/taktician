@@ -21,8 +21,10 @@ type MCTSConfig struct {
 
 	Size int
 
-	Policy func(r *rand.Rand, p *tak.Position, next *tak.Position) *tak.Position
+	Policy PolicyFunc
 }
+
+type PolicyFunc func(r *rand.Rand, p *tak.Position, next *tak.Position) *tak.Position
 
 type MonteCarloAI struct {
 	cfg  MCTSConfig
@@ -178,33 +180,17 @@ func (ai *MonteCarloAI) evaluate(t *tree) bool {
 	alloc := tak.Alloc(p.Size())
 
 	for i := 0; i < maxMoves; i++ {
+		if ok, c := p.GameOver(); ok {
+			return c == t.position.ToMove()
+		}
 		next := ai.cfg.Policy(ai.r, p, alloc)
 		if next == nil {
 			return false
 		}
 		p, alloc = next, p
-		if ok, c := p.GameOver(); ok {
-			return c == t.position.ToMove()
-		}
 	}
 	v := ai.eval(ai.mm, p)
 	return v > evalThreshold
-}
-
-func RandomPolicy(r *rand.Rand, p *tak.Position, alloc *tak.Position) *tak.Position {
-	moves := p.AllMoves(nil)
-	var next *tak.Position
-	for {
-		r := r.Int31n(int32(len(moves)))
-		m := moves[r]
-		var e error
-		if next, e = p.MovePreallocated(&m, alloc); e == nil {
-			break
-		}
-		moves[0], moves[r] = moves[r], moves[0]
-		moves = moves[1:]
-	}
-	return next
 }
 
 func (mc *MonteCarloAI) update(t *tree, win bool) {
@@ -245,7 +231,7 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 		mc.cfg.Seed = time.Now().Unix()
 	}
 	if mc.cfg.Policy == nil {
-		mc.cfg.Policy = RandomPolicy
+		mc.cfg.Policy = NewMinimaxPolicy(&mc.cfg, 2)
 	}
 	mc.r = rand.New(rand.NewSource(mc.cfg.Seed))
 	mc.mm = ai.NewMinimax(ai.MinimaxConfig{
