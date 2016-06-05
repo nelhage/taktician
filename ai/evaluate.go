@@ -42,11 +42,30 @@ var defaultWeights = Weights{
 		0,   // 2
 		100, // 3
 		300, // 4
-		500, // 5
 	},
 }
 
-var defaultWeights6 = defaultWeights
+var defaultWeights6 = Weights{
+	TopFlat:  400,
+	Standing: 200,
+	Capstone: 300,
+
+	HardFlat: 125,
+	SoftFlat: -200,
+
+	Liberties: 20,
+
+	Tempo: 250,
+
+	Groups: [8]int{
+		0,   // 0
+		0,   // 1
+		0,   // 2
+		100, // 3
+		300, // 4
+		500, // 5
+	},
+}
 
 var DefaultWeights = []Weights{
 	defaultWeights,  // 0
