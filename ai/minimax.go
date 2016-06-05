@@ -106,7 +106,9 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	}
 	m.history = make(map[uint64]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
 	m.response = make(map[uint64]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)
-	m.table = make([]tableEntry, tableSize)
+	if !cfg.NoTable {
+		m.table = make([]tableEntry, tableSize)
+	}
 	for i := range m.stack {
 		m.stack[i].p = tak.Alloc(m.cfg.Size)
 	}
@@ -125,6 +127,9 @@ func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
 }
 
 func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
+	if m.cfg.NoTable {
+		return nil
+	}
 	return &m.table[h%tableSize]
 }
 
@@ -385,18 +390,19 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 
-	te = ai.ttPut(p.Hash())
-	te.hash = p.Hash()
-	te.depth = depth
-	te.m = best[0]
-	te.value = α
-	if !improved {
-		te.bound = upperBound
-		ai.st.AllNodes++
-	} else if α >= β {
-		te.bound = lowerBound
-	} else {
-		te.bound = exactBound
+	if te = ai.ttPut(p.Hash()); te != nil {
+		te.hash = p.Hash()
+		te.depth = depth
+		te.m = best[0]
+		te.value = α
+		if !improved {
+			te.bound = upperBound
+			ai.st.AllNodes++
+		} else if α >= β {
+			te.bound = lowerBound
+		} else {
+			te.bound = exactBound
+		}
 	}
 
 	return best, α
