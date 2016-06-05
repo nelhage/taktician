@@ -79,7 +79,7 @@ func testCollisions(t *testing.T, p *tak.Position) {
 	ai := ai.NewMinimax(ai.MinimaxConfig{
 		Size:     5,
 		Depth:    5,
-		Evaluate: wrapHash(tbl, ai.DefaultEvaluate),
+		Evaluate: wrapHash(tbl, ai.MakeEvaluator(5, nil)),
 		NoTable:  true,
 	})
 	for i := 0; i < 4; i++ {
