@@ -61,7 +61,7 @@ func (c *Client) lastSent() []string {
 	out := make([]string, 0, len(c.last.buf))
 	c.last.Lock()
 	defer c.last.Unlock()
-	for i := 0; i < len(c.last.buf); i++ {
+	for i := 1; i < len(c.last.buf); i++ {
 		j := (c.last.i - i + len(c.last.buf)) % len(c.last.buf)
 		if c.last.buf[j] != "" {
 			out = append(out, c.last.buf[j])
