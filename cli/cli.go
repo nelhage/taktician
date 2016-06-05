@@ -28,13 +28,6 @@ func (c *CLI) Play() *tak.Position {
 	c.p = tak.New(c.Config)
 	for {
 		c.render()
-		if len(c.moves) > 0 && len(c.moves)%2 == 0 {
-			fmt.Fprintf(c.Out,
-				"%d. %s  %s\n",
-				len(c.moves)/2,
-				ptn.FormatMove(&c.moves[len(c.moves)-2]),
-				ptn.FormatMove(&c.moves[len(c.moves)-1]))
-		}
 		if ok, _ := c.p.GameOver(); ok {
 			d := c.p.WinDetails()
 			fmt.Fprintf(c.Out, "Game Over! ")
@@ -64,10 +57,19 @@ func (c *CLI) Play() *tak.Position {
 		if e != nil {
 			fmt.Fprintln(c.Out, "illegal move:", e)
 		} else {
+			if c.p.ToMove() == tak.White {
+				fmt.Fprintf(c.Out, "%d. %s", c.p.MoveNumber()/2+1, ptn.FormatMove(&m))
+			} else {
+				fmt.Fprintf(c.Out, "%d. ... %s", c.p.MoveNumber()/2+1, ptn.FormatMove(&m))
+			}
 			c.p = p
 			c.moves = append(c.moves, m)
 		}
 	}
+}
+
+func (c *CLI) Moves() []tak.Move {
+	return c.moves
 }
 
 func (c *CLI) render() {

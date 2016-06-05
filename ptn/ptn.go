@@ -283,3 +283,12 @@ func (p *PTN) Render() string {
 	out.WriteString("\n")
 	return out.String()
 }
+
+func (p *PTN) AddMoves(moves []tak.Move) {
+	for i, m := range moves {
+		if i%2 == 0 {
+			p.Ops = append(p.Ops, &MoveNumber{Number: i/2 + 1})
+		}
+		p.Ops = append(p.Ops, &Move{Move: m})
+	}
+}

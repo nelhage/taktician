@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/cli"
+	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -21,6 +23,7 @@ var (
 	size  = flag.Int("size", 5, "game size")
 	debug = flag.Int("debug", 0, "debug level")
 	limit = flag.Duration("limit", time.Minute, "ai time limit")
+	out   = flag.String("out", "", "write ptn to file")
 )
 
 type aiWrapper struct {
@@ -95,4 +98,14 @@ func main() {
 		Black:  parsePlayer(in, *black),
 	}
 	st.Play()
+	if *out != "" {
+		p := &ptn.PTN{}
+		p.Tags = []ptn.Tag{
+			{Name: "Size", Value: strconv.Itoa(*size)},
+			{Name: "Player1", Value: *white},
+			{Name: "Player2", Value: *white},
+		}
+		p.AddMoves(st.Moves())
+		ioutil.WriteFile(*out, []byte(p.Render()), 0644)
+	}
 }
