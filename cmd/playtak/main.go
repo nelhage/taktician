@@ -76,6 +76,7 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 		p := mcts.NewMonteCarlo(mcts.MCTSConfig{
 			Limit: limit,
 			Debug: *debug,
+			Size:  *size,
 		})
 		return &aiWrapper{p}
 	}
