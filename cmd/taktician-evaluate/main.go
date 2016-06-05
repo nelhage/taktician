@@ -33,6 +33,8 @@ var (
 	threads = flag.Int("threads", 4, "number of parallel threads")
 
 	out = flag.String("out", "", "directory to write ptns to")
+
+	search = flag.Bool("search", false, "search for a good set of weights")
 )
 
 func main() {
@@ -72,6 +74,11 @@ func main() {
 		if err := json.Unmarshal([]byte(*c2), &cfg2); err != nil {
 			log.Fatal("c2:", err)
 		}
+	}
+
+	if *search {
+		doSearch(cfg1, weights1)
+		return
 	}
 
 	st := Simulate(&Config{
