@@ -111,3 +111,17 @@ func (t *TestBotUndo) GetMove(ctx context.Context,
 func (t *TestBotUndo) AcceptUndo() bool {
 	return true
 }
+
+type TestBotThinker struct {
+	TestBotStatic
+}
+
+func (t *TestBotThinker) GetMove(ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
+	if p.ToMove() != t.game.color {
+		<-ctx.Done()
+		return tak.Move{}
+	}
+	return t.TestBotStatic.GetMove(ctx, p, mine, theirs)
+}

@@ -143,3 +143,40 @@ func TestUndoGame(t *testing.T) {
 			final, want)
 	}
 }
+
+func TestThinker(t *testing.T) {
+	moves := parseMoves([][2]string{
+		{"a1", "e1"},
+		{"e3", "b1"},
+		{"e2", "b2"},
+		{"Ce4", "a2"},
+		{"e5", ""},
+	})
+	bot := &TestBotThinker{}
+	for _, r := range moves {
+		bot.moves = append(bot.moves, *r[0])
+	}
+
+	startLine := "Game Start 100 5 Taktician vs HonestJoe white 600"
+	var transcript []Expectation
+	tm := 600
+	for _, r := range moves {
+		transcript = appendMove(
+			transcript, "100", tm, r)
+		tm -= 10
+	}
+	transcript = append(transcript, Expectation{
+		send: []string{
+			"Game#100 Over R-0",
+		},
+	})
+
+	c := NewTestClient(t, transcript)
+	playGame(c, bot, startLine)
+	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
+	want := `x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`
+	if final != want {
+		t.Fatalf("final position=%q !=%q",
+			final, want)
+	}
+}
