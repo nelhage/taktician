@@ -149,15 +149,8 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		}
 	}
 
-	ws += int64(m.scoreGroups(analysis.WhiteGroups, w))
-	bs += int64(m.scoreGroups(analysis.BlackGroups, w))
-
-	wr := p.White &^ p.Standing
-	br := p.Black &^ p.Standing
-	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ p.White)
-	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ p.Black)
-	ws += int64(w.Liberties * wl)
-	bs += int64(w.Liberties * bl)
+	ws += int64(m.scoreGroups(analysis.WhiteGroups, p.White, p.Black, w))
+	bs += int64(m.scoreGroups(analysis.BlackGroups, p.Black, p.White, w))
 
 	if p.ToMove() == tak.White {
 		return ws - bs
@@ -165,14 +158,18 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 	return bs - ws
 }
 
-func (ai *MinimaxAI) scoreGroups(gs []uint64, ws *Weights) int {
+func (ai *MinimaxAI) scoreGroups(gs []uint64, me, them uint64, ws *Weights) int {
 	sc := 0
+	var allg uint64
 	for _, g := range gs {
+		allg |= g
 		w, h := bitboard.Dimensions(&ai.c, g)
 
 		sc += ws.Groups[w]
 		sc += ws.Groups[h]
 	}
+	l := bitboard.Popcount(bitboard.Grow(&ai.c, allg, ^them) &^ me)
+	sc += int(ws.Liberties * l)
 
 	return sc
 }

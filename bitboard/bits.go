@@ -57,7 +57,7 @@ func FloodGroups(c *Constants, bits uint64, out []uint64) []uint64 {
 
 		if seen&bit == 0 {
 			g := Flood(c, bits, bit)
-			if g != bit && Popcount(g) > 2 {
+			if g != bit {
 				out = append(out, g)
 			}
 			seen |= g
