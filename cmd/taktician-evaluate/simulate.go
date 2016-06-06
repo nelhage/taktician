@@ -16,6 +16,8 @@ type Config struct {
 
 	Verbose bool
 
+	Initial *tak.Position
+
 	Cfg1, Cfg2 ai.MinimaxConfig
 	W1, W2     ai.Weights
 
@@ -152,7 +154,10 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		white := ai.NewMinimax(*g.white)
 		black := ai.NewMinimax(*g.black)
 		var ms []tak.Move
-		p := tak.New(tak.Config{Size: g.c.Cfg1.Size})
+		p := g.c.Initial
+		if p == nil {
+			p = tak.New(tak.Config{Size: g.c.Cfg1.Size})
+		}
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
 			if p.ToMove() == tak.White {

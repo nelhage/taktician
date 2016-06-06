@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 var (
@@ -26,6 +28,8 @@ var (
 	games   = flag.Int("games", 10, "number of games")
 	cutoff  = flag.Int("cutoff", 81, "cut games off after how many plies")
 	swap    = flag.Bool("swap", true, "swap colors each game")
+
+	prefix = flag.String("prefix", "", "ptn file to resume testing after")
 
 	depth = flag.Int("depth", 3, "depth to search")
 	limit = flag.Duration("limit", 0, "search duration")
@@ -51,6 +55,22 @@ func main() {
 			}
 			pprof.Lookup("heap").WriteTo(f, 0)
 		}()
+	}
+
+	var p *tak.Position
+	if *prefix != "" {
+		bs, e := ioutil.ReadFile(*prefix)
+		if e != nil {
+			log.Fatalf("Read %s: %v", *prefix, e)
+		}
+		pt, e := ptn.ParsePTN(bytes.NewBuffer(bs))
+		if e != nil {
+			log.Fatalf("Parse PTN: %v", e)
+		}
+		p, e = pt.PositionAtMove(0, tak.NoColor)
+		if e != nil {
+			log.Fatalf("PTN: %v", e)
+		}
 	}
 
 	weights1 := ai.DefaultWeights[*size]
@@ -106,6 +126,7 @@ func main() {
 		Cutoff:  *cutoff,
 		Limit:   *limit,
 		Perturb: *perturb,
+		Initial: p,
 	})
 
 	if *out != "" {
