@@ -164,14 +164,19 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		}
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
-			ctx, cancel := context.WithDeadline(context.Background(),
-				time.Now().Add(g.c.Limit))
+			var cancel context.CancelFunc
+			ctx := context.Background()
+			if g.c.Limit != 0 {
+				ctx, cancel = context.WithTimeout(ctx, g.c.Limit)
+			}
 			if p.ToMove() == tak.White {
 				m = white.GetMove(ctx, p)
 			} else {
 				m = black.GetMove(ctx, p)
 			}
-			cancel()
+			if cancel != nil {
+				cancel()
+			}
 			p, _ = p.Move(&m)
 			ms = append(ms, m)
 			if ok, _ := p.GameOver(); ok {
