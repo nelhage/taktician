@@ -24,15 +24,15 @@ var (
 	c1      = flag.String("c1", "", "custom config 1")
 	c2      = flag.String("c2", "", "custom config 2")
 	perturb = flag.Float64("perturb", 0.0, "perturb weights")
-	seed    = flag.Int64("seed", 1, "starting seed")
-	games   = flag.Int("games", 10, "number of games")
+	seed    = flag.Int64("seed", 1, "starting random seed")
+	games   = flag.Int("games", 10, "number of games to play")
 	cutoff  = flag.Int("cutoff", 81, "cut games off after how many plies")
 	swap    = flag.Bool("swap", true, "swap colors each game")
 
-	prefix = flag.String("prefix", "", "ptn file to resume testing after")
+	prefix = flag.String("prefix", "", "ptn file to start games at the end of")
 
-	depth = flag.Int("depth", 3, "depth to search")
-	limit = flag.Duration("limit", 0, "search duration")
+	depth = flag.Int("depth", 3, "depth to search each move")
+	limit = flag.Duration("limit", 0, "amount of time to search each move")
 
 	threads = flag.Int("threads", 4, "number of parallel threads")
 
