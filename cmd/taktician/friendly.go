@@ -74,6 +74,9 @@ func (f *Friendly) GetMove(
 	ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
+	if p.ToMove() != f.g.color {
+		return tak.Move{}
+	}
 	var deadline <-chan time.Time
 	if f.waitUndo(p) {
 		deadline = time.After(undoTimeout)

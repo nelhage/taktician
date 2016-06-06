@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -40,8 +41,7 @@ func (t *TestClient) sendRecv() {
 			got := <-t.send
 			if got != r {
 				t.t.Fatalf("msg %d,%d: got %q != %q",
-					i, j, got, r,
-				)
+					i, j, got, r)
 			}
 		}
 	}
@@ -69,6 +69,13 @@ func (t *TestBot) GameOver() {}
 func (t *TestBot) GetMove(ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
+	log.Printf("(*TestBot).GetMove(ply=%d color=%s)",
+		p.MoveNumber(),
+		p.ToMove(),
+	)
+	if p.ToMove() != t.game.color {
+		return tak.Move{}
+	}
 	m := t.moves[0]
 	t.moves = t.moves[1:]
 	return m

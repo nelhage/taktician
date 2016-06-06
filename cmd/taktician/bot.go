@@ -87,17 +87,23 @@ func playGame(c Client, b Bot, line string) {
 
 	for {
 		over, _ := p.GameOver()
-		if p.ToMove() == g.color && !over {
+		if !over {
 			moveCtx, moveCancel := context.WithCancel(ctx)
 			moves = make(chan tak.Move, 1)
-			go func(mc chan<- tak.Move) {
+			go func(p *tak.Position, mc chan<- tak.Move) {
 				moveLock.Lock()
 				defer moveLock.Unlock()
+				defer moveCancel()
 				mc <- b.GetMove(moveCtx, p, times.mine, times.theirs)
-			}(moves)
-			cancel = func() {
+			}(p, moves)
+			if p.ToMove() != g.color {
 				moves = nil
-				moveCancel()
+				cancel = moveCancel
+			} else {
+				cancel = func() {
+					moves = nil
+					moveCancel()
+				}
 			}
 		}
 
@@ -128,7 +134,7 @@ func playGame(c Client, b Bot, line string) {
 				p = next
 				g.positions = append(g.positions, p)
 				g.moves = append(g.moves, move)
-				continue eventLoop
+				break eventLoop
 			case <-timeout:
 				break eventLoop
 			}
@@ -164,7 +170,7 @@ func playGame(c Client, b Bot, line string) {
 				p = next
 				g.positions = append(g.positions, p)
 				g.moves = append(g.moves, move)
-				timeout = time.NewTimer(500 * time.Millisecond).C
+				timeout = time.After(500 * time.Millisecond)
 				cancel()
 			case "Abandoned.":
 				log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",

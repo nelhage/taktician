@@ -69,4 +69,10 @@ func TestBasicGame(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
+	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
+	want := `x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`
+	if final != want {
+		t.Fatalf("final position=%q !=%q",
+			final, want)
+	}
 }
