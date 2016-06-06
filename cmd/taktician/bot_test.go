@@ -48,7 +48,9 @@ func appendMove(transcript []Expectation,
 	return transcript
 }
 
-func TestBasicGame(t *testing.T) {
+const startLine = "Game Start 100 5 Taktician vs HonestJoe white 600"
+
+func setupGame() (*TestBotStatic, []Expectation) {
 	moves := parseMoves([][2]string{
 		{"a1", "e1"},
 		{"e3", "b1"},
@@ -61,7 +63,6 @@ func TestBasicGame(t *testing.T) {
 		bot.moves = append(bot.moves, *r[0])
 	}
 
-	startLine := "Game Start 100 5 Taktician vs HonestJoe white 600"
 	var transcript []Expectation
 	tm := 600
 	for _, r := range moves {
@@ -74,7 +75,11 @@ func TestBasicGame(t *testing.T) {
 			"Game#100 Over R-0",
 		},
 	})
+	return bot, transcript
+}
 
+func TestBasicGame(t *testing.T) {
+	bot, transcript := setupGame()
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
 	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
@@ -86,53 +91,32 @@ func TestBasicGame(t *testing.T) {
 }
 
 func TestUndoGame(t *testing.T) {
-	moves := parseMoves([][2]string{
-		{"a1", "e1"},
-		{"e3", "b1"},
-		{"e2", "b2"},
-		{"Ce4", "a2"},
-		{"e5", ""},
-	})
-	bot := &TestBotUndo{}
-	for _, r := range moves {
-		bot.moves = append(bot.moves, *r[0])
-	}
-	bot.undoPly = 5
+	base, transcript := setupGame()
+	bot := &TestBotUndo{*base, 5}
 
-	startLine := "Game Start 100 5 Taktician vs HonestJoe white 600"
-	var transcript []Expectation
-	tm := 600
-	for i, r := range moves {
-		transcript = appendMove(
-			transcript, "100", tm, r)
-		tm -= 10
-		if i == 2 {
-			e := transcript[len(transcript)-1]
-			transcript = append(transcript,
-				Expectation{
-					send: []string{
-						"Game#100 RequestUndo",
-					},
-					recv: []string{
-						"Game#100 RequestUndo",
-					},
-				},
-				Expectation{
-					send: []string{
-						"Game#100 Undo",
-					},
-				},
-				Expectation{
-					send: e.send,
-				},
-			)
-		}
-	}
-	transcript = append(transcript, Expectation{
-		send: []string{
-			"Game#100 Over R-0",
+	i := 6
+	rest := transcript[i:]
+	transcript = transcript[:i:i]
+	e := transcript[i-1]
+	transcript = append(transcript,
+		Expectation{
+			send: []string{
+				"Game#100 RequestUndo",
+			},
+			recv: []string{
+				"Game#100 RequestUndo",
+			},
 		},
-	})
+		Expectation{
+			send: []string{
+				"Game#100 Undo",
+			},
+		},
+		Expectation{
+			send: e.send,
+		},
+	)
+	transcript = append(transcript, rest...)
 
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
@@ -145,31 +129,8 @@ func TestUndoGame(t *testing.T) {
 }
 
 func TestThinker(t *testing.T) {
-	moves := parseMoves([][2]string{
-		{"a1", "e1"},
-		{"e3", "b1"},
-		{"e2", "b2"},
-		{"Ce4", "a2"},
-		{"e5", ""},
-	})
-	bot := &TestBotThinker{}
-	for _, r := range moves {
-		bot.moves = append(bot.moves, *r[0])
-	}
-
-	startLine := "Game Start 100 5 Taktician vs HonestJoe white 600"
-	var transcript []Expectation
-	tm := 600
-	for _, r := range moves {
-		transcript = appendMove(
-			transcript, "100", tm, r)
-		tm -= 10
-	}
-	transcript = append(transcript, Expectation{
-		send: []string{
-			"Game#100 Over R-0",
-		},
-	})
+	base, transcript := setupGame()
+	bot := &TestBotThinker{*base}
 
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
