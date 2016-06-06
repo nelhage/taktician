@@ -137,6 +137,9 @@ func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
 	if m.cfg.NoTable {
 		return nil
 	}
+	if *m.cancel {
+		return nil
+	}
 	return &m.table[h%tableSize]
 }
 
