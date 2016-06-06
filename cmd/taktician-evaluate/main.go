@@ -26,7 +26,7 @@ var (
 	perturb = flag.Float64("perturb", 0.0, "perturb weights")
 	seed    = flag.Int64("seed", 1, "starting random seed")
 	games   = flag.Int("games", 10, "number of games to play")
-	cutoff  = flag.Int("cutoff", 81, "cut games off after how many plies")
+	cutoff  = flag.Int("cutoff", 80, "cut games off after how many plies")
 	swap    = flag.Bool("swap", true, "swap colors each game")
 
 	prefix = flag.String("prefix", "", "ptn file to start games at the end of")
@@ -146,16 +146,15 @@ func main() {
 	if *c2 != "" {
 		log.Printf("p2c=!%s", *c2)
 	}
-	log.Printf("done games=%d seed=%d ties=%d p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
-		*games, *seed, st.Ties,
+	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d",
+		*games, *seed, st.Ties, st.Cutoff, st.White, st.Black)
+	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
 	a, b := int64(st.Players[0].Wins), int64(st.Players[1].Wins)
 	if a < b {
 		a, b = b, a
 	}
-	log.Printf("white=%d black=%d (%.2f)",
-		st.White, st.Black, float64(st.White)/float64(st.White+st.Black))
 	log.Printf("p[one-sided]=%f", binomTest(a, b, 0.5))
 }
 

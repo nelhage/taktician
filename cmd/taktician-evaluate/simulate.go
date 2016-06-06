@@ -37,6 +37,7 @@ type Stats struct {
 	}
 	White, Black int
 	Ties         int
+	Cutoff       int
 
 	Games []Result
 }
@@ -75,7 +76,11 @@ func Simulate(c *Config) Stats {
 				st.White++
 			} else if d.Winner == tak.Black {
 				st.Black++
+			} else {
+				st.Ties++
 			}
+		} else {
+			st.Cutoff++
 		}
 		if d.Over && d.Winner != tak.NoColor {
 			pst := &st.Players[0]
@@ -89,9 +94,6 @@ func Simulate(c *Config) Stats {
 			case tak.RoadWin:
 				pst.RoadWins++
 			}
-		}
-		if d.Winner == tak.NoColor {
-			st.Ties++
 		}
 		st.Games = append(st.Games, r)
 	}
