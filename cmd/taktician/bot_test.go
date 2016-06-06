@@ -28,6 +28,26 @@ func parseMoves(spec [][2]string) [][2]*tak.Move {
 	return out
 }
 
+func appendMove(transcript []Expectation,
+	id string, tm int,
+	move [2]*tak.Move) []Expectation {
+	transcript = append(transcript, Expectation{
+		recv: []string{
+			fmt.Sprintf("Game#%s %s", id, playtak.FormatServer(move[0])),
+		},
+	})
+	if move[1] == nil {
+		return transcript
+	}
+	transcript = append(transcript, Expectation{
+		send: []string{
+			fmt.Sprintf("Game#%s %s", id, playtak.FormatServer(move[1])),
+			fmt.Sprintf("Game#%s Time %d %d", id, tm, tm),
+		},
+	})
+	return transcript
+}
+
 func TestBasicGame(t *testing.T) {
 	moves := parseMoves([][2]string{
 		{"a1", "e1"},
@@ -36,7 +56,7 @@ func TestBasicGame(t *testing.T) {
 		{"Ce4", "a2"},
 		{"e5", ""},
 	})
-	bot := &TestBot{}
+	bot := &TestBotStatic{}
 	for _, r := range moves {
 		bot.moves = append(bot.moves, *r[0])
 	}
@@ -45,21 +65,68 @@ func TestBasicGame(t *testing.T) {
 	var transcript []Expectation
 	tm := 600
 	for _, r := range moves {
-		transcript = append(transcript, Expectation{
-			recv: []string{
-				fmt.Sprintf("Game#100 %s", playtak.FormatServer(r[0])),
-			},
-		})
-		if r[1] == nil {
-			continue
-		}
-		transcript = append(transcript, Expectation{
-			send: []string{
-				fmt.Sprintf("Game#100 %s", playtak.FormatServer(r[1])),
-				fmt.Sprintf("Game#100 Time %d %d", tm, tm),
-			},
-		})
+		transcript = appendMove(
+			transcript, "100", tm, r)
 		tm -= 10
+	}
+	transcript = append(transcript, Expectation{
+		send: []string{
+			"Game#100 Over R-0",
+		},
+	})
+
+	c := NewTestClient(t, transcript)
+	playGame(c, bot, startLine)
+	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
+	want := `x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`
+	if final != want {
+		t.Fatalf("final position=%q !=%q",
+			final, want)
+	}
+}
+
+func TestUndoGame(t *testing.T) {
+	moves := parseMoves([][2]string{
+		{"a1", "e1"},
+		{"e3", "b1"},
+		{"e2", "b2"},
+		{"Ce4", "a2"},
+		{"e5", ""},
+	})
+	bot := &TestBotUndo{}
+	for _, r := range moves {
+		bot.moves = append(bot.moves, *r[0])
+	}
+	bot.undoPly = 5
+
+	startLine := "Game Start 100 5 Taktician vs HonestJoe white 600"
+	var transcript []Expectation
+	tm := 600
+	for i, r := range moves {
+		transcript = appendMove(
+			transcript, "100", tm, r)
+		tm -= 10
+		if i == 2 {
+			e := transcript[len(transcript)-1]
+			transcript = append(transcript,
+				Expectation{
+					send: []string{
+						"Game#100 RequestUndo",
+					},
+					recv: []string{
+						"Game#100 RequestUndo",
+					},
+				},
+				Expectation{
+					send: []string{
+						"Game#100 Undo",
+					},
+				},
+				Expectation{
+					send: e.send,
+				},
+			)
+		}
 	}
 	transcript = append(transcript, Expectation{
 		send: []string{

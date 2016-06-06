@@ -36,9 +36,11 @@ func (t *TestClient) sendRecv() {
 	for i, e := range t.expect {
 		for _, s := range e.send {
 			t.recv <- s
+			log.Printf("[srv] -> %s", s)
 		}
 		for j, r := range e.recv {
 			got := <-t.send
+			log.Printf("[srv] <- %s", got)
 			if got != r {
 				t.t.Fatalf("msg %d,%d: got %q != %q",
 					i, j, got, r)
@@ -55,18 +57,27 @@ func (t *TestClient) Recv() <-chan string {
 	return t.recv
 }
 
-type TestBot struct {
-	game  *Game
-	moves []tak.Move
+type BotBase struct {
+	game *Game
 }
 
-func (t *TestBot) NewGame(g *Game) {
+func (t *BotBase) NewGame(g *Game) {
 	t.game = g
 }
 
-func (t *TestBot) GameOver() {}
+func (t *BotBase) GameOver() {}
 
-func (t *TestBot) GetMove(ctx context.Context,
+func (t *BotBase) AcceptUndo() bool {
+	return false
+}
+func (t *BotBase) HandleChat(who, msg string) {}
+
+type TestBotStatic struct {
+	BotBase
+	moves []tak.Move
+}
+
+func (t *TestBotStatic) GetMove(ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
 	log.Printf("(*TestBot).GetMove(ply=%d color=%s)",
@@ -81,7 +92,22 @@ func (t *TestBot) GetMove(ctx context.Context,
 	return m
 }
 
-func (t *TestBot) AcceptUndo() bool {
-	return false
+type TestBotUndo struct {
+	TestBotStatic
+	undoPly int
 }
-func (t *TestBot) HandleChat(who, msg string) {}
+
+func (t *TestBotUndo) GetMove(ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
+	if p.MoveNumber() == t.undoPly+1 {
+		<-ctx.Done()
+		t.undoPly = -1
+		return tak.Move{}
+	}
+	return t.TestBotStatic.GetMove(ctx, p, mine, theirs)
+}
+
+func (t *TestBotUndo) AcceptUndo() bool {
+	return true
+}
