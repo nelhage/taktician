@@ -45,6 +45,8 @@ type MinimaxAI struct {
 		pv    [maxDepth]tak.Move
 		m     tak.Move
 	}
+
+	cancel *bool
 }
 
 type tableEntry struct {
@@ -168,6 +170,12 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	for i, v := range m.history {
 		m.history[i] = v / 2
 	}
+	var cancel bool
+	m.cancel = &cancel
+	go func() {
+		<-ctx.Done()
+		cancel = true
+	}()
 
 	var seed = m.cfg.Seed
 	if seed == 0 {
@@ -179,7 +187,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	}
 	deadline, limited := ctx.Deadline()
 
-	var ms []tak.Move
+	var ms, next []tak.Move
 	var v int64
 	top := time.Now()
 	var prevEval uint64
@@ -194,7 +202,11 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
-		ms, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
+		next, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
+		if next == nil {
+			break
+		}
+		ms = next
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
@@ -272,6 +284,9 @@ func (ai *MinimaxAI) minimax(
 			ai.st.Terminal++
 		}
 		return nil, ai.evaluate(ai, p)
+	}
+	if *ai.cancel {
+		return nil, 0
 	}
 
 	ai.st.Visited++

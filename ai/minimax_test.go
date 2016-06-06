@@ -57,3 +57,19 @@ func TestRegression(t *testing.T) {
 		t.Fatalf("ai returned illegal move: %s: %s", ptn.FormatMove(&m), e)
 	}
 }
+
+func TestCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan Stats)
+	ai := NewMinimax(MinimaxConfig{Size: 5, Depth: maxDepth})
+	p := tak.New(tak.Config{Size: 5})
+	go func() {
+		_, _, st := ai.Analyze(ctx, p)
+		done <- st
+	}()
+	cancel()
+	st := <-done
+	if st.Depth == maxDepth {
+		t.Fatal("wtf too deep")
+	}
+}
