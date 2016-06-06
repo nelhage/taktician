@@ -32,8 +32,11 @@ func (t *Taktician) NewGame(g *Game) {
 	})
 }
 
-func (t *Taktician) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeBound(mine)))
+func (t *Taktician) GetMove(
+	ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(timeBound(mine)))
 	defer cancel()
 	return t.ai.GetMove(ctx, p)
 }

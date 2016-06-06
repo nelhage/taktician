@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -27,7 +29,9 @@ type Game struct {
 type Bot interface {
 	NewGame(g *Game)
 	GameOver()
-	GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
+	GetMove(ctx context.Context,
+		p *tak.Position,
+		mine, theirs time.Duration) tak.Move
 	AcceptUndo() bool
 	HandleChat(who, msg string)
 }
@@ -37,7 +41,7 @@ type Client interface {
 	SendCommand(...string)
 }
 
-func playGame(c Client, b Bot, line string) {
+func parseGameStart(line string) *Game {
 	var g Game
 	bits := strings.Split(line, " ")
 	g.size, _ = strconv.Atoi(bits[3])
@@ -55,11 +59,17 @@ func playGame(c Client, b Bot, line string) {
 
 	secs, _ := strconv.Atoi(bits[8])
 	g.time = time.Duration(secs) * time.Second
+	return &g
+}
+
+func playGame(c Client, b Bot, line string) {
+	ctx := context.Background()
+	g := parseGameStart(line)
 
 	gameStr := fmt.Sprintf("Game#%s", g.id)
 	p := tak.New(tak.Config{Size: g.size})
 	g.positions = append(g.positions, p)
-	b.NewGame(&g)
+	b.NewGame(g)
 	defer b.GameOver()
 
 	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
@@ -71,18 +81,24 @@ func playGame(c Client, b Bot, line string) {
 	times.mine = g.time
 	times.theirs = g.time
 
+	var cancel context.CancelFunc
 	var moves chan tak.Move
 	var moveLock sync.Mutex
 
 	for {
 		over, _ := p.GameOver()
-		if g.color == p.ToMove() && !over {
+		if p.ToMove() == g.color && !over {
+			moveCtx, moveCancel := context.WithCancel(ctx)
 			moves = make(chan tak.Move, 1)
 			go func(mc chan<- tak.Move) {
 				moveLock.Lock()
 				defer moveLock.Unlock()
-				mc <- b.GetMove(p, times.mine, times.theirs)
+				mc <- b.GetMove(moveCtx, p, times.mine, times.theirs)
 			}(moves)
+			cancel = func() {
+				moves = nil
+				moveCancel()
+			}
 		}
 
 		var timeout <-chan time.Time
@@ -117,7 +133,7 @@ func playGame(c Client, b Bot, line string) {
 				break eventLoop
 			}
 
-			bits = strings.Split(line, " ")
+			bits := strings.Split(line, " ")
 			switch bits[0] {
 			case gameStr:
 			case "Shout":
@@ -149,6 +165,7 @@ func playGame(c Client, b Bot, line string) {
 				g.positions = append(g.positions, p)
 				g.moves = append(g.moves, move)
 				timeout = time.NewTimer(500 * time.Millisecond).C
+				cancel()
 			case "Abandoned.":
 				log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",
 					g.id, g.opponent, p.MoveNumber())
@@ -171,7 +188,7 @@ func playGame(c Client, b Bot, line string) {
 			case "RequestUndo":
 				if b.AcceptUndo() {
 					c.SendCommand(gameStr, "RequestUndo")
-					moves = nil
+					cancel()
 				}
 			case "Undo":
 				log.Printf("undo game-id=%s ply=%d", g.id, p.MoveNumber())

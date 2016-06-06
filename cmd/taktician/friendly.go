@@ -34,8 +34,6 @@ type Friendly struct {
 	levelSet time.Time
 
 	greeted map[string]time.Time
-
-	undo chan struct{}
 }
 
 func (f *Friendly) NewGame(g *Game) {
@@ -53,7 +51,6 @@ func (f *Friendly) NewGame(g *Game) {
 		Debug:    0,
 		Evaluate: ai.EvaluateWinner,
 	})
-	f.undo = make(chan struct{}, 1)
 	/*
 		f.client.SendCommand("Shout",
 			fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
@@ -73,25 +70,24 @@ func (f *Friendly) GameOver() {
 	f.g = nil
 }
 
-func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
+func (f *Friendly) GetMove(
+	ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
 	var deadline <-chan time.Time
 	if f.waitUndo(p) {
 		deadline = time.After(undoTimeout)
 	} else {
 		deadline = time.After(minThink)
 	}
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(maxThink))
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(maxThink))
 	defer cancel()
 	m := f.ai.GetMove(ctx, p)
 	select {
 	case <-deadline:
-	case <-f.undo:
+	case <-ctx.Done():
 	}
 
-	select {
-	case <-f.undo:
-	default:
-	}
 	return m
 }
 
@@ -207,10 +203,5 @@ func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
 }
 
 func (f *Friendly) AcceptUndo() bool {
-	select {
-	case f.undo <- struct{}{}:
-	default:
-	}
-
 	return true
 }
