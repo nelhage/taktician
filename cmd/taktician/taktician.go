@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/tak"
@@ -31,7 +33,9 @@ func (t *Taktician) NewGame(g *Game) {
 }
 
 func (t *Taktician) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
-	return t.ai.GetMove(p, timeBound(mine))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeBound(mine)))
+	defer cancel()
+	return t.ai.GetMove(ctx, p)
 }
 
 func (t *Taktician) GameOver() {

@@ -8,6 +8,8 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
@@ -123,7 +125,9 @@ func analyze(p *tak.Position) {
 }
 
 func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
-	pv, val, _ := player.Analyze(p, *timeLimit)
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(*timeLimit))
+	defer cancel()
+	pv, val, _ := player.Analyze(ctx, p)
 	if !*quiet {
 		cli.RenderBoard(os.Stdout, p)
 		if *explain {

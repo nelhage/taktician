@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/tak"
@@ -78,7 +80,9 @@ func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
 	} else {
 		deadline = time.After(minThink)
 	}
-	m := f.ai.GetMove(p, maxThink)
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(maxThink))
+	defer cancel()
+	m := f.ai.GetMove(ctx, p)
 	select {
 	case <-deadline:
 	case <-f.undo:
@@ -92,11 +96,12 @@ func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move
 }
 
 func (f *Friendly) waitUndo(p *tak.Position) bool {
-	_, v, st := f.check.Analyze(p, 0)
+	ctx := context.Background()
+	_, v, st := f.check.Analyze(ctx, p)
 	if v < ai.WinThreshold || st.Depth > 1 {
 		return false
 	}
-	_, v, st = f.check.Analyze(f.g.positions[len(f.g.positions)-2], 0)
+	_, v, st = f.check.Analyze(ctx, f.g.positions[len(f.g.positions)-2])
 	if v > -ai.WinThreshold {
 		return true
 	}

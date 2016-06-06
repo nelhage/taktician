@@ -1,13 +1,14 @@
 package mcts
 
 import (
-	"math/rand"
+	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/tak"
 )
 
-func RandomPolicy(r *rand.Rand, p *tak.Position, alloc *tak.Position) *tak.Position {
+func RandomPolicy(ctx context.Context, p *tak.Position, alloc *tak.Position) *tak.Position {
+	r := GetRand(ctx)
 	moves := p.AllMoves(nil)
 	var next *tak.Position
 	for {
@@ -30,8 +31,8 @@ func NewMinimaxPolicy(cfg *MCTSConfig, depth int) PolicyFunc {
 		Depth:   depth,
 		Seed:    cfg.Seed,
 	})
-	return func(r *rand.Rand, p *tak.Position, next *tak.Position) *tak.Position {
-		m := mm.GetMove(p, 0)
+	return func(ctx context.Context, p *tak.Position, next *tak.Position) *tak.Position {
+		m := mm.GetMove(ctx, p)
 		next, _ = p.MovePreallocated(&m, next)
 		return next
 	}

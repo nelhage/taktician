@@ -2,7 +2,8 @@ package ai
 
 import (
 	"math/rand"
-	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/tak"
 )
@@ -11,7 +12,7 @@ type RandomAI struct {
 	r *rand.Rand
 }
 
-func (r *RandomAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
+func (r *RandomAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	moves := p.AllMoves(nil)
 	i := r.r.Int31n(int32(len(moves)))
 	return moves[i]

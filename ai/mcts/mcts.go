@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -24,7 +26,7 @@ type MCTSConfig struct {
 	Policy PolicyFunc
 }
 
-type PolicyFunc func(r *rand.Rand, p *tak.Position, next *tak.Position) *tak.Position
+type PolicyFunc func(ctx context.Context, p *tak.Position, next *tak.Position) *tak.Position
 
 type MonteCarloAI struct {
 	cfg  MCTSConfig
@@ -46,17 +48,20 @@ type tree struct {
 	children []*tree
 }
 
-func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
+func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	tree := &tree{
 		position: p,
 	}
-	ai.populate(tree)
+	ai.populate(ctx, tree)
 	start := time.Now()
-	if ai.cfg.Limit < limit {
-		limit = ai.cfg.Limit
+	deadline, limited := ctx.Deadline()
+	if !limited || deadline.Sub(start) > ai.cfg.Limit {
+		deadline = time.Now().Add(ai.cfg.Limit)
 	}
+	ctx = WithRand(ctx, ai.r)
+
 	next := start.Add(10 * time.Second)
-	for time.Now().Sub(start) < limit {
+	for time.Now().Before(deadline) {
 		node := ai.descend(tree)
 		if ai.cfg.Debug > 4 {
 			var s []string
@@ -67,10 +72,10 @@ func (ai *MonteCarloAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
 			}
 			log.Printf("evaluate: [%s]", strings.Join(s, "<-"))
 		}
-		ai.populate(node)
+		ai.populate(ctx, node)
 		var win bool
 		if node.value == 0 {
-			win = ai.evaluate(node)
+			win = ai.evaluate(ctx, node)
 		}
 		ai.update(node, win)
 		if time.Now().After(next) && ai.cfg.Debug > 0 {
@@ -131,8 +136,8 @@ func (mc *MonteCarloAI) printpv(t *tree) {
 	)
 }
 
-func (mc *MonteCarloAI) populate(t *tree) {
-	_, v, _ := mc.mm.Analyze(t.position, 0)
+func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
+	_, v, _ := mc.mm.Analyze(ctx, t.position)
 	if v < -ai.WinThreshold || v > ai.WinThreshold {
 		t.value = v
 		return
@@ -210,7 +215,7 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 const maxMoves = 50
 const evalThreshold = 500
 
-func (ai *MonteCarloAI) evaluate(t *tree) bool {
+func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) bool {
 	p := t.position
 	alloc := tak.Alloc(p.Size())
 
@@ -218,7 +223,7 @@ func (ai *MonteCarloAI) evaluate(t *tree) bool {
 		if ok, c := p.GameOver(); ok {
 			return c == t.position.ToMove()
 		}
-		next := ai.cfg.Policy(ai.r, p, alloc)
+		next := ai.cfg.Policy(ctx, p, alloc)
 		if next == nil {
 			return false
 		}

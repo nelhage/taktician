@@ -4,6 +4,8 @@ import (
 	"flag"
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -83,7 +85,7 @@ func testCollisions(t *testing.T, p *tak.Position) {
 		NoTable:  true,
 	})
 	for i := 0; i < 4; i++ {
-		m := ai.GetMove(p, 0)
+		m := ai.GetMove(context.Background(), p)
 		p, _ = p.Move(&m)
 		if ok, _ := p.GameOver(); ok {
 			break

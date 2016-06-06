@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/cli"
@@ -31,7 +33,9 @@ type aiWrapper struct {
 }
 
 func (a *aiWrapper) GetMove(p *tak.Position) tak.Move {
-	return a.p.GetMove(p, *limit)
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(*limit))
+	defer cancel()
+	return a.p.GetMove(ctx, p)
 }
 
 func parsePlayer(in *bufio.Reader, s string) cli.Player {

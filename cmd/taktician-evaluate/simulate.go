@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/tak"
 )
@@ -162,11 +164,14 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		}
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
+			ctx, cancel := context.WithDeadline(context.Background(),
+				time.Now().Add(g.c.Limit))
 			if p.ToMove() == tak.White {
-				m = white.GetMove(p, g.c.Limit)
+				m = white.GetMove(ctx, p)
 			} else {
-				m = black.GetMove(p, g.c.Limit)
+				m = black.GetMove(ctx, p)
 			}
+			cancel()
 			p, _ = p.Move(&m)
 			ms = append(ms, m)
 			if ok, _ := p.GameOver(); ok {
