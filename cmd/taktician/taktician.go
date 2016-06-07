@@ -17,11 +17,13 @@ func timeBound(remaining time.Duration) time.Duration {
 }
 
 type Taktician struct {
+	g      *Game
 	client *playtak.Client
 	ai     *ai.MinimaxAI
 }
 
 func (t *Taktician) NewGame(g *Game) {
+	t.g = g
 	t.ai = ai.NewMinimax(ai.MinimaxConfig{
 		Size:  g.size,
 		Depth: *depth,
@@ -36,8 +38,11 @@ func (t *Taktician) GetMove(
 	ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
-	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(timeBound(mine)))
-	defer cancel()
+	if p.ToMove() == t.g.color {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, time.Now().Add(timeBound(mine)))
+		defer cancel()
+	}
 	return t.ai.GetMove(ctx, p)
 }
 
