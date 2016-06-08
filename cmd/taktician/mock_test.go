@@ -129,3 +129,16 @@ func (t *TestBotThinker) GetMove(ctx context.Context,
 	}
 	return t.TestBotStatic.GetMove(ctx, p, mine, theirs)
 }
+
+type TestBotResume struct {
+	TestBotStatic
+}
+
+func (t *TestBotResume) GetMove(ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
+	if p.MoveNumber() == 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+	return t.TestBotStatic.GetMove(ctx, p, mine, theirs)
+}

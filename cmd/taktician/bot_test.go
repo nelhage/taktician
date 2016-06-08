@@ -50,14 +50,16 @@ func appendMove(transcript []Expectation,
 
 const startLine = "Game Start 100 5 Taktician vs HonestJoe white 600"
 
-func setupGame() (*TestBotStatic, []Expectation) {
-	moves := parseMoves([][2]string{
-		{"a1", "e1"},
-		{"e3", "b1"},
-		{"e2", "b2"},
-		{"Ce4", "a2"},
-		{"e5", ""},
-	})
+var defaultGame = [][2]string{
+	{"a1", "e1"},
+	{"e3", "b1"},
+	{"e2", "b2"},
+	{"Ce4", "a2"},
+	{"e5", ""},
+}
+
+func setupGame(spec [][2]string) (*TestBotStatic, []Expectation) {
+	moves := parseMoves(spec)
 	bot := &TestBotStatic{}
 	for _, r := range moves {
 		bot.moves = append(bot.moves, *r[0])
@@ -86,7 +88,7 @@ func assertPosition(t *testing.T, p *tak.Position, expect string) {
 }
 
 func TestBasicGame(t *testing.T) {
-	bot, transcript := setupGame()
+	bot, transcript := setupGame(defaultGame)
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
 	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
@@ -94,7 +96,7 @@ func TestBasicGame(t *testing.T) {
 }
 
 func TestUndoGame(t *testing.T) {
-	base, transcript := setupGame()
+	base, transcript := setupGame(defaultGame)
 	bot := &TestBotUndo{*base, 5}
 
 	i := 6
@@ -128,7 +130,7 @@ func TestUndoGame(t *testing.T) {
 }
 
 func TestThinker(t *testing.T) {
-	base, transcript := setupGame()
+	base, transcript := setupGame(defaultGame)
 	bot := &TestBotThinker{TestBotStatic: *base}
 
 	c := NewTestClient(t, transcript)
@@ -138,7 +140,7 @@ func TestThinker(t *testing.T) {
 }
 
 func TestAbandon(t *testing.T) {
-	base, transcript := setupGame()
+	base, transcript := setupGame(defaultGame)
 	bot := &TestBotThinker{TestBotStatic: *base}
 	transcript = append(transcript[:7:7], Expectation{
 		send: []string{"Game#100 Abandoned."},
@@ -147,4 +149,26 @@ func TestAbandon(t *testing.T) {
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
 	bot.wg.Wait()
+}
+
+func TestResume(t *testing.T) {
+	base, transcript := setupGame(defaultGame)
+	base.moves = append(base.moves[:1:1], base.moves[4:]...)
+	bot := &TestBotResume{*base}
+
+	var resume []Expectation
+	for i := 0; i < 4; i++ {
+		resume = append(resume, Expectation{
+			send: transcript[2*i].recv,
+		})
+		resume = append(resume, Expectation{
+			send: transcript[2*i+1].send[:1],
+		})
+	}
+	transcript = append(resume, transcript[8:]...)
+
+	c := NewTestClient(t, transcript)
+	playGame(c, bot, startLine)
+	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
