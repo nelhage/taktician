@@ -90,6 +90,7 @@ func assertPosition(t *testing.T, p *tak.Position, expect string) {
 func TestBasicGame(t *testing.T) {
 	bot, transcript := setupGame(defaultGame)
 	c := NewTestClient(t, transcript)
+	defer c.shutdown()
 	playGame(c, bot, startLine)
 	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
@@ -124,6 +125,7 @@ func TestUndoGame(t *testing.T) {
 	transcript = append(transcript, rest...)
 
 	c := NewTestClient(t, transcript)
+	defer c.shutdown()
 	playGame(c, bot, startLine)
 	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
@@ -134,6 +136,7 @@ func TestThinker(t *testing.T) {
 	bot := &TestBotThinker{TestBotStatic: *base}
 
 	c := NewTestClient(t, transcript)
+	defer c.shutdown()
 	playGame(c, bot, startLine)
 	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
@@ -147,6 +150,7 @@ func TestAbandon(t *testing.T) {
 	})
 
 	c := NewTestClient(t, transcript)
+	defer c.shutdown()
 	playGame(c, bot, startLine)
 	bot.wg.Wait()
 }
@@ -168,6 +172,7 @@ func TestResume(t *testing.T) {
 	transcript = append(resume, transcript[8:]...)
 
 	c := NewTestClient(t, transcript)
+	defer c.shutdown()
 	playGame(c, bot, startLine)
 	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)

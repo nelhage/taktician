@@ -22,6 +22,10 @@ type TestClient struct {
 	expect []Expectation
 }
 
+func (c *TestClient) shutdown() {
+	close(c.send)
+}
+
 func NewTestClient(t *testing.T, expect []Expectation) *TestClient {
 	c := &TestClient{
 		send:   make(chan string),
