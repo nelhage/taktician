@@ -171,8 +171,8 @@ func playGame(c Client, b Bot, line string) {
 			case "RequestUndo":
 				if b.AcceptUndo() {
 					c.SendCommand(gameStr, "RequestUndo")
+					moves = nil
 				}
-				moves = nil
 			case "Undo":
 				log.Printf("undo game-id=%s ply=%d", g.id, p.MoveNumber())
 				g.positions = g.positions[:len(g.positions)-1]
