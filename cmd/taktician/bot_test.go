@@ -78,16 +78,19 @@ func setupGame() (*TestBotStatic, []Expectation) {
 	return bot, transcript
 }
 
+func assertPosition(t *testing.T, p *tak.Position, expect string) {
+	got := ptn.FormatTPS(p)
+	if got != expect {
+		t.Fatalf("wrong position=%q !=%q", got, expect)
+	}
+}
+
 func TestBasicGame(t *testing.T) {
 	bot, transcript := setupGame()
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
-	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
-	want := `x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`
-	if final != want {
-		t.Fatalf("final position=%q !=%q",
-			final, want)
-	}
+	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
 
 func TestUndoGame(t *testing.T) {
@@ -120,24 +123,28 @@ func TestUndoGame(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
-	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
-	want := `x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`
-	if final != want {
-		t.Fatalf("final position=%q !=%q",
-			final, want)
-	}
+	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
 
 func TestThinker(t *testing.T) {
 	base, transcript := setupGame()
-	bot := &TestBotThinker{*base}
+	bot := &TestBotThinker{TestBotStatic: *base}
 
 	c := NewTestClient(t, transcript)
 	playGame(c, bot, startLine)
-	final := ptn.FormatTPS(bot.game.positions[len(bot.game.positions)-1])
-	want := `x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`
-	if final != want {
-		t.Fatalf("final position=%q !=%q",
-			final, want)
-	}
+	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
+}
+
+func TestAbandon(t *testing.T) {
+	base, transcript := setupGame()
+	bot := &TestBotThinker{TestBotStatic: *base}
+	transcript = append(transcript[:7:7], Expectation{
+		send: []string{"Game#100 Abandoned."},
+	})
+
+	c := NewTestClient(t, transcript)
+	playGame(c, bot, startLine)
+	bot.wg.Wait()
 }

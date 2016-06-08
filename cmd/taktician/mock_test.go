@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -114,11 +115,14 @@ func (t *TestBotUndo) AcceptUndo() bool {
 
 type TestBotThinker struct {
 	TestBotStatic
+	wg sync.WaitGroup
 }
 
 func (t *TestBotThinker) GetMove(ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
+	t.wg.Add(1)
+	defer t.wg.Done()
 	if p.ToMove() != t.game.color {
 		<-ctx.Done()
 		return tak.Move{}

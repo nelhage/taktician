@@ -82,6 +82,11 @@ func playGame(c Client, b Bot, line string) {
 	times.theirs = g.time
 
 	var cancel context.CancelFunc
+	defer func() {
+		if cancel != nil {
+			cancel()
+		}
+	}()
 	var moves chan tak.Move
 	var moveLock sync.Mutex
 
