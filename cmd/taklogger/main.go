@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -17,15 +18,25 @@ import (
 )
 
 var (
-	server = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
-	out    = flag.String("out", "ptn", "Directory to write PTN files")
-	index  = flag.String("index", "", "write a sqlite index")
+	server     = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
+	out        = flag.String("out", "ptn", "Directory to write PTN files")
+	index      = flag.String("index", "", "write a sqlite index")
+	cpuProfile = flag.String("cpu-profile", "", "write a CPU profile")
 )
 
 const ClientName = "Taktician Logger"
 
 func main() {
 	flag.Parse()
+	if *cpuProfile != "" {
+		f, e := os.OpenFile(*cpuProfile, os.O_WRONLY|os.O_CREATE, 0644)
+		if e != nil {
+			log.Fatalf("open cpu-profile: %s: %v", *cpuProfile, e)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	if *index != "" {
 		err := indexPTN(*out, *index)
 		if err != nil {
