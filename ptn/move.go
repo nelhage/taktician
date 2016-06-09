@@ -16,32 +16,34 @@ func ParseMove(move string) (tak.Move, error) {
 	if len(move) < 2 {
 		return tak.Move{}, errors.New("move too short")
 	}
-	groups := moveRE.FindStringSubmatch(move)
+	groups := moveRE.FindStringSubmatchIndex(move)
 	if groups == nil {
 		return tak.Move{}, errors.New("illegal move")
 	}
-	var (
-		place     = groups[1]
-		carry     = groups[2]
-		position  = groups[3]
-		direction = groups[4]
-		drops     = groups[5]
+	const (
+		place = 2 * (iota + 1)
+		carry
+		position
+		direction
+		drops
 	)
-	x := position[0] - 'a'
-	y := position[1] - '1'
+	x := move[groups[position]] - 'a'
+	y := move[groups[position]+1] - '1'
 
 	m := tak.Move{X: int(x), Y: int(y)}
-	if direction == "" {
+	if groups[direction] == groups[direction+1] {
 		// place a piece
-		if carry != "" || drops != "" {
+		if groups[carry] != groups[carry+1] || groups[drops] != groups[drops+1] {
 			return tak.Move{}, errors.New("can't carry or drop without a direction")
 		}
-		switch place {
-		case "F", "":
+		switch {
+		case groups[place] == groups[place+1]:
 			m.Type = tak.PlaceFlat
-		case "S":
+		case move[groups[place]] == 'F':
+			m.Type = tak.PlaceFlat
+		case move[groups[place]] == 'S':
 			m.Type = tak.PlaceStanding
-		case "C":
+		case move[groups[place]] == 'C':
 			m.Type = tak.PlaceCapstone
 		default:
 			panic("parser error")
@@ -51,10 +53,11 @@ func ParseMove(move string) (tak.Move, error) {
 
 	// a slide
 	stack := 1
-	if carry != "" {
-		stack = int(carry[0] - '0')
+	if groups[carry] != groups[carry+1] {
+		stack = int(move[groups[carry]] - '0')
 	}
-	for _, d := range drops {
+	for i := groups[drops]; i != groups[drops+1]; i++ {
+		d := move[i]
 		m.Slides = append(m.Slides, byte(d-'0'))
 		stack -= int(d - '0')
 	}
@@ -63,14 +66,14 @@ func ParseMove(move string) (tak.Move, error) {
 	} else if stack < 0 {
 		return tak.Move{}, errors.New("malformed move: bad count")
 	}
-	switch direction {
-	case "<":
+	switch move[groups[direction]] {
+	case '<':
 		m.Type = tak.SlideLeft
-	case ">":
+	case '>':
 		m.Type = tak.SlideRight
-	case "+":
+	case '+':
 		m.Type = tak.SlideUp
-	case "-":
+	case '-':
 		m.Type = tak.SlideDown
 	default:
 		panic("parser error")
