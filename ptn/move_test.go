@@ -69,3 +69,27 @@ func TestParseMove(t *testing.T) {
 		}
 	}
 }
+
+func TestParseMoveErrors(t *testing.T) {
+	bad := []string{
+		"",
+		"a11",
+		"z3",
+		"14c4>",
+		"6a1",
+		"6a1>2222",
+		"a",
+	}
+	for _, b := range bad {
+		_, e := ParseMove(b)
+		if e == nil {
+			t.Errorf("parse(%q): no error", b)
+		}
+	}
+}
+
+func BenchmarkParseMove(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseMove("3a1+111")
+	}
+}

@@ -9,10 +9,13 @@ import (
 
 var moveRE = regexp.MustCompile(
 	// [place] [carry] position [direction] [drops] [top]
-	`([CFS]?)([1-8]?)([a-h][1-9])([<>+-]?)([1-8]*)([CFS]?)`,
+	`\A([CFS]?)([1-8]?)([a-h][1-9])([<>+-]?)([1-8]*)([CFS]?)\z`,
 )
 
 func ParseMove(move string) (tak.Move, error) {
+	if len(move) < 2 {
+		return tak.Move{}, errors.New("move too short")
+	}
 	groups := moveRE.FindStringSubmatch(move)
 	if groups == nil {
 		return tak.Move{}, errors.New("illegal move")
@@ -57,6 +60,8 @@ func ParseMove(move string) (tak.Move, error) {
 	}
 	if stack > 0 {
 		m.Slides = append(m.Slides, byte(stack))
+	} else if stack < 0 {
+		return tak.Move{}, errors.New("malformed move: bad count")
 	}
 	switch direction {
 	case "<":
