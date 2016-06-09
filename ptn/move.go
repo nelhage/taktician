@@ -16,57 +16,49 @@ func ParseMove(move string) (tak.Move, error) {
 	if len(move) < 2 {
 		return tak.Move{}, errors.New("move too short")
 	}
-	groups := moveRE.FindStringSubmatchIndex(move)
-	if groups == nil {
+
+	var m tak.Move
+	var stack int
+	i := 0
+	switch move[i] {
+	case 'F':
+		m.Type = tak.PlaceFlat
+		i++
+	case 'S':
+		m.Type = tak.PlaceStanding
+		i++
+	case 'C':
+		m.Type = tak.PlaceCapstone
+		i++
+	default:
+		if move[i] >= '1' && move[i] <= '8' {
+			stack = int(move[i] - '0')
+			i++
+		} else {
+			// provisional, may be updated if we see a
+			// slide
+			m.Type = tak.PlaceFlat
+		}
+	}
+	if move[i] >= 'a' && move[i] <= 'h' {
+		m.X = int(move[i] - 'a')
+		i++
+	} else {
 		return tak.Move{}, errors.New("illegal move")
 	}
-	const (
-		place = 2 * (iota + 1)
-		carry
-		position
-		direction
-		drops
-	)
-	x := move[groups[position]] - 'a'
-	y := move[groups[position]+1] - '1'
-
-	m := tak.Move{X: int(x), Y: int(y)}
-	if groups[direction] == groups[direction+1] {
-		// place a piece
-		if groups[carry] != groups[carry+1] || groups[drops] != groups[drops+1] {
-			return tak.Move{}, errors.New("can't carry or drop without a direction")
-		}
-		switch {
-		case groups[place] == groups[place+1]:
-			m.Type = tak.PlaceFlat
-		case move[groups[place]] == 'F':
-			m.Type = tak.PlaceFlat
-		case move[groups[place]] == 'S':
-			m.Type = tak.PlaceStanding
-		case move[groups[place]] == 'C':
-			m.Type = tak.PlaceCapstone
-		default:
-			panic("parser error")
+	if move[i] >= '1' && move[i] <= '8' {
+		m.Y = int(move[i] - '1')
+		i++
+	} else {
+		return tak.Move{}, errors.New("illegal move")
+	}
+	if i == len(move) {
+		if stack != 0 {
+			return tak.Move{}, errors.New("illegal move")
 		}
 		return m, nil
 	}
-
-	// a slide
-	stack := 1
-	if groups[carry] != groups[carry+1] {
-		stack = int(move[groups[carry]] - '0')
-	}
-	for i := groups[drops]; i != groups[drops+1]; i++ {
-		d := move[i]
-		m.Slides = append(m.Slides, byte(d-'0'))
-		stack -= int(d - '0')
-	}
-	if stack > 0 {
-		m.Slides = append(m.Slides, byte(stack))
-	} else if stack < 0 {
-		return tak.Move{}, errors.New("malformed move: bad count")
-	}
-	switch move[groups[direction]] {
+	switch move[i] {
 	case '<':
 		m.Type = tak.SlideLeft
 	case '>':
@@ -76,7 +68,21 @@ func ParseMove(move string) (tak.Move, error) {
 	case '-':
 		m.Type = tak.SlideDown
 	default:
-		panic("parser error")
+		return tak.Move{}, errors.New("bad move")
+	}
+	if stack == 0 {
+		stack = 1
+	}
+	i++
+	for ; i != len(move); i++ {
+		d := move[i]
+		m.Slides = append(m.Slides, byte(d-'0'))
+		stack -= int(d - '0')
+	}
+	if stack > 0 {
+		m.Slides = append(m.Slides, byte(stack))
+	} else if stack < 0 {
+		return tak.Move{}, errors.New("malformed move: bad count")
 	}
 
 	return m, nil
