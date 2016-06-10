@@ -26,11 +26,12 @@ var (
 
 	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
 
-	debug = flag.Int("debug", 1, "debug level")
-	depth = flag.Int("depth", 5, "minimax depth")
-	limit = flag.Duration("limit", time.Minute, "time limit per move")
-	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
-	table = flag.Bool("table", true, "use the transposition table")
+	debug           = flag.Int("debug", 1, "debug level")
+	depth           = flag.Int("depth", 5, "minimax depth")
+	limit           = flag.Duration("limit", time.Minute, "time limit per move")
+	sort            = flag.Bool("sort", true, "sort moves via history heuristic")
+	table           = flag.Bool("table", true, "use the transposition table")
+	useOpponentTime = flag.Bool("use-opponent-time", true, "think on opponent's time")
 
 	debugClient = flag.Bool("debug-client", false, "log debug output for playtak connection")
 )

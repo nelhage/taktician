@@ -16,11 +16,20 @@ import (
 )
 
 type Game struct {
+	p        *tak.Position
 	id       string
+	gameStr  string
 	opponent string
 	color    tak.Color
 	size     int
 	time     time.Duration
+
+	times struct {
+		mine, theirs time.Duration
+	}
+
+	bot      Bot
+	moveLock sync.Mutex
 
 	positions []*tak.Position
 	moves     []tak.Move
@@ -66,148 +75,138 @@ func playGame(c Client, b Bot, line string) {
 	ctx := context.Background()
 	g := parseGameStart(line)
 
-	gameStr := fmt.Sprintf("Game#%s", g.id)
-	p := tak.New(tak.Config{Size: g.size})
-	g.positions = append(g.positions, p)
+	g.gameStr = fmt.Sprintf("Game#%s", g.id)
+	g.p = tak.New(tak.Config{Size: g.size})
+	g.positions = append(g.positions, g.p)
+	g.bot = b
 	b.NewGame(g)
 	defer b.GameOver()
 
 	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
 		g.id, g.size, g.opponent, g.color, g.time)
 
-	var times struct {
-		mine, theirs time.Duration
-	}
-	times.mine = g.time
-	times.theirs = g.time
-
-	var cancel context.CancelFunc
-	defer func() {
-		if cancel != nil {
-			cancel()
-		}
-	}()
-	var moves chan tak.Move
-	var moveLock sync.Mutex
+	g.times.mine = g.time
+	g.times.theirs = g.time
 
 	for {
-		over, _ := p.GameOver()
-		if !over {
-			moveCtx, moveCancel := context.WithCancel(ctx)
-			moves = make(chan tak.Move, 1)
-			go func(p *tak.Position, mc chan<- tak.Move) {
-				moveLock.Lock()
-				defer moveLock.Unlock()
-				defer moveCancel()
-				mc <- b.GetMove(moveCtx, p, times.mine, times.theirs)
-			}(p, moves)
-			if p.ToMove() != g.color {
-				moves = nil
-				cancel = moveCancel
-			} else {
-				cancel = func() {
-					moves = nil
-					moveCancel()
-				}
+		over, _ := g.p.GameOver()
+		if over {
+			break
+		}
+		if handleMove(ctx, g, c) {
+			break
+		}
+	}
+}
+
+func handleMove(ctx context.Context, g *Game, c Client) bool {
+	moves := make(chan tak.Move, 1)
+	moveCtx, moveCancel := context.WithCancel(ctx)
+	defer moveCancel()
+	go func(p *tak.Position, mc chan<- tak.Move) {
+		g.moveLock.Lock()
+		defer g.moveLock.Unlock()
+		defer moveCancel()
+		mc <- g.bot.GetMove(moveCtx, p, g.times.mine, g.times.theirs)
+	}(g.p, moves)
+	if g.p.ToMove() != g.color {
+		moves = nil
+	}
+
+	var timeout <-chan time.Time
+
+	for {
+		var line string
+		var ok bool
+		select {
+		case line, ok = <-c.Recv():
+			if !ok {
+				return false
 			}
+		case move := <-moves:
+			next, err := g.p.Move(&move)
+			if err != nil {
+				log.Printf("ai returned bad move: %s: %s",
+					ptn.FormatMove(&move), err)
+				return false
+			}
+			c.SendCommand(g.gameStr, playtak.FormatServer(&move))
+			log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
+				g.id,
+				g.p.MoveNumber(),
+				g.p.MoveNumber()/2+1,
+				strings.ToUpper(g.p.ToMove().String()[:1]),
+				ptn.FormatMove(&move))
+			g.p = next
+			g.positions = append(g.positions, g.p)
+			g.moves = append(g.moves, move)
+			return false
+		case <-timeout:
+			return false
 		}
 
-		var timeout <-chan time.Time
-	eventLoop:
-		for {
-			var line string
-			var ok bool
-			select {
-			case line, ok = <-c.Recv():
-				if !ok {
-					return
-				}
-			case move := <-moves:
-				next, err := p.Move(&move)
-				if err != nil {
-					log.Printf("ai returned bad move: %s: %s",
-						ptn.FormatMove(&move), err)
-					break eventLoop
-				}
-				c.SendCommand(gameStr, playtak.FormatServer(&move))
-				log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
-					g.id,
-					p.MoveNumber(),
-					p.MoveNumber()/2+1,
-					strings.ToUpper(p.ToMove().String()[:1]),
-					ptn.FormatMove(&move))
-				p = next
-				g.positions = append(g.positions, p)
-				g.moves = append(g.moves, move)
-				break eventLoop
-			case <-timeout:
-				break eventLoop
+		bits := strings.Split(line, " ")
+		switch bits[0] {
+		case g.gameStr:
+		case "Shout":
+			who, msg := playtak.ParseShout(line)
+			if who != "" {
+				g.bot.HandleChat(who, msg)
 			}
-
-			bits := strings.Split(line, " ")
-			switch bits[0] {
-			case gameStr:
-			case "Shout":
-				who, msg := playtak.ParseShout(line)
-				if who != "" {
-					b.HandleChat(who, msg)
-				}
-				fallthrough
-			default:
-				continue eventLoop
+			fallthrough
+		default:
+			continue
+		}
+		switch bits[1] {
+		case "P", "M":
+			move, err := playtak.ParseServer(strings.Join(bits[1:], " "))
+			if err != nil {
+				panic(err)
 			}
-			switch bits[1] {
-			case "P", "M":
-				move, err := playtak.ParseServer(strings.Join(bits[1:], " "))
-				if err != nil {
-					panic(err)
-				}
-				next, err := p.Move(&move)
-				if err != nil {
-					panic(err)
-				}
-				log.Printf("their-move game-id=%s ply=%d ptn=%d.%s move=%q",
-					g.id,
-					p.MoveNumber(),
-					p.MoveNumber()/2+1,
-					strings.ToUpper(p.ToMove().String()[:1]),
-					ptn.FormatMove(&move))
-				p = next
-				g.positions = append(g.positions, p)
-				g.moves = append(g.moves, move)
-				timeout = time.After(500 * time.Millisecond)
-				cancel()
-			case "Abandoned.":
-				log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",
-					g.id, g.opponent, p.MoveNumber())
-				return
-			case "Over":
-				log.Printf("game-over game-id=%s opponent=%s ply=%d result=%q",
-					g.id, g.opponent, p.MoveNumber(), bits[2])
-				return
-			case "Time":
-				w, _ := strconv.Atoi(bits[2])
-				b, _ := strconv.Atoi(bits[3])
-				if g.color == tak.White {
-					times.mine = time.Duration(w) * time.Second
-					times.theirs = time.Duration(b) * time.Second
-				} else {
-					times.theirs = time.Duration(w) * time.Second
-					times.mine = time.Duration(b) * time.Second
-				}
-				break eventLoop
-			case "RequestUndo":
-				if b.AcceptUndo() {
-					c.SendCommand(gameStr, "RequestUndo")
-					cancel()
-				}
-			case "Undo":
-				log.Printf("undo game-id=%s ply=%d", g.id, p.MoveNumber())
-				g.positions = g.positions[:len(g.positions)-1]
-				g.moves = g.moves[:len(g.moves)-1]
-				p = g.positions[len(g.positions)-1]
-				break eventLoop
+			next, err := g.p.Move(&move)
+			if err != nil {
+				panic(err)
 			}
+			log.Printf("their-move game-id=%s ply=%d ptn=%d.%s move=%q",
+				g.id,
+				g.p.MoveNumber(),
+				g.p.MoveNumber()/2+1,
+				strings.ToUpper(g.p.ToMove().String()[:1]),
+				ptn.FormatMove(&move))
+			g.p = next
+			g.positions = append(g.positions, g.p)
+			g.moves = append(g.moves, move)
+			timeout = time.After(500 * time.Millisecond)
+		case "Abandoned.":
+			log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",
+				g.id, g.opponent, g.p.MoveNumber())
+			return true
+		case "Over":
+			log.Printf("game-over game-id=%s opponent=%s ply=%d result=%q",
+				g.id, g.opponent, g.p.MoveNumber(), bits[2])
+			return true
+		case "Time":
+			w, _ := strconv.Atoi(bits[2])
+			b, _ := strconv.Atoi(bits[3])
+			if g.color == tak.White {
+				g.times.mine = time.Duration(w) * time.Second
+				g.times.theirs = time.Duration(b) * time.Second
+			} else {
+				g.times.theirs = time.Duration(w) * time.Second
+				g.times.mine = time.Duration(b) * time.Second
+			}
+			return false
+		case "RequestUndo":
+			if g.bot.AcceptUndo() {
+				c.SendCommand(g.gameStr, "RequestUndo")
+				moveCancel()
+			}
+		case "Undo":
+			log.Printf("undo game-id=%s ply=%d", g.id, g.p.MoveNumber())
+			g.positions = g.positions[:len(g.positions)-1]
+			g.moves = g.moves[:len(g.moves)-1]
+			g.p = g.positions[len(g.positions)-1]
+			return false
 		}
 	}
 }

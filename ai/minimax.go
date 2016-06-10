@@ -202,7 +202,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		ms = []tak.Move{te.m}
 	}
 
-	for i := 1; i+base <= m.cfg.Depth; i++ {
+	for i := 1; i+base <= m.cfg.Depth && !cancel; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
 		next, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)

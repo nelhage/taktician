@@ -42,6 +42,8 @@ func (t *Taktician) GetMove(
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithDeadline(ctx, time.Now().Add(timeBound(mine)))
 		defer cancel()
+	} else if !*useOpponentTime {
+		return tak.Move{}
 	}
 	return t.ai.GetMove(ctx, p)
 }
