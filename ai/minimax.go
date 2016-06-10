@@ -288,9 +288,6 @@ func (ai *MinimaxAI) minimax(
 		}
 		return nil, ai.evaluate(ai, p)
 	}
-	if *ai.cancel {
-		return nil, 0
-	}
 
 	ai.st.Visited++
 	if β == α+1 {
@@ -410,6 +407,9 @@ func (ai *MinimaxAI) minimax(
 				}
 				break
 			}
+		}
+		if *ai.cancel {
+			return nil, 0
 		}
 	}
 
