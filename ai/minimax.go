@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/context"
@@ -46,7 +47,7 @@ type MinimaxAI struct {
 		m     tak.Move
 	}
 
-	cancel *bool
+	cancel *int32
 }
 
 type tableEntry struct {
@@ -137,7 +138,7 @@ func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
 	if m.cfg.NoTable {
 		return nil
 	}
-	if *m.cancel {
+	if atomic.LoadInt32(m.cancel) != 0 {
 		return nil
 	}
 	return &m.table[h%tableSize]
@@ -173,11 +174,11 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	for i, v := range m.history {
 		m.history[i] = v / 2
 	}
-	var cancel bool
+	var cancel int32
 	m.cancel = &cancel
 	go func() {
 		<-ctx.Done()
-		cancel = true
+		atomic.StoreInt32(&cancel, 1)
 	}()
 
 	var seed = m.cfg.Seed
@@ -202,11 +203,11 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		ms = []tak.Move{te.m}
 	}
 
-	for i := 1; i+base <= m.cfg.Depth && !cancel; i++ {
+	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
 		next, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
-		if next == nil {
+		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
 			break
 		}
 		ms = next
@@ -408,7 +409,7 @@ func (ai *MinimaxAI) minimax(
 				break
 			}
 		}
-		if *ai.cancel {
+		if atomic.LoadInt32(ai.cancel) != 0 {
 			return nil, 0
 		}
 	}
