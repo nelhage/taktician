@@ -134,6 +134,7 @@ func TestUndoGame(t *testing.T) {
 func TestThinker(t *testing.T) {
 	base, transcript := setupGame(defaultGame)
 	bot := &TestBotThinker{TestBotStatic: *base}
+	bot.wg.Add(9)
 
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
@@ -151,6 +152,7 @@ func TestAbandon(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
+	bot.wg.Add(8)
 	PlayGame(c, bot, startLine)
 	bot.wg.Wait()
 }

@@ -125,7 +125,6 @@ type TestBotThinker struct {
 func (t *TestBotThinker) GetMove(ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
-	t.wg.Add(1)
 	defer t.wg.Done()
 	if p.ToMove() != t.game.Color {
 		<-ctx.Done()

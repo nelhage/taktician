@@ -104,12 +104,12 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 	moves := make(chan tak.Move, 1)
 	moveCtx, moveCancel := context.WithCancel(ctx)
 	defer moveCancel()
-	go func(p *tak.Position, mc chan<- tak.Move) {
+	go func(p *tak.Position, mc chan<- tak.Move, mine, theirs time.Duration) {
 		g.moveLock.Lock()
 		defer g.moveLock.Unlock()
 		defer moveCancel()
-		mc <- g.bot.GetMove(moveCtx, p, g.times.mine, g.times.theirs)
-	}(g.p, moves)
+		mc <- g.bot.GetMove(moveCtx, p, mine, theirs)
+	}(g.p, moves, g.times.mine, g.times.theirs)
 	if g.p.ToMove() != g.Color {
 		moves = nil
 	}
