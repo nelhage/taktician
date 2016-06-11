@@ -1,4 +1,4 @@
-package main
+package bot
 
 import (
 	"fmt"
@@ -72,7 +72,7 @@ func parseGameStart(line string) *Game {
 	return &g
 }
 
-func playGame(c Client, b Bot, line string) {
+func PlayGame(c Client, b Bot, line string) {
 	ctx := context.Background()
 	g := parseGameStart(line)
 

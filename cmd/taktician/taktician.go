@@ -9,6 +9,7 @@ import (
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
+	"github.com/nelhage/taktician/playtak/bot"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -17,12 +18,12 @@ func timeBound(remaining time.Duration) time.Duration {
 }
 
 type Taktician struct {
-	g      *Game
+	g      *bot.Game
 	client *playtak.Client
 	ai     *ai.MinimaxAI
 }
 
-func (t *Taktician) NewGame(g *Game) {
+func (t *Taktician) NewGame(g *bot.Game) {
 	t.g = g
 	t.ai = ai.NewMinimax(ai.MinimaxConfig{
 		Size:  g.Size,

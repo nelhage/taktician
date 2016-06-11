@@ -10,6 +10,7 @@ import (
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
+	"github.com/nelhage/taktician/playtak/bot"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -28,7 +29,7 @@ type Friendly struct {
 	client *playtak.Client
 	ai     *ai.MinimaxAI
 	check  *ai.MinimaxAI
-	g      *Game
+	g      *bot.Game
 
 	level    int
 	levelSet time.Time
@@ -36,7 +37,7 @@ type Friendly struct {
 	greeted map[string]time.Time
 }
 
-func (f *Friendly) NewGame(g *Game) {
+func (f *Friendly) NewGame(g *bot.Game) {
 	if f.greeted == nil {
 		f.greeted = make(map[string]time.Time)
 	}

@@ -1,4 +1,4 @@
-package main
+package bot
 
 import (
 	"fmt"
@@ -91,7 +91,7 @@ func TestBasicGame(t *testing.T) {
 	bot, transcript := setupGame(defaultGame)
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
-	playGame(c, bot, startLine)
+	PlayGame(c, bot, startLine)
 	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
@@ -126,7 +126,7 @@ func TestUndoGame(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
-	playGame(c, bot, startLine)
+	PlayGame(c, bot, startLine)
 	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
@@ -137,7 +137,7 @@ func TestThinker(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
-	playGame(c, bot, startLine)
+	PlayGame(c, bot, startLine)
 	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
@@ -151,7 +151,7 @@ func TestAbandon(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
-	playGame(c, bot, startLine)
+	PlayGame(c, bot, startLine)
 	bot.wg.Wait()
 }
 
@@ -172,7 +172,7 @@ func TestResume(t *testing.T) {
 
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
-	playGame(c, bot, startLine)
+	PlayGame(c, bot, startLine)
 	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
