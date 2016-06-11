@@ -1,7 +1,6 @@
 package mcts
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"math/rand"
@@ -101,7 +100,7 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 		}
 	}
 	if ai.cfg.Debug > 1 {
-		fmt.Printf("[mcts] evaluated simulations=%d wins=%d", tree.simulations, tree.wins)
+		log.Printf("[mcts] evaluated simulations=%d wins=%d", tree.simulations, tree.wins)
 	}
 	return best.move
 }
