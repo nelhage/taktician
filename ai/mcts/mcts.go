@@ -25,7 +25,10 @@ type MCTSConfig struct {
 	Policy PolicyFunc
 }
 
-type PolicyFunc func(ctx context.Context, p *tak.Position, next *tak.Position) *tak.Position
+type PolicyFunc func(ctx context.Context,
+	m *MonteCarloAI,
+	p *tak.Position,
+	next *tak.Position) *tak.Position
 
 type MonteCarloAI struct {
 	cfg  MCTSConfig
@@ -222,7 +225,7 @@ func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) bool {
 		if ok, c := p.GameOver(); ok {
 			return c == t.position.ToMove()
 		}
-		next := ai.cfg.Policy(ctx, p, alloc)
+		next := ai.cfg.Policy(ctx, ai, p, alloc)
 		if next == nil {
 			return false
 		}
@@ -270,7 +273,7 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 		mc.cfg.Seed = time.Now().Unix()
 	}
 	if mc.cfg.Policy == nil {
-		mc.cfg.Policy = NewMinimaxPolicy(&mc.cfg, 1)
+		mc.cfg.Policy = EvalWeightedPolicy
 	}
 	mc.r = rand.New(rand.NewSource(mc.cfg.Seed))
 	mc.mm = ai.NewMinimax(ai.MinimaxConfig{
