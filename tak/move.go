@@ -112,6 +112,8 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 		dy = 1
 	case SlideDown:
 		dy = -1
+	default:
+		return nil, errors.New("invalid move type")
 	}
 	if p.move < 2 {
 		if place.Kind() != Flat {

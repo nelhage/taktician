@@ -16,7 +16,8 @@ import (
 )
 
 type Game struct {
-	p        *tak.Position
+	p *tak.Position
+
 	id       string
 	gameStr  string
 	opponent string
@@ -200,6 +201,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 			if g.bot.AcceptUndo() {
 				c.SendCommand(g.gameStr, "RequestUndo")
 				moveCancel()
+				moves = nil
 			}
 		case "Undo":
 			log.Printf("undo game-id=%s ply=%d", g.id, g.p.MoveNumber())

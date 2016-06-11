@@ -157,7 +157,6 @@ func TestAbandon(t *testing.T) {
 
 func TestResume(t *testing.T) {
 	base, transcript := setupGame(defaultGame)
-	base.moves = append(base.moves[:1:1], base.moves[4:]...)
 	bot := &TestBotResume{*base}
 
 	var resume []Expectation

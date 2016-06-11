@@ -92,9 +92,8 @@ func (t *TestBotStatic) GetMove(ctx context.Context,
 	if p.ToMove() != t.game.color {
 		return tak.Move{}
 	}
-	m := t.moves[0]
-	t.moves = t.moves[1:]
-	return m
+	i := p.MoveNumber() / 2
+	return t.moves[i]
 }
 
 type TestBotUndo struct {
@@ -106,9 +105,10 @@ func (t *TestBotUndo) GetMove(ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
 	if p.MoveNumber() == t.undoPly+1 {
-		<-ctx.Done()
-		t.undoPly = -1
-		return tak.Move{}
+		select {
+		case <-ctx.Done():
+		case <-time.After(10 * time.Millisecond):
+		}
 	}
 	return t.TestBotStatic.GetMove(ctx, p, mine, theirs)
 }
