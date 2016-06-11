@@ -47,7 +47,7 @@ func (f *Friendly) NewGame(g *Game) {
 	f.ai = ai.NewMinimax(f.Config())
 	f.check = ai.NewMinimax(ai.MinimaxConfig{
 		Depth:    3,
-		Size:     g.size,
+		Size:     g.Size,
 		Debug:    0,
 		Evaluate: ai.EvaluateWinner,
 	})
@@ -57,12 +57,12 @@ func (f *Friendly) NewGame(g *Game) {
 				f.level, g.opponent,
 			))
 	*/
-	if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
-		log.Printf("greeting user=%q greeted=%s", g.opponent, t)
+	if t := f.greeted[g.Opponent]; time.Now().Sub(t) > time.Hour {
+		log.Printf("greeting user=%q greeted=%s", g.Opponent, t)
 		f.client.SendCommand("Shout",
 			fmt.Sprintf("FriendlyBot@level %d: %s",
 				f.level, docURL))
-		f.greeted[g.opponent] = time.Now()
+		f.greeted[g.Opponent] = time.Now()
 	}
 }
 
@@ -74,7 +74,7 @@ func (f *Friendly) GetMove(
 	ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
-	if p.ToMove() != f.g.color {
+	if p.ToMove() != f.g.Color {
 		return tak.Move{}
 	}
 	var deadline <-chan time.Time
@@ -100,7 +100,7 @@ func (f *Friendly) waitUndo(p *tak.Position) bool {
 	if v < ai.WinThreshold || st.Depth > 1 {
 		return false
 	}
-	_, v, st = f.check.Analyze(ctx, f.g.positions[len(f.g.positions)-2])
+	_, v, st = f.check.Analyze(ctx, f.g.Positions[len(f.g.Positions)-2])
 	if v > -ai.WinThreshold {
 		return true
 	}
@@ -133,7 +133,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		}
 		f.level = int(l)
 		f.levelSet = time.Now()
-		if f.g == nil || who != f.g.opponent {
+		if f.g == nil || who != f.g.Opponent {
 			f.client.SendCommand("Shout",
 				fmt.Sprintf("OK! I'll play at level %d for future games.", l))
 		} else if f.g != nil {
@@ -150,13 +150,13 @@ func (f *Friendly) HandleChat(who string, msg string) {
 
 func (f *Friendly) Config() ai.MinimaxConfig {
 	cfg := ai.MinimaxConfig{
-		Size:  f.g.size,
+		Size:  f.g.Size,
 		Debug: *debug,
 
 		NoSort:  !*sort,
 		NoTable: !*table,
 	}
-	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.size, f.level)
+	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.Size, f.level)
 
 	return cfg
 }

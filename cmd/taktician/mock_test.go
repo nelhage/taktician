@@ -89,7 +89,7 @@ func (t *TestBotStatic) GetMove(ctx context.Context,
 		p.MoveNumber(),
 		p.ToMove(),
 	)
-	if p.ToMove() != t.game.color {
+	if p.ToMove() != t.game.Color {
 		return tak.Move{}
 	}
 	i := p.MoveNumber() / 2
@@ -127,7 +127,7 @@ func (t *TestBotThinker) GetMove(ctx context.Context,
 	mine, theirs time.Duration) tak.Move {
 	t.wg.Add(1)
 	defer t.wg.Done()
-	if p.ToMove() != t.game.color {
+	if p.ToMove() != t.game.Color {
 		<-ctx.Done()
 		return tak.Move{}
 	}

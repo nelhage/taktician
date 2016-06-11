@@ -16,23 +16,23 @@ import (
 )
 
 type Game struct {
-	p *tak.Position
-
-	id       string
-	gameStr  string
-	opponent string
-	color    tak.Color
-	size     int
-	time     time.Duration
+	ID       string
+	GameStr  string
+	Opponent string
+	Color    tak.Color
+	Size     int
+	Time     time.Duration
 
 	times struct {
 		mine, theirs time.Duration
 	}
 
+	p *tak.Position
+
 	bot      Bot
 	moveLock sync.Mutex
 
-	positions []*tak.Position
+	Positions []*tak.Position
 	moves     []tak.Move
 }
 
@@ -54,21 +54,21 @@ type Client interface {
 func parseGameStart(line string) *Game {
 	var g Game
 	bits := strings.Split(line, " ")
-	g.size, _ = strconv.Atoi(bits[3])
-	g.id = bits[2]
+	g.Size, _ = strconv.Atoi(bits[3])
+	g.ID = bits[2]
 	switch bits[7] {
 	case "white":
-		g.color = tak.White
-		g.opponent = bits[6]
+		g.Color = tak.White
+		g.Opponent = bits[6]
 	case "black":
-		g.color = tak.Black
-		g.opponent = bits[4]
+		g.Color = tak.Black
+		g.Opponent = bits[4]
 	default:
 		panic(fmt.Sprintf("bad color: %s", bits[7]))
 	}
 
 	secs, _ := strconv.Atoi(bits[8])
-	g.time = time.Duration(secs) * time.Second
+	g.Time = time.Duration(secs) * time.Second
 	return &g
 }
 
@@ -76,18 +76,18 @@ func playGame(c Client, b Bot, line string) {
 	ctx := context.Background()
 	g := parseGameStart(line)
 
-	g.gameStr = fmt.Sprintf("Game#%s", g.id)
-	g.p = tak.New(tak.Config{Size: g.size})
-	g.positions = append(g.positions, g.p)
+	g.GameStr = fmt.Sprintf("Game#%s", g.ID)
+	g.p = tak.New(tak.Config{Size: g.Size})
+	g.Positions = append(g.Positions, g.p)
 	g.bot = b
 	b.NewGame(g)
 	defer b.GameOver()
 
 	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
-		g.id, g.size, g.opponent, g.color, g.time)
+		g.ID, g.Size, g.Opponent, g.Color, g.Time)
 
-	g.times.mine = g.time
-	g.times.theirs = g.time
+	g.times.mine = g.Time
+	g.times.theirs = g.Time
 
 	for {
 		over, _ := g.p.GameOver()
@@ -110,7 +110,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 		defer moveCancel()
 		mc <- g.bot.GetMove(moveCtx, p, g.times.mine, g.times.theirs)
 	}(g.p, moves)
-	if g.p.ToMove() != g.color {
+	if g.p.ToMove() != g.Color {
 		moves = nil
 	}
 
@@ -131,15 +131,15 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 					ptn.FormatMove(&move), err)
 				return false
 			}
-			c.SendCommand(g.gameStr, playtak.FormatServer(&move))
+			c.SendCommand(g.GameStr, playtak.FormatServer(&move))
 			log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
-				g.id,
+				g.ID,
 				g.p.MoveNumber(),
 				g.p.MoveNumber()/2+1,
 				strings.ToUpper(g.p.ToMove().String()[:1]),
 				ptn.FormatMove(&move))
 			g.p = next
-			g.positions = append(g.positions, g.p)
+			g.Positions = append(g.Positions, g.p)
 			g.moves = append(g.moves, move)
 			return false
 		case <-timeout:
@@ -148,7 +148,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 
 		bits := strings.Split(line, " ")
 		switch bits[0] {
-		case g.gameStr:
+		case g.GameStr:
 		case "Shout":
 			who, msg := playtak.ParseShout(line)
 			if who != "" {
@@ -169,27 +169,27 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				panic(err)
 			}
 			log.Printf("their-move game-id=%s ply=%d ptn=%d.%s move=%q",
-				g.id,
+				g.ID,
 				g.p.MoveNumber(),
 				g.p.MoveNumber()/2+1,
 				strings.ToUpper(g.p.ToMove().String()[:1]),
 				ptn.FormatMove(&move))
 			g.p = next
-			g.positions = append(g.positions, g.p)
+			g.Positions = append(g.Positions, g.p)
 			g.moves = append(g.moves, move)
 			timeout = time.After(500 * time.Millisecond)
 		case "Abandoned.":
 			log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",
-				g.id, g.opponent, g.p.MoveNumber())
+				g.ID, g.Opponent, g.p.MoveNumber())
 			return true
 		case "Over":
 			log.Printf("game-over game-id=%s opponent=%s ply=%d result=%q",
-				g.id, g.opponent, g.p.MoveNumber(), bits[2])
+				g.ID, g.Opponent, g.p.MoveNumber(), bits[2])
 			return true
 		case "Time":
 			w, _ := strconv.Atoi(bits[2])
 			b, _ := strconv.Atoi(bits[3])
-			if g.color == tak.White {
+			if g.Color == tak.White {
 				g.times.mine = time.Duration(w) * time.Second
 				g.times.theirs = time.Duration(b) * time.Second
 			} else {
@@ -199,15 +199,15 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 			return false
 		case "RequestUndo":
 			if g.bot.AcceptUndo() {
-				c.SendCommand(g.gameStr, "RequestUndo")
+				c.SendCommand(g.GameStr, "RequestUndo")
 				moveCancel()
 				moves = nil
 			}
 		case "Undo":
-			log.Printf("undo game-id=%s ply=%d", g.id, g.p.MoveNumber())
-			g.positions = g.positions[:len(g.positions)-1]
+			log.Printf("undo game-id=%s ply=%d", g.ID, g.p.MoveNumber())
+			g.Positions = g.Positions[:len(g.Positions)-1]
 			g.moves = g.moves[:len(g.moves)-1]
-			g.p = g.positions[len(g.positions)-1]
+			g.p = g.Positions[len(g.Positions)-1]
 			return false
 		}
 	}

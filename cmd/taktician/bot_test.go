@@ -92,7 +92,7 @@ func TestBasicGame(t *testing.T) {
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
 	playGame(c, bot, startLine)
-	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
 
@@ -127,7 +127,7 @@ func TestUndoGame(t *testing.T) {
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
 	playGame(c, bot, startLine)
-	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
 
@@ -138,7 +138,7 @@ func TestThinker(t *testing.T) {
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
 	playGame(c, bot, startLine)
-	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
 
@@ -173,6 +173,6 @@ func TestResume(t *testing.T) {
 	c := NewTestClient(t, transcript)
 	defer c.shutdown()
 	playGame(c, bot, startLine)
-	assertPosition(t, bot.game.positions[len(bot.game.positions)-1],
+	assertPosition(t, bot.game.Positions[len(bot.game.Positions)-1],
 		`x4,1/x4,1C/x4,1/2,2,x2,1/2,2,x2,1 2 5`)
 }
