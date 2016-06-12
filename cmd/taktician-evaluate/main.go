@@ -139,12 +139,12 @@ func main() {
 	j, _ = json.Marshal(&weights1)
 	log.Printf("p1w=%s", j)
 	if *c1 != "" {
-		log.Printf("p1c=!%s", *c1)
+		log.Printf("p1c=%s", *c1)
 	}
 	j, _ = json.Marshal(&weights2)
 	log.Printf("p2w=%s", j)
 	if *c2 != "" {
-		log.Printf("p2c=!%s", *c2)
+		log.Printf("p2c=%s", *c2)
 	}
 	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d",
 		*games, *seed, st.Ties, st.Cutoff, st.White, st.Black)
