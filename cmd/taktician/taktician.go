@@ -41,7 +41,11 @@ func (t *Taktician) GetMove(
 	mine, theirs time.Duration) tak.Move {
 	if p.ToMove() == t.g.Color {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, time.Now().Add(timeBound(mine)))
+		timeout := timeBound(mine)
+		if p.MoveNumber() < 2 {
+			timeout = 20 * time.Second
+		}
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	} else if !*useOpponentTime {
 		return tak.Move{}
