@@ -196,7 +196,9 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				g.times.theirs = time.Duration(w) * time.Second
 				g.times.mine = time.Duration(b) * time.Second
 			}
-			return false
+			if timeout != nil {
+				return false
+			}
 		case "RequestUndo":
 			if g.bot.AcceptUndo() {
 				c.SendCommand(g.GameStr, "RequestUndo")
