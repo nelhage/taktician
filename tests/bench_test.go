@@ -4,6 +4,8 @@ import (
 	"flag"
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -63,6 +65,6 @@ func BenchmarkPuzzle1(b *testing.B) {
 			Seed:  *seed,
 			Size:  p.Size(),
 		})
-		mm.GetMove(p, 0)
+		mm.GetMove(context.Background(), p)
 	}
 }

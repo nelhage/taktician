@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"log"
 	"math/rand"
+	"sync/atomic"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
@@ -43,6 +46,8 @@ type MinimaxAI struct {
 		pv    [maxDepth]tak.Move
 		m     tak.Move
 	}
+
+	cancel *int32
 }
 
 type tableEntry struct {
@@ -133,6 +138,9 @@ func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
 	if m.cfg.NoTable {
 		return nil
 	}
+	if atomic.LoadInt32(m.cancel) != 0 {
+		return nil
+	}
 	return &m.table[h%tableSize]
 }
 
@@ -154,18 +162,24 @@ func formatpv(ms []tak.Move) string {
 	return out.String()
 }
 
-func (m *MinimaxAI) GetMove(p *tak.Position, limit time.Duration) tak.Move {
-	ms, _, _ := m.Analyze(p, limit)
+func (m *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
+	ms, _, _ := m.Analyze(ctx, p)
 	return ms[0]
 }
 
-func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, int64, Stats) {
+func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, int64, Stats) {
 	if m.cfg.Size != p.Size() {
 		panic("Analyze: wrong size")
 	}
 	for i, v := range m.history {
 		m.history[i] = v / 2
 	}
+	var cancel int32
+	m.cancel = &cancel
+	go func() {
+		<-ctx.Done()
+		atomic.StoreInt32(&cancel, 1)
+	}()
 
 	var seed = m.cfg.Seed
 	if seed == 0 {
@@ -173,10 +187,12 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	}
 	m.rand = rand.New(rand.NewSource(seed))
 	if m.cfg.Debug > 0 {
-		log.Printf("seed=%d", seed)
+		log.Printf("start search ply=%d color=%s seed=%d",
+			p.MoveNumber(), p.ToMove(), seed)
 	}
+	deadline, limited := ctx.Deadline()
 
-	var ms []tak.Move
+	var ms, next []tak.Move
 	var v int64
 	top := time.Now()
 	var prevEval uint64
@@ -191,7 +207,11 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
-		ms, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
+		next, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
+		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
+			break
+		}
+		ms = next
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
@@ -228,10 +248,13 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 		if v > WinThreshold || v < -WinThreshold {
 			break
 		}
-		if i+base != m.cfg.Depth && limit != 0 {
+		if limited && i+base != m.cfg.Depth {
 			var branch uint64
 			if i > 2 {
-				branch = branchSum / uint64(i-1)
+				// conservatively multiply by 2 to
+				// account for the bimodal branching
+				// factor
+				branch = 2 * branchSum / uint64(i-1)
 			} else {
 				// conservative estimate if we haven't
 				// run enough plies to have one
@@ -239,11 +262,11 @@ func (m *MinimaxAI) Analyze(p *tak.Position, limit time.Duration) ([]tak.Move, i
 				// returns a deep move
 				branch = 20
 			}
-			estimate := timeUsed + time.Now().Sub(start)*time.Duration(branch)
-			if estimate > limit {
+			estimate := time.Now().Add(time.Now().Sub(start) * time.Duration(branch))
+			if estimate.After(deadline) {
 				if m.cfg.Debug > 0 {
 					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
-						i, timeUsed, estimate)
+						i, timeUsed, estimate.Sub(top))
 				}
 				break
 			}
@@ -386,6 +409,9 @@ func (ai *MinimaxAI) minimax(
 				}
 				break
 			}
+		}
+		if atomic.LoadInt32(ai.cancel) != 0 {
+			return nil, 0
 		}
 	}
 

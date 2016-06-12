@@ -1,11 +1,10 @@
 package ai
 
 import (
-	"time"
-
 	"github.com/nelhage/taktician/tak"
+	"golang.org/x/net/context"
 )
 
 type TakPlayer interface {
-	GetMove(p *tak.Position, limit time.Duration) tak.Move
+	GetMove(ctx context.Context, p *tak.Position) tak.Move
 }

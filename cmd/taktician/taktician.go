@@ -5,8 +5,11 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
+	"github.com/nelhage/taktician/playtak/bot"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -15,13 +18,15 @@ func timeBound(remaining time.Duration) time.Duration {
 }
 
 type Taktician struct {
+	g      *bot.Game
 	client *playtak.Client
 	ai     *ai.MinimaxAI
 }
 
-func (t *Taktician) NewGame(g *Game) {
+func (t *Taktician) NewGame(g *bot.Game) {
+	t.g = g
 	t.ai = ai.NewMinimax(ai.MinimaxConfig{
-		Size:  g.size,
+		Size:  g.Size,
 		Depth: *depth,
 		Debug: *debug,
 
@@ -30,8 +35,18 @@ func (t *Taktician) NewGame(g *Game) {
 	})
 }
 
-func (t *Taktician) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
-	return t.ai.GetMove(p, timeBound(mine))
+func (t *Taktician) GetMove(
+	ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
+	if p.ToMove() == t.g.Color {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, time.Now().Add(timeBound(mine)))
+		defer cancel()
+	} else if !*useOpponentTime {
+		return tak.Move{}
+	}
+	return t.ai.GetMove(ctx, p)
 }
 
 func (t *Taktician) GameOver() {

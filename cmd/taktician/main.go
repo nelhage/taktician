@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/nelhage/taktician/playtak"
+	"github.com/nelhage/taktician/playtak/bot"
 )
 
 var (
@@ -26,11 +27,12 @@ var (
 
 	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
 
-	debug = flag.Int("debug", 1, "debug level")
-	depth = flag.Int("depth", 5, "minimax depth")
-	limit = flag.Duration("limit", time.Minute, "time limit per move")
-	sort  = flag.Bool("sort", true, "sort moves via history heuristic")
-	table = flag.Bool("table", true, "use the transposition table")
+	debug           = flag.Int("debug", 1, "debug level")
+	depth           = flag.Int("depth", 5, "minimax depth")
+	limit           = flag.Duration("limit", time.Minute, "time limit per move")
+	sort            = flag.Bool("sort", true, "sort moves via history heuristic")
+	table           = flag.Bool("table", true, "use the transposition table")
+	useOpponentTime = flag.Bool("use-opponent-time", true, "think on opponent's time")
 
 	debugClient = flag.Bool("debug-client", false, "log debug output for playtak connection")
 )
@@ -47,7 +49,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	backoff := 1 * time.Second
-	var bot Bot
+	var b bot.Bot
 	for {
 		client := &playtak.Client{
 			Debug: *debugClient,
@@ -68,9 +70,9 @@ func main() {
 		}
 		log.Printf("login OK")
 		if *friendly {
-			bot = &Friendly{client: client}
+			b = &Friendly{client: client}
 		} else {
-			bot = &Taktician{client: client}
+			b = &Taktician{client: client}
 		}
 		for {
 			if *accept == "" {
@@ -100,13 +102,13 @@ func main() {
 						}
 					}
 					if strings.HasPrefix(line, "Game Start") {
-						playGame(client, bot, line)
+						bot.PlayGame(client, b, line)
 						break recvLoop
 					}
 					if strings.HasPrefix(line, "Shout") {
 						who, msg := playtak.ParseShout(line)
 						if who != "" {
-							bot.HandleChat(who, msg)
+							b.HandleChat(who, msg)
 						}
 					}
 				case <-sigs:

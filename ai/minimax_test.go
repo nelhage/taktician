@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -29,7 +31,7 @@ func BenchmarkMinimax(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		var e error
-		m := ai.GetMove(p, time.Minute)
+		m := ai.GetMove(context.Background(), p)
 		p, e = p.Move(&m)
 		if e != nil {
 			b.Fatal("bad move", e)
@@ -50,9 +52,62 @@ func TestRegression(t *testing.T) {
 		panic(err)
 	}
 	ai := NewMinimax(MinimaxConfig{Size: game.Size(), Depth: 3})
-	m := ai.GetMove(game, time.Minute)
+	m := ai.GetMove(context.Background(), game)
 	_, e := game.Move(&m)
 	if e != nil {
 		t.Fatalf("ai returned illegal move: %s: %s", ptn.FormatMove(&m), e)
+	}
+}
+
+func TestCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ai := NewMinimax(MinimaxConfig{Size: 5, Depth: maxDepth})
+	p := tak.New(tak.Config{Size: 5})
+	done := make(chan Stats)
+	go func() {
+		_, _, st := ai.Analyze(ctx, p)
+		done <- st
+	}()
+	cancel()
+	st := <-done
+	if st.Depth == maxDepth {
+		t.Fatal("wtf too deep")
+	}
+}
+
+func TestRepeatedCancel(t *testing.T) {
+	type result struct {
+		ms []tak.Move
+		st Stats
+	}
+	ctx := context.Background()
+	ai := NewMinimax(MinimaxConfig{Size: 5, Depth: 6, NoNullMove: true, NoTable: true})
+	p := tak.New(tak.Config{Size: 5})
+	for i := 0; i < 5; i++ {
+		done := make(chan result)
+		start := make(chan struct{})
+		ctx, cancel := context.WithCancel(ctx)
+		go func() {
+			start <- struct{}{}
+			ms, _, st := ai.Analyze(ctx, p)
+			done <- result{ms, st}
+		}()
+		<-start
+		time.Sleep(time.Millisecond)
+		cancel()
+		res := <-done
+		if res.st.Depth == 6 {
+			t.Fatalf("[%d] cancel() didn't work", i)
+		}
+		if len(res.ms) == 0 {
+			t.Fatalf("[%d] canceled search did not return a move", i)
+		}
+	}
+	ms, _, st := ai.Analyze(ctx, p)
+	if len(ms) == 0 {
+		t.Fatal("did not return a move")
+	}
+	if st.Depth != 6 {
+		t.Fatal("did not do full search")
 	}
 }

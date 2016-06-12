@@ -6,8 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
+	"github.com/nelhage/taktician/playtak/bot"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -26,17 +29,15 @@ type Friendly struct {
 	client *playtak.Client
 	ai     *ai.MinimaxAI
 	check  *ai.MinimaxAI
-	g      *Game
+	g      *bot.Game
 
 	level    int
 	levelSet time.Time
 
 	greeted map[string]time.Time
-
-	undo chan struct{}
 }
 
-func (f *Friendly) NewGame(g *Game) {
+func (f *Friendly) NewGame(g *bot.Game) {
 	if f.greeted == nil {
 		f.greeted = make(map[string]time.Time)
 	}
@@ -47,23 +48,22 @@ func (f *Friendly) NewGame(g *Game) {
 	f.ai = ai.NewMinimax(f.Config())
 	f.check = ai.NewMinimax(ai.MinimaxConfig{
 		Depth:    3,
-		Size:     g.size,
+		Size:     g.Size,
 		Debug:    0,
 		Evaluate: ai.EvaluateWinner,
 	})
-	f.undo = make(chan struct{}, 1)
 	/*
 		f.client.SendCommand("Shout",
 			fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
 				f.level, g.opponent,
 			))
 	*/
-	if t := f.greeted[g.opponent]; time.Now().Sub(t) > time.Hour {
-		log.Printf("greeting user=%q greeted=%s", g.opponent, t)
+	if t := f.greeted[g.Opponent]; time.Now().Sub(t) > time.Hour {
+		log.Printf("greeting user=%q greeted=%s", g.Opponent, t)
 		f.client.SendCommand("Shout",
 			fmt.Sprintf("FriendlyBot@level %d: %s",
 				f.level, docURL))
-		f.greeted[g.opponent] = time.Now()
+		f.greeted[g.Opponent] = time.Now()
 	}
 }
 
@@ -71,32 +71,37 @@ func (f *Friendly) GameOver() {
 	f.g = nil
 }
 
-func (f *Friendly) GetMove(p *tak.Position, mine, theirs time.Duration) tak.Move {
+func (f *Friendly) GetMove(
+	ctx context.Context,
+	p *tak.Position,
+	mine, theirs time.Duration) tak.Move {
+	if p.ToMove() != f.g.Color {
+		return tak.Move{}
+	}
 	var deadline <-chan time.Time
 	if f.waitUndo(p) {
 		deadline = time.After(undoTimeout)
 	} else {
 		deadline = time.After(minThink)
 	}
-	m := f.ai.GetMove(p, maxThink)
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(maxThink))
+	defer cancel()
+	m := f.ai.GetMove(ctx, p)
 	select {
 	case <-deadline:
-	case <-f.undo:
+	case <-ctx.Done():
 	}
 
-	select {
-	case <-f.undo:
-	default:
-	}
 	return m
 }
 
 func (f *Friendly) waitUndo(p *tak.Position) bool {
-	_, v, st := f.check.Analyze(p, 0)
+	ctx := context.Background()
+	_, v, st := f.check.Analyze(ctx, p)
 	if v < ai.WinThreshold || st.Depth > 1 {
 		return false
 	}
-	_, v, st = f.check.Analyze(f.g.positions[len(f.g.positions)-2], 0)
+	_, v, st = f.check.Analyze(ctx, f.g.Positions[len(f.g.Positions)-2])
 	if v > -ai.WinThreshold {
 		return true
 	}
@@ -129,7 +134,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		}
 		f.level = int(l)
 		f.levelSet = time.Now()
-		if f.g == nil || who != f.g.opponent {
+		if f.g == nil || who != f.g.Opponent {
 			f.client.SendCommand("Shout",
 				fmt.Sprintf("OK! I'll play at level %d for future games.", l))
 		} else if f.g != nil {
@@ -146,13 +151,13 @@ func (f *Friendly) HandleChat(who string, msg string) {
 
 func (f *Friendly) Config() ai.MinimaxConfig {
 	cfg := ai.MinimaxConfig{
-		Size:  f.g.size,
+		Size:  f.g.Size,
 		Debug: *debug,
 
 		NoSort:  !*sort,
 		NoTable: !*table,
 	}
-	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.size, f.level)
+	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.Size, f.level)
 
 	return cfg
 }
@@ -202,10 +207,5 @@ func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
 }
 
 func (f *Friendly) AcceptUndo() bool {
-	select {
-	case f.undo <- struct{}{}:
-	default:
-	}
-
 	return true
 }

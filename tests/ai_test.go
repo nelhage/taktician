@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
@@ -171,7 +173,9 @@ func runTest(t *testing.T, tc *TestCase) {
 		cli.RenderBoard(&buf, p)
 		t.Log(buf.String())
 		start := time.Now()
-		pv, v, st := ai.Analyze(p, tc.limit)
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(tc.limit))
+		pv, v, st := ai.Analyze(ctx, p)
+		cancel()
 		elapsed := time.Now().Sub(start)
 		if *dumpPerf {
 			log.Printf("%s move=%d color=%s depth=%d evaluated=%d time=%s",
