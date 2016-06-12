@@ -44,6 +44,10 @@ func (mg *moveGenerator) sortMoves() {
 	sort.Sort(s)
 }
 
+func (mg *moveGenerator) Reset() {
+	mg.i = 0
+}
+
 func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 	for {
 		var m tak.Move
@@ -77,7 +81,9 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 			fallthrough
 		case 3:
 			mg.i++
-			mg.ms = mg.p.AllMoves(mg.ai.stack[mg.ply].moves[:0])
+			if mg.ms == nil {
+				mg.ms = mg.p.AllMoves(mg.ai.stack[mg.ply].moves[:0])
+			}
 			if mg.ply == 0 {
 				for i := len(mg.ms) - 1; i > 0; i-- {
 					j := mg.ai.rand.Int31n(int32(i))
@@ -88,12 +94,12 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 			}
 			fallthrough
 		default:
+			j := mg.i - 3
 			mg.i++
-			if len(mg.ms) == 0 {
+			if j >= len(mg.ms) {
 				return tak.Move{}, nil
 			}
-			m = mg.ms[0]
-			mg.ms = mg.ms[1:]
+			m = mg.ms[j]
 			if mg.te != nil && mg.te.m.Equal(&m) {
 				continue
 			}

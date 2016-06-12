@@ -23,6 +23,9 @@ const (
 
 	maxDepth = 15
 	maxMoves = 500
+
+	multiCutSearch    = 6
+	multiCutThreshold = 3
 )
 
 type EvaluationFunc func(c *bitboard.Constants, p *tak.Position) int64
@@ -98,6 +101,9 @@ type Stats struct {
 
 	Extensions    uint64
 	ReducedSlides uint64
+
+	MCSearch uint64
+	MCCut    uint64
 }
 
 func (s Stats) Merge(other Stats) Stats {
@@ -118,6 +124,8 @@ func (s Stats) Merge(other Stats) Stats {
 	s.TTShortcut += other.TTShortcut
 	s.Extensions += other.Extensions
 	s.ReducedSlides += other.ReducedSlides
+	s.MCSearch += other.MCSearch
+	s.MCCut += other.MCCut
 	return s
 }
 
@@ -138,6 +146,7 @@ type MinimaxConfig struct {
 	NoExtendForces bool
 
 	NoReduceSlides bool
+	NoMultiCut     bool
 
 	Evaluate EvaluationFunc
 }
@@ -154,6 +163,7 @@ func (cfg *MinimaxConfig) MakePrecise() {
 	cfg.NoNullMove = true
 	cfg.NoExtendForces = true
 	cfg.NoReduceSlides = true
+	cfg.NoMultiCut = true
 }
 
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
@@ -388,10 +398,12 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				float64(m.st.Cut0+m.st.Cut1)/float64(m.st.CutNodes+1),
 				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
 			)
-			log.Printf("[minimax]         scout=%d null=%d/%d research=%d extend=%d rslide=%d",
+			log.Printf("[minimax]         scout=%d null=%d/%d mc=%d/%d research=%d extend=%d rslide=%d",
 				m.st.Scout,
 				m.st.NullCut,
 				m.st.NullSearch,
+				m.st.MCCut,
+				m.st.MCSearch,
 				m.st.ReSearch,
 				m.st.Extensions,
 				m.st.ReducedSlides,
@@ -660,9 +672,27 @@ func (ai *MinimaxAI) zwSearch(
 		pv:    pv,
 	}
 
+	var i int
+
+	if cut && depth > 3 && !ai.cfg.NoMultiCut {
+		cuts := 0
+		ai.st.MCSearch++
+		for _, child := mg.Next(); child != nil && i < multiCutSearch; _, child = mg.Next() {
+			i++
+			_, v := ai.zwSearch(child, ply+1, depth-1-2, nil, -α-1, !cut)
+			if -v > α {
+				cuts++
+				if cuts >= multiCutThreshold {
+					ai.st.MCCut++
+					return nil, α + 1
+				}
+			}
+		}
+	}
+	mg.Reset()
+
 	best := ai.stack[ply].pv[:0]
 	best = append(best, pv...)
-	var i int
 	var didCut bool
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
 		i++

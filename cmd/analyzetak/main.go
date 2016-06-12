@@ -42,6 +42,7 @@ var (
 	nullMove     = flag.Bool("null-move", true, "use null-move pruning")
 	extendForces = flag.Bool("extend-forces", true, "extend forced moves")
 	reduceSlides = flag.Bool("reduce-slides", true, "reduce trivial slides")
+	multiCut     = flag.Bool("multi-cut", true, "use multi-cut pruning")
 
 	precise = flag.Bool("precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
 
@@ -154,6 +155,7 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		NoNullMove:     !*nullMove,
 		NoExtendForces: !*extendForces,
 		NoReduceSlides: !*reduceSlides,
+		NoMultiCut:     !*multiCut,
 
 		Evaluate: ai.MakeEvaluator(p.Size(), &w),
 	}
