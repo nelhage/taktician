@@ -122,7 +122,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 		select {
 		case line, ok = <-c.Recv():
 			if !ok {
-				return false
+				return true
 			}
 		case move := <-moves:
 			next, err := g.p.Move(&move)
