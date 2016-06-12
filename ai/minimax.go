@@ -187,7 +187,8 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	}
 	m.rand = rand.New(rand.NewSource(seed))
 	if m.cfg.Debug > 0 {
-		log.Printf("seed=%d", seed)
+		log.Printf("start search ply=%d color=%s seed=%d",
+			p.MoveNumber(), p.ToMove(), seed)
 	}
 	deadline, limited := ctx.Deadline()
 
