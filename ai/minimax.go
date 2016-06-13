@@ -192,7 +192,8 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	}
 	deadline, limited := ctx.Deadline()
 
-	var ms, next []tak.Move
+	var next []tak.Move
+	ms := make([]tak.Move, 0, maxDepth)
 	var v int64
 	top := time.Now()
 	var prevEval uint64
@@ -201,7 +202,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	te := m.ttGet(p.Hash())
 	if te != nil && te.bound == exactBound {
 		base = te.depth
-		ms = []tak.Move{te.m}
+		ms = append(ms[:0], te.m)
 	}
 
 	for i := 1; i+base <= m.cfg.Depth; i++ {
@@ -211,7 +212,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
 			break
 		}
-		ms = next
+		ms = append(ms[:0], next...)
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
@@ -272,9 +273,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			}
 		}
 	}
-	r := make([]tak.Move, len(ms))
-	copy(r, ms)
-	return r, v, m.st
+	return ms, v, m.st
 }
 
 func (ai *MinimaxAI) minimax(
