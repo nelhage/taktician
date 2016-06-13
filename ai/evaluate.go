@@ -9,14 +9,19 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
+const (
+	endgameCutoff = 5
+)
+
 type FlatScores struct {
 	Hard, Soft int
 }
 
 type Weights struct {
-	TopFlat  int
-	Standing int
-	Capstone int
+	TopFlat     int
+	EndgameFlat int
+	Standing    int
+	Capstone    int
 
 	FlatCaptives     FlatScores
 	StandingCaptives FlatScores
@@ -30,9 +35,10 @@ type Weights struct {
 }
 
 var defaultWeights = Weights{
-	TopFlat:  400,
-	Standing: 200,
-	Capstone: 300,
+	TopFlat:     400,
+	EndgameFlat: 800,
+	Standing:    200,
+	Capstone:    300,
 
 	FlatCaptives: FlatScores{
 		Hard: 125,
@@ -61,9 +67,10 @@ var defaultWeights = Weights{
 }
 
 var defaultWeights6 = Weights{
-	TopFlat:  400,
-	Standing: 200,
-	Capstone: 300,
+	TopFlat:     400,
+	EndgameFlat: 800,
+	Standing:    200,
+	Capstone:    300,
 
 	FlatCaptives: FlatScores{
 		Hard: 125,
@@ -151,8 +158,17 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 	}
 	analysis := p.Analysis()
 
-	ws += int64(bitboard.Popcount(p.White&^p.Caps&^p.Standing) * w.TopFlat)
-	bs += int64(bitboard.Popcount(p.Black&^p.Caps&^p.Standing) * w.TopFlat)
+	left := p.WhiteStones()
+	if p.BlackStones() < left {
+		left = p.BlackStones()
+	}
+	if left > endgameCutoff {
+		left = endgameCutoff
+	}
+	flat := w.TopFlat + ((endgameCutoff-left)*w.EndgameFlat)/endgameCutoff
+
+	ws += int64(bitboard.Popcount(p.White&^p.Caps&^p.Standing) * flat)
+	bs += int64(bitboard.Popcount(p.Black&^p.Caps&^p.Standing) * flat)
 	ws += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
 	bs += int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
 	ws += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
