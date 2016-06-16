@@ -89,14 +89,7 @@ func PlayGame(c Client, b Bot, line string) {
 	g.times.mine = g.Time
 	g.times.theirs = g.Time
 
-	for {
-		over, _ := g.p.GameOver()
-		if over {
-			break
-		}
-		if handleMove(ctx, g, c) {
-			break
-		}
+	for !handleMove(ctx, g, c) {
 	}
 }
 
@@ -105,6 +98,10 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 	moveCtx, moveCancel := context.WithCancel(ctx)
 	defer moveCancel()
 	go func(p *tak.Position, mc chan<- tak.Move, mine, theirs time.Duration) {
+		if over, _ := p.GameOver(); over {
+			<-moveCtx.Done()
+			return
+		}
 		g.moveLock.Lock()
 		defer g.moveLock.Unlock()
 		defer moveCancel()
