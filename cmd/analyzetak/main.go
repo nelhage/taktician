@@ -28,7 +28,7 @@ var (
 	white = flag.Bool("white", false, "only analyze white's move")
 
 	debug     = flag.Int("debug", 1, "debug level")
-	depth     = flag.Int("depth", 5, "minimax depth")
+	depth     = flag.Int("depth", 0, "minimax depth")
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
 
 	seed     = flag.Int64("seed", 0, "specify a seed")
