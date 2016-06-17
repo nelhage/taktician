@@ -13,10 +13,6 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-func timeBound(remaining time.Duration) time.Duration {
-	return *limit
-}
-
 type Taktician struct {
 	g      *bot.Game
 	client *playtak.Client
@@ -41,7 +37,7 @@ func (t *Taktician) GetMove(
 	mine, theirs time.Duration) tak.Move {
 	if p.ToMove() == t.g.Color {
 		var cancel context.CancelFunc
-		timeout := timeBound(mine)
+		timeout := t.timeBound(mine)
 		if p.MoveNumber() < 2 {
 			timeout = 20 * time.Second
 		}
@@ -51,6 +47,13 @@ func (t *Taktician) GetMove(
 		return tak.Move{}
 	}
 	return t.ai.GetMove(ctx, p)
+}
+
+func (t *Taktician) timeBound(remaining time.Duration) time.Duration {
+	if t.g.Size == 4 {
+		return *limit
+	}
+	return *limit
 }
 
 func (t *Taktician) GameOver() {
