@@ -86,7 +86,8 @@ type Stats struct {
 
 	AllNodes uint64
 
-	TTHits uint64
+	TTHits     uint64
+	TTShortcut uint64
 }
 
 type MinimaxConfig struct {
@@ -123,15 +124,23 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	return m
 }
 
+const hashMul = 0x61C8864680B583EB
+
 func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
 	if m.cfg.NoTable {
 		return nil
 	}
-	te := &m.table[h%tableSize]
-	if te.hash != h {
-		return nil
+	i1 := h % tableSize
+	i2 := (h * hashMul) % tableSize
+	te := &m.table[i1]
+	if te.hash == h {
+		return te
 	}
-	return te
+	te = &m.table[i2]
+	if te.hash == h {
+		return te
+	}
+	return nil
 }
 
 func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
@@ -141,7 +150,12 @@ func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
 	if atomic.LoadInt32(m.cancel) != 0 {
 		return nil
 	}
-	return &m.table[h%tableSize]
+	i1 := h % tableSize
+	i2 := (h * hashMul) % tableSize
+	if m.table[i1].hash != 0 {
+		m.table[i2] = m.table[i1]
+	}
+	return &m.table[i1]
 }
 
 func (m *MinimaxAI) precompute() {
@@ -216,11 +230,12 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
 		if m.cfg.Debug > 0 {
-			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d branch=%d",
+			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d/%d branch=%d",
 				base+i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
 				m.st.Evaluated,
+				m.st.TTShortcut,
 				m.st.TTHits,
 				m.st.Evaluated/(prevEval+1),
 			)
@@ -297,6 +312,7 @@ func (ai *MinimaxAI) minimax(
 
 	te := ai.ttGet(p.Hash())
 	if te != nil {
+		ai.st.TTHits++
 		teSuffices := false
 		if te.depth >= depth {
 			if te.bound == exactBound ||
@@ -313,7 +329,7 @@ func (ai *MinimaxAI) minimax(
 		if teSuffices {
 			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
 			if e == nil {
-				ai.st.TTHits++
+				ai.st.TTShortcut++
 				ai.stack[ply].pv[0] = te.m
 				return ai.stack[ply].pv[:1], te.value
 			}
