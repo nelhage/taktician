@@ -9,13 +9,18 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
+type FlatScores struct {
+	Hard, Soft int
+}
+
 type Weights struct {
 	TopFlat  int
 	Standing int
 	Capstone int
 
-	HardFlat int
-	SoftFlat int
+	FlatCaptives     FlatScores
+	StandingCaptives FlatScores
+	CapstoneCaptives FlatScores
 
 	Liberties int
 
@@ -29,8 +34,18 @@ var defaultWeights = Weights{
 	Standing: 200,
 	Capstone: 300,
 
-	HardFlat: 125,
-	SoftFlat: -75,
+	FlatCaptives: FlatScores{
+		Hard: 125,
+		Soft: -75,
+	},
+	StandingCaptives: FlatScores{
+		Hard: 125,
+		Soft: -50,
+	},
+	CapstoneCaptives: FlatScores{
+		Hard: 150,
+		Soft: -25,
+	},
 
 	Liberties: 20,
 
@@ -50,8 +65,18 @@ var defaultWeights6 = Weights{
 	Standing: 200,
 	Capstone: 300,
 
-	HardFlat: 125,
-	SoftFlat: -200,
+	FlatCaptives: FlatScores{
+		Hard: 125,
+		Soft: -75,
+	},
+	StandingCaptives: FlatScores{
+		Hard: 125,
+		Soft: -50,
+	},
+	CapstoneCaptives: FlatScores{
+		Hard: 150,
+		Soft: -25,
+	},
 
 	Liberties: 20,
 
@@ -137,15 +162,30 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		if h <= 1 {
 			continue
 		}
+		bit := uint64(1 << uint(i))
 		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
-		bf := bitboard.Popcount(s)
-		wf := int(h) - bf - 1
-		if p.White&(1<<uint(i)) != 0 {
-			ws += int64(wf * w.HardFlat)
-			ws += int64(bf * w.SoftFlat)
+		var hf, sf int
+		var ptr *int64
+		if p.White&bit != 0 {
+			sf = bitboard.Popcount(s)
+			hf = int(h) - sf - 1
+			ptr = &ws
 		} else {
-			bs += int64(bf * w.HardFlat)
-			bs += int64(wf * w.SoftFlat)
+			hf = bitboard.Popcount(s)
+			sf = int(h) - hf - 1
+			ptr = &bs
+		}
+
+		switch {
+		case p.Standing&(1<<uint(i)) != 0:
+			*ptr += (int64(hf*w.StandingCaptives.Hard) +
+				int64(sf*w.StandingCaptives.Soft))
+		case p.Caps&(1<<uint(i)) != 0:
+			*ptr += (int64(hf*w.CapstoneCaptives.Hard) +
+				int64(sf*w.CapstoneCaptives.Soft))
+		default:
+			*ptr += (int64(hf*w.FlatCaptives.Hard) +
+				int64(sf*w.FlatCaptives.Soft))
 		}
 	}
 

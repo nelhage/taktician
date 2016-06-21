@@ -168,12 +168,14 @@ var (
 		Tempo:   50,
 	}
 	medWeights = ai.Weights{
-		TopFlat:  200,
-		Standing: 100,
-		Capstone: 150,
-		HardFlat: 50,
-		Tempo:    100,
-		Groups:   [8]int{0, 0, 0, 100, 200},
+		TopFlat:          200,
+		Standing:         100,
+		Capstone:         150,
+		FlatCaptives:     ai.FlatScores{Hard: 50},
+		StandingCaptives: ai.FlatScores{Hard: 50},
+		CapstoneCaptives: ai.FlatScores{Hard: 50},
+		Tempo:            100,
+		Groups:           [8]int{0, 0, 0, 100, 200},
 	}
 )
 
