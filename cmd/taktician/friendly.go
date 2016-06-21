@@ -165,7 +165,6 @@ func (f *Friendly) Config() ai.MinimaxConfig {
 var (
 	easyWeights = ai.Weights{
 		TopFlat: 100,
-		Tempo:   50,
 	}
 	medWeights = ai.Weights{
 		TopFlat:          200,
@@ -174,7 +173,6 @@ var (
 		FlatCaptives:     ai.FlatScores{Hard: 50},
 		StandingCaptives: ai.FlatScores{Hard: 50},
 		CapstoneCaptives: ai.FlatScores{Hard: 50},
-		Tempo:            100,
 		Groups:           [8]int{0, 0, 0, 100, 200},
 	}
 )
