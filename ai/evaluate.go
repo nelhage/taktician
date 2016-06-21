@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	endgameCutoff = 5
+	endgameCutoff = 7
 )
 
 type FlatScores struct {
@@ -28,8 +28,6 @@ type Weights struct {
 	CapstoneCaptives FlatScores
 
 	Liberties int
-
-	Tempo int
 
 	Groups [8]int
 }
@@ -54,8 +52,6 @@ var defaultWeights = Weights{
 	},
 
 	Liberties: 20,
-
-	Tempo: 250,
 
 	Groups: [8]int{
 		0,   // 0
@@ -86,8 +82,6 @@ var defaultWeights6 = Weights{
 	},
 
 	Liberties: 20,
-
-	Tempo: 250,
 
 	Groups: [8]int{
 		0,   // 0
@@ -151,11 +145,6 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 
 	var ws, bs int64
 
-	if p.ToMove() == tak.White {
-		ws += int64(w.Tempo)
-	} else {
-		bs += int64(w.Tempo)
-	}
 	analysis := p.Analysis()
 
 	left := p.WhiteStones()
@@ -166,6 +155,11 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		left = endgameCutoff
 	}
 	flat := w.TopFlat + ((endgameCutoff-left)*w.EndgameFlat)/endgameCutoff
+	if p.ToMove() == tak.White {
+		ws += int64(flat/2) + 50
+	} else {
+		bs += int64(flat/2) + 50
+	}
 
 	ws += int64(bitboard.Popcount(p.White&^p.Caps&^p.Standing) * flat)
 	bs += int64(bitboard.Popcount(p.Black&^p.Caps&^p.Standing) * flat)
