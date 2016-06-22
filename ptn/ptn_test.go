@@ -90,6 +90,16 @@ func TestParsePTN(t *testing.T) {
 	}
 }
 
+func TestParsePTNBOM(t *testing.T) {
+	var buf bytes.Buffer
+	buf.WriteRune(0xFEFF)
+	buf.WriteString(testGame)
+	_, err := ParsePTN(&buf)
+	if err != nil {
+		t.Fatal("failed to parse PTN with BOM")
+	}
+}
+
 func TestRoundTripPTN(t *testing.T) {
 	ptn, err := ParsePTN(bytes.NewBufferString(testGame))
 	if err != nil {

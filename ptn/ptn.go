@@ -81,6 +81,13 @@ type PTN struct {
 
 func ParsePTN(r io.Reader) (*PTN, error) {
 	buf := bufio.NewReader(r)
+	ch, _, err := buf.ReadRune()
+	if err != nil {
+		return nil, err
+	}
+	if ch != 0xFEFF {
+		buf.UnreadRune()
+	}
 	var ptn PTN
 	if err := readEvents(buf, &ptn); err != nil && err != io.EOF {
 		return nil, err
