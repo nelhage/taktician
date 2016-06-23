@@ -142,6 +142,19 @@ func (f *Friendly) HandleChat(who string, msg string) {
 			f.client.SendCommand("Shout",
 				fmt.Sprintf("OK! I'll play at level %d, starting right now.", l))
 		}
+	case "size":
+		sz, err := strconv.Atoi(arg)
+		if err != nil {
+			log.Printf("bad size size=%q", arg)
+			return
+		}
+		if sz >= 4 && sz <= 6 {
+			*size = sz
+			f.client.SendCommand("Seek",
+				strconv.Itoa(*size),
+				strconv.Itoa(int(gameTime.Seconds())),
+				strconv.Itoa(int(increment.Seconds())))
+		}
 	case "help":
 		f.client.SendCommand("Shout",
 			fmt.Sprintf("[FriendlyBot@level %d]: %s",

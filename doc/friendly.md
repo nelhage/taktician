@@ -31,6 +31,10 @@ mid-game.
 Levels 10 and up are roughly equivalent to Taktician at various stages
 of its development, and so should be considered pretty challenging.
 
+FriendlyBot can also play on different sizes of board: Try
+
+    FriendlyBot: size <size>
+
 # Resources
 
 New to Tak? Here are some links that might help you out.
