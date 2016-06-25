@@ -254,7 +254,7 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
 		ai.stack[0].m = m
-		_, cv := ai.minimax(child, 1, st.Depth-1, pv[1:],
+		_, cv := ai.pvSearch(child, 1, st.Depth-1, pv[1:],
 			-v-1, -base)
 		cv = -cv
 		if cv <= base {
@@ -294,8 +294,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 		// we want to find moves in (v-1, v+1) (i.e. == v). We
 		// invert and negate that to find the α-β window for
 		// the child search: (-v-1, -v+1)
-		ms, cv := ai.minimax(child, 1, st.Depth-1, pv[1:],
-			-v-1, -v+1)
+		ms, cv := ai.pvSearch(child, 1, st.Depth-1, pv[1:], -v-1, -v+1)
 		cv = -cv
 		if ai.cfg.Debug > 2 {
 			log.Printf("[all-search] m=%s v=%d pv=%s",
@@ -356,7 +355,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
 		m.depth = i + base
-		next, nv = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
+		next, nv = m.pvSearch(p, 0, i+base, ms, MinEval-1, MaxEval+1)
 		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
 			st.Canceled = true
 			break
@@ -437,7 +436,39 @@ func (m *MinimaxAI) Evaluate(p *tak.Position) int64 {
 	return m.evaluate(&m.c, p)
 }
 
-func (ai *MinimaxAI) minimax(
+func teSuffices(te *tableEntry, depth int, α, β int64) bool {
+	if te.depth >= depth {
+		if te.bound == exactBound ||
+			(te.value < α && te.bound == upperBound) ||
+			(te.value > β && te.bound == lowerBound) {
+			return true
+		}
+	}
+
+	if te.bound == exactBound &&
+		(te.value > WinThreshold || te.value < -WinThreshold) {
+		return true
+	}
+	return false
+}
+
+func (ai *MinimaxAI) recordCut(m *tak.Move, move, depth, ply int) {
+	ai.st.CutNodes++
+	switch move {
+	case 1:
+		ai.st.Cut0++
+	case 2:
+		ai.st.Cut1++
+	default:
+		ai.st.CutSearch += uint64(move + 1)
+	}
+	ai.history[m.Hash()] += (1 << uint(depth))
+	if ply > 0 {
+		ai.response[ai.stack[ply-1].m.Hash()] = *m
+	}
+}
+
+func (ai *MinimaxAI) pvSearch(
 	p *tak.Position,
 	ply, depth int,
 	pv []tak.Move,
@@ -467,20 +498,7 @@ func (ai *MinimaxAI) minimax(
 			}
 		}
 		ai.st.TTHits++
-		teSuffices := false
-		if te.depth >= depth {
-			if te.bound == exactBound ||
-				(te.value < α && te.bound == upperBound) ||
-				(te.value > β && te.bound == lowerBound) {
-				teSuffices = true
-			}
-		}
-
-		if te.bound == exactBound &&
-			(te.value > WinThreshold || te.value < -WinThreshold) {
-			teSuffices = true
-		}
-		if teSuffices {
+		if teSuffices(te, depth, α, β) {
 			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
 			if e == nil {
 				ai.st.TTShortcut++
@@ -488,45 +506,6 @@ func (ai *MinimaxAI) minimax(
 				return ai.stack[ply].pv[:1], te.value
 			}
 			te = nil
-		}
-	}
-
-	if β == α+1 && ai.nullMoveOK(ply, depth, p) {
-		ai.stack[ply].m = tak.Move{Type: tak.Pass}
-		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
-		if e == nil {
-			ai.st.NullSearch++
-			_, v := ai.minimax(child, ply+1, depth-3, nil, -α-1, -α)
-			v = -v
-			if v >= β {
-				ai.st.NullCut++
-				return nil, v
-			}
-		}
-	}
-	if /* ai.cfg.NoExtendForces && depth+ply < 4*ai.depth/3 */ false {
-		ai.stack[ply].m = tak.Move{Type: tak.Pass}
-		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
-		if e == nil {
-			_, v := ai.minimax(child, ply+1, 1, nil, WinThreshold-1, WinThreshold)
-			v = -v
-			if v < -WinThreshold {
-				ai.st.Extensions++
-				depth++
-			}
-		}
-	}
-
-	if !ai.cfg.NoReduceSlides && β == α+1 && ply > 0 {
-		m := ai.stack[ply-1].m
-		if m.IsSlide() && len(m.Slides) == 1 {
-			i := m.X + m.Y*int(ai.c.Size)
-			dx, dy := m.Dest()
-			j := dx + dy*int(ai.c.Size)
-			if p.Height[i] == 0 && p.Height[j] == m.Slides[0] {
-				ai.st.ReducedSlides++
-				depth -= 2
-			}
 		}
 	}
 
@@ -557,13 +536,13 @@ func (ai *MinimaxAI) minimax(
 		}
 		ai.stack[ply].m = m
 		if i > 1 {
-			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -α-1, -α)
+			ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1)
 			if -v > α && -v < β {
 				ai.st.ReSearch++
-				ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
+				ms, v = ai.pvSearch(child, ply+1, depth-1, newpv, -β, -α)
 			}
 		} else {
-			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
+			ms, v = ai.pvSearch(child, ply+1, depth-1, newpv, -β, -α)
 		}
 		v = -v
 		if ai.cfg.Debug > 4+ply {
@@ -582,19 +561,7 @@ func (ai *MinimaxAI) minimax(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.st.CutNodes++
-				switch i {
-				case 1:
-					ai.st.Cut0++
-				case 2:
-					ai.st.Cut1++
-				default:
-					ai.st.CutSearch += uint64(i + 1)
-				}
-				ai.history[m.Hash()] += (1 << uint(depth))
-				if ply > 0 {
-					ai.response[ai.stack[ply-1].m.Hash()] = m
-				}
+				ai.recordCut(&m, i, depth, ply)
 				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
 					var tm tak.Move
 					td := 0
@@ -633,6 +600,136 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 
+	return best, α
+}
+
+func (ai *MinimaxAI) zwSearch(
+	p *tak.Position,
+	ply, depth int,
+	pv []tak.Move,
+	α int64) ([]tak.Move, int64) {
+	over, _ := p.GameOver()
+	if depth <= 0 || over {
+		ai.st.Evaluated++
+		if over {
+			ai.st.Terminal++
+		}
+		return nil, ai.evaluate(&ai.c, p)
+	}
+
+	ai.st.Visited++
+	ai.st.Scout++
+
+	te := ai.ttGet(p.Hash())
+	if te != nil {
+		ai.st.TTHits++
+		if teSuffices(te, depth, α, α+1) {
+			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
+			if e == nil {
+				ai.st.TTShortcut++
+				ai.stack[ply].pv[0] = te.m
+				return ai.stack[ply].pv[:1], te.value
+			}
+			te = nil
+		}
+	}
+
+	if !ai.cfg.NoReduceSlides && ply > 0 {
+		m := ai.stack[ply-1].m
+		if m.IsSlide() && len(m.Slides) == 1 {
+			i := m.X + m.Y*int(ai.c.Size)
+			dx, dy := m.Dest()
+			j := dx + dy*int(ai.c.Size)
+			if p.Height[i] == 0 && p.Height[j] == m.Slides[0] {
+				ai.st.ReducedSlides++
+				depth -= 2
+			}
+		}
+	}
+
+	if ai.nullMoveOK(ply, depth, p) {
+		ai.stack[ply].m = tak.Move{Type: tak.Pass}
+		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
+		if e == nil {
+			ai.st.NullSearch++
+			_, v := ai.zwSearch(child, ply+1, depth-3, nil, -α-1)
+			v = -v
+			if v >= α+1 {
+				ai.st.NullCut++
+				return nil, v
+			}
+		}
+	}
+
+	mg := &ai.stack[ply].mg
+	*mg = moveGenerator{
+		ai:    ai,
+		ply:   ply,
+		depth: depth,
+		p:     p,
+		te:    te,
+		pv:    pv,
+	}
+
+	best := ai.stack[ply].pv[:0]
+	best = append(best, pv...)
+	var i int
+	var didCut bool
+	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
+		i++
+		var ms []tak.Move
+		var newpv []tak.Move
+		var v int64
+		if len(best) != 0 {
+			newpv = best[1:]
+		}
+		ai.stack[ply].m = m
+		ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1)
+		v = -v
+
+		if len(best) == 0 {
+			best = append(best[:0], m)
+			best = append(best, ms...)
+		}
+		if v > α {
+			best = append(best[:0], m)
+			best = append(best, ms...)
+			didCut = true
+			ai.recordCut(&m, i, depth, ply)
+			if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
+				var tm tak.Move
+				td := 0
+				if te != nil {
+					tm = te.m
+					td = te.depth
+				}
+				log.Printf("[minimax] late cutoff depth=%d m=%d pv=%s te=%d:%s killer=%s pos=%q",
+					depth, i, formatpv(pv), td, ptn.FormatMove(&tm), ptn.FormatMove(&m), ptn.FormatTPS(p),
+				)
+			}
+			break
+		}
+		if atomic.LoadInt32(ai.cancel) != 0 {
+			return nil, 0
+		}
+	}
+
+	if te = ai.ttPut(p.Hash()); te != nil {
+		te.hash = p.Hash()
+		te.depth = depth
+		te.m = best[0]
+		te.value = α
+		if didCut {
+			te.bound = lowerBound
+		} else {
+			te.bound = upperBound
+			ai.st.AllNodes++
+		}
+	}
+
+	if didCut {
+		return best, α + 1
+	}
 	return best, α
 }
 
