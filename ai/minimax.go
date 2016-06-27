@@ -282,7 +282,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			if estimate.After(deadline) {
 				if m.cfg.Debug > 0 {
 					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
-						i, timeUsed, estimate.Sub(top))
+						base+i, timeUsed, estimate.Sub(top))
 				}
 				break
 			}
