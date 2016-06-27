@@ -39,6 +39,7 @@ type MinimaxAI struct {
 	evaluate EvaluationFunc
 
 	table []tableEntry
+	depth int
 	stack [maxDepth]struct {
 		p     *tak.Position
 		mg    moveGenerator
@@ -88,6 +89,8 @@ type Stats struct {
 
 	TTHits     uint64
 	TTShortcut uint64
+
+	Extensions uint64
 }
 
 type MinimaxConfig struct {
@@ -99,9 +102,10 @@ type MinimaxConfig struct {
 	RandomizeWindow int64
 	RandomizeScale  int64
 
-	NoSort     bool
-	NoTable    bool
-	NoNullMove bool
+	NoSort         bool
+	NoTable        bool
+	NoNullMove     bool
+	NoExtendForces bool
 
 	Evaluate EvaluationFunc
 }
@@ -268,6 +272,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
+		m.depth = i + base
 		next, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
 		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
 			break
@@ -288,10 +293,9 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d scout=%d evaluated=%d null=%d/%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d",
+			log.Printf("[minimax]  stats: visited=%d scout=%d null=%d/%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d extend=%d",
 				m.st.Visited,
 				m.st.Scout,
-				m.st.Evaluated,
 				m.st.NullCut,
 				m.st.NullSearch,
 				m.st.CutNodes,
@@ -302,7 +306,9 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
 				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
 				m.st.AllNodes,
-				m.st.ReSearch)
+				m.st.ReSearch,
+				m.st.Extensions,
+			)
 		}
 		if i > 1 {
 			branchSum += m.st.Evaluated / (prevEval + 1)
@@ -401,6 +407,18 @@ func (ai *MinimaxAI) minimax(
 			}
 		}
 	}
+	if β != α+1 && !ai.cfg.NoExtendForces && depth+ply < 4*ai.depth/3 {
+		ai.stack[ply].m = tak.Move{Type: tak.Pass}
+		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
+		if e == nil {
+			_, v := ai.minimax(child, ply+1, 1, nil, WinThreshold-1, WinThreshold)
+			v = -v
+			if v < -WinThreshold {
+				ai.st.Extensions++
+				depth++
+			}
+		}
+	}
 
 	// As of 1.6.2, Go's escape analysis can't tell that a
 	// stack-allocated object here doesn't escape. So we force it
@@ -481,8 +499,9 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 
-	if te = ai.ttPut(p.Hash()); te != nil {
-		te.hash = p.Hash()
+	hash := p.Hash()
+	if te = ai.ttPut(hash); te != nil && (te.hash != hash || te.depth <= depth) {
+		te.hash = hash
 		te.depth = depth
 		te.m = best[0]
 		te.value = α
