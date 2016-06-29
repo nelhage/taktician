@@ -26,7 +26,7 @@ func (c *cliPlayer) GetMove(p *tak.Position) tak.Move {
 		if err != nil {
 			panic(err)
 		}
-		line = strings.TrimRight(line, "\n")
+		line = strings.TrimRight(line, "\r\n")
 		m, err := ptn.ParseMove(line)
 		if err != nil {
 			fmt.Fprintln(c.out, "parse error: ", err)
