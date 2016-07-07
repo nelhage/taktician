@@ -70,15 +70,15 @@ var defaultWeights6 = Weights{
 
 	FlatCaptives: FlatScores{
 		Hard: 125,
-		Soft: -75,
+		Soft: -200,
 	},
 	StandingCaptives: FlatScores{
 		Hard: 125,
-		Soft: -50,
+		Soft: -150,
 	},
 	CapstoneCaptives: FlatScores{
 		Hard: 150,
-		Soft: -25,
+		Soft: -50,
 	},
 
 	Liberties: 20,
