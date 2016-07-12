@@ -29,28 +29,19 @@ CREATE TABLE games (
 )`
 
 const createPlayerTable = `
-CREATE TABLE player_games (
-  day string not null,
-  id integer not null,
-  player varchar,
-  opponent varchar,
-  win varchar
-)
-`
-
-const insertStmt = `
-INSERT INTO games (day, id, time, size, player1, player2, result, winner, moves)
-VALUES (?,?,?,?,?,?,?,?,?)
-`
-
-const transformStmt = `
-INSERT INTO player_games
- (day, id, player, opponent, win)
+CREATE VIEW player_games (
+  day, id, player, opponent, win
+) AS
 SELECT day, id, player2, player1,
  CASE winner WHEN 'white' THEN 'lose' WHEN 'black' THEN 'win' ELSE 'tie' END FROM games
 UNION
 SELECT day, id, player1, player2,
  CASE winner WHEN 'white' THEN 'win' WHEN 'black' THEN 'lose' ELSE 'tie' END FROM games
+`
+
+const insertStmt = `
+INSERT INTO games (day, id, time, size, player1, player2, result, winner, moves)
+VALUES (?,?,?,?,?,?,?,?,?)
 `
 
 func indexPTN(dir string, db string) error {
@@ -107,10 +98,6 @@ func indexPTN(dir string, db string) error {
 		return fmt.Errorf("commit: %v", err)
 	}
 
-	_, err = sql.Exec(transformStmt)
-	if err != nil {
-		return fmt.Errorf("transform: %v", err)
-	}
 	return nil
 }
 
