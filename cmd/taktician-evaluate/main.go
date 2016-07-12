@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"runtime/pprof"
+	"strings"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
@@ -30,6 +31,7 @@ var (
 	swap    = flag.Bool("swap", true, "swap colors each game")
 
 	prefix = flag.String("prefix", "", "ptn file to start games at the end of")
+	seeds  = flag.String("seeds", "", "directory of seed positions")
 
 	depth = flag.Int("depth", 3, "depth to search each move")
 	limit = flag.Duration("limit", 0, "amount of time to search each move")
@@ -42,6 +44,34 @@ var (
 
 	memProfile = flag.String("mem-profile", "", "write memory profile")
 )
+
+func readSeeds(d string) ([]*tak.Position, error) {
+	ents, e := ioutil.ReadDir(d)
+	if e != nil {
+		return nil, e
+	}
+	var ps []*tak.Position
+	for _, de := range ents {
+		if !strings.HasSuffix(de.Name(), ".ptn") {
+			continue
+		}
+		f, e := os.Open(path.Join(d, de.Name()))
+		if e != nil {
+			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
+		}
+		g, e := ptn.ParsePTN(f)
+		if e != nil {
+			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
+		}
+		f.Close()
+		p, e := g.PositionAtMove(0, tak.NoColor)
+		if e != nil {
+			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
+		}
+		ps = append(ps, p)
+	}
+	return ps, nil
+}
 
 func main() {
 	flag.Parse()
@@ -57,7 +87,7 @@ func main() {
 		}()
 	}
 
-	var p *tak.Position
+	var starts []*tak.Position
 	if *prefix != "" {
 		bs, e := ioutil.ReadFile(*prefix)
 		if e != nil {
@@ -67,9 +97,17 @@ func main() {
 		if e != nil {
 			log.Fatalf("Parse PTN: %v", e)
 		}
-		p, e = pt.PositionAtMove(0, tak.NoColor)
+		p, e := pt.PositionAtMove(0, tak.NoColor)
 		if e != nil {
 			log.Fatalf("PTN: %v", e)
+		}
+		starts = []*tak.Position{p}
+	}
+	if *seeds != "" {
+		var e error
+		starts, e = readSeeds(*seeds)
+		if e != nil {
+			log.Fatalf("-seeds: %v", e)
 		}
 	}
 
@@ -126,7 +164,7 @@ func main() {
 		Cutoff:  *cutoff,
 		Limit:   *limit,
 		Perturb: *perturb,
-		Initial: p,
+		Initial: starts,
 	})
 
 	if *out != "" {
@@ -164,6 +202,10 @@ func writeGame(d string, r *Result) {
 	p.Tags = []ptn.Tag{
 		{"Size", fmt.Sprintf("%d", r.Position.Size())},
 		{"Player1", r.spec.p1color.String()},
+	}
+	if r.Initial != nil {
+		p.Tags = append(p.Tags, ptn.Tag{
+			Name: "TPS", Value: ptn.FormatTPS(r.Initial)})
 	}
 	for i, m := range r.Moves {
 		if i%2 == 0 {

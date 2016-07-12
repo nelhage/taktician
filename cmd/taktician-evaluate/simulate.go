@@ -18,7 +18,7 @@ type Config struct {
 
 	Verbose bool
 
-	Initial *tak.Position
+	Initial []*tak.Position
 
 	Cfg1, Cfg2 ai.MinimaxConfig
 	W1, W2     ai.Weights
@@ -48,11 +48,13 @@ type gameSpec struct {
 	c            *Config
 	i            int
 	white, black *ai.MinimaxConfig
+	r            *rand.Rand
 	p1color      tak.Color
 }
 
 type Result struct {
 	spec     gameSpec
+	Initial  *tak.Position
 	Position *tak.Position
 	Moves    []tak.Move
 }
@@ -145,6 +147,7 @@ func startGames(c *Config, rc chan<- Result) {
 			white:   white,
 			black:   black,
 			p1color: p1color,
+			r:       rand.New(rand.NewSource(r.Int63())),
 		}
 		gc <- spec
 	}
@@ -158,7 +161,11 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		white := ai.NewMinimax(*g.white)
 		black := ai.NewMinimax(*g.black)
 		var ms []tak.Move
-		p := g.c.Initial
+		var initial *tak.Position
+		if len(g.c.Initial) != 0 {
+			initial = g.c.Initial[g.r.Intn(len(g.c.Initial))]
+		}
+		p := initial
 		if p == nil {
 			p = tak.New(tak.Config{Size: g.c.Cfg1.Size})
 		}
@@ -185,6 +192,7 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		}
 		out <- Result{
 			spec:     g,
+			Initial:  initial,
 			Position: p,
 			Moves:    ms,
 		}
