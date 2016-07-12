@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -10,39 +9,9 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
-
+	"github.com/nelhage/taktician/logs"
 	"github.com/nelhage/taktician/ptn"
 )
-
-const createGameTable = `
-CREATE TABLE games (
-  day string not null,
-  id integer not null,
-  time datetime,
-  size int,
-  player1 varchar,
-  player2 varchar,
-  result string,
-  winner string,
-  moves int
-)`
-
-const createPlayerTable = `
-CREATE VIEW player_games (
-  day, id, player, opponent, win
-) AS
-SELECT day, id, player2, player1,
- CASE winner WHEN 'white' THEN 'lose' WHEN 'black' THEN 'win' ELSE 'tie' END FROM games
-UNION
-SELECT day, id, player1, player2,
- CASE winner WHEN 'white' THEN 'win' WHEN 'black' THEN 'lose' ELSE 'tie' END FROM games
-`
-
-const insertStmt = `
-INSERT INTO games (day, id, time, size, player1, player2, result, winner, moves)
-VALUES (?,?,?,?,?,?,?,?,?)
-`
 
 func indexPTN(dir string, db string) error {
 	ptns, e := readPTNs(dir)
@@ -51,28 +20,12 @@ func indexPTN(dir string, db string) error {
 	}
 
 	os.Remove(db)
-	sql, err := sql.Open("sqlite3", db)
+	repo, err := logs.Open(db)
 	if err != nil {
-		return err
+		return fmt.Errorf("open: %v", err)
 	}
-	defer sql.Close()
-	_, err = sql.Exec(createGameTable)
-	if err != nil {
-		return fmt.Errorf("create game table: %v", err)
-	}
-	_, err = sql.Exec(createPlayerTable)
-	if err != nil {
-		return fmt.Errorf("create player_game table: %v", err)
-	}
-	tx, err := sql.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare(insertStmt)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
+	defer repo.Close()
+	var gs []*logs.Game
 	for _, g := range ptns {
 		day := g.FindTag("Date")
 		id, e := strconv.Atoi(g.FindTag("Id"))
@@ -86,16 +39,21 @@ func indexPTN(dir string, db string) error {
 		result := g.FindTag("Result")
 		winner := (&ptn.Result{Result: result}).Winner().String()
 		moves := countMoves(g)
-		_, e = stmt.Exec(
-			day, id, t, size, player1, player2, result, winner, moves,
-		)
-		if e != nil {
-			return e
-		}
+		gs = append(gs, &logs.Game{
+			Day:       day,
+			ID:        id,
+			Timestamp: t,
+			Size:      size,
+			Player1:   player1,
+			Player2:   player2,
+			Result:    result,
+			Winner:    winner,
+			Moves:     moves,
+		})
 	}
-	err = tx.Commit()
+	err = repo.InsertGames(gs)
 	if err != nil {
-		return fmt.Errorf("commit: %v", err)
+		return fmt.Errorf("insert: %v", err)
 	}
 
 	return nil
