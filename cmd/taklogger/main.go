@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nelhage/taktician/logs"
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -21,6 +22,7 @@ var (
 	server     = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
 	out        = flag.String("out", "ptn", "Directory to write PTN files")
 	index      = flag.String("index", "", "write a sqlite index")
+	reindex    = flag.Bool("reindex", false, "reindex all games")
 	cpuProfile = flag.String("cpu-profile", "", "write a CPU profile")
 )
 
@@ -37,13 +39,31 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	if *index != "" {
-		err := indexPTN(*out, *index)
+	if *reindex {
+		if *index == "" {
+			log.Fatal("-reindex requires -index")
+		}
+		os.Remove(*index)
+		repo, err := logs.Open(*index)
 		if err != nil {
+			log.Fatal(err)
+		}
+		defer repo.Close()
+		if err := indexPTN(repo, *out, *index); err != nil {
 			log.Fatal(err)
 		}
 		return
 	}
+
+	var repo *logs.Repository
+	if *index != "" {
+		var err error
+		repo, err = logs.Open(*index)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	client := &playtak.Client{
 		Debug: true,
 	}
@@ -57,7 +77,7 @@ func main() {
 		log.Fatal("login: ", err)
 	}
 
-	if e := logGames(client, *out); e != nil {
+	if e := logGames(repo, client, *out); e != nil {
 		log.Fatal(e)
 	}
 }
@@ -74,7 +94,7 @@ type Game struct {
 	Result string
 }
 
-func logGames(client *playtak.Client, out string) error {
+func logGames(repo *logs.Repository, client *playtak.Client, out string) error {
 	e := os.MkdirAll(out, 0755)
 	if e != nil {
 		return e
@@ -93,7 +113,7 @@ func logGames(client *playtak.Client, out string) error {
 		no := strings.SplitN(words[0], "#", 2)[1]
 		if g, ok := games[no]; ok {
 			if over := handleCmd(g, words); over {
-				render(g, out)
+				render(repo, g, out)
 				delete(games, no)
 			}
 		}
@@ -137,7 +157,7 @@ func handleCmd(g *Game, cmd []string) bool {
 	return false
 }
 
-func render(g *Game, dir string) {
+func render(repo *logs.Repository, g *Game, dir string) {
 	p := ptn.PTN{}
 	p.Tags = []ptn.Tag{
 		{Name: "Size", Value: strconv.Itoa(g.Size)},
@@ -155,6 +175,15 @@ func render(g *Game, dir string) {
 		p.Ops = append(p.Ops, &ptn.Move{Move: m})
 	}
 	p.Ops = append(p.Ops, &ptn.Result{Result: g.Result})
+	if repo != nil {
+		g := PTNGame(&p)
+		if g != nil {
+			err := repo.InsertGame(g)
+			if err != nil {
+				log.Printf("insert %d: %v", g.ID, err)
+			}
+		}
+	}
 	out := p.Render()
 	dir = path.Join(dir, g.Date)
 	if e := os.MkdirAll(dir, 0755); e != nil {
