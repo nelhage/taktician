@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -31,6 +32,8 @@ type PolicyFunc func(ctx context.Context,
 	next *tak.Position) *tak.Position
 
 type MonteCarloAI struct {
+	c bitboard.Constants
+
 	cfg  MCTSConfig
 	mm   *ai.MinimaxAI
 	eval ai.EvaluationFunc
@@ -170,7 +173,7 @@ func (mc *MonteCarloAI) descendPolicy(t *tree) *tree {
 	val := ai.MinEval
 	i := 0
 	for _, c := range t.children {
-		v := mc.eval(mc.mm, c.position)
+		v := mc.eval(&mc.c, c.position)
 		if v > val {
 			best = c
 			val = v
@@ -244,7 +247,7 @@ func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) int64 {
 		}
 		p, alloc = next, p
 	}
-	v := ai.eval(ai.mm, p)
+	v := ai.eval(&ai.c, p)
 	if v > evalThreshold {
 		return 1
 	} else if v < -evalThreshold {
@@ -282,6 +285,7 @@ func (mc *MonteCarloAI) update(t *tree, value int64) {
 func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 	mc := &MonteCarloAI{
 		cfg: cfg,
+		c:   bitboard.Precompute(uint(cfg.Size)),
 	}
 	if mc.cfg.C == 0 {
 		mc.cfg.C = 0.7

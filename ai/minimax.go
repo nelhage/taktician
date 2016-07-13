@@ -24,7 +24,7 @@ const (
 	maxDepth = 15
 )
 
-type EvaluationFunc func(m *MinimaxAI, p *tak.Position) int64
+type EvaluationFunc func(c *bitboard.Constants, p *tak.Position) int64
 
 type MinimaxAI struct {
 	cfg  MinimaxConfig
@@ -302,7 +302,7 @@ func (ai *MinimaxAI) minimax(
 		if over {
 			ai.st.Terminal++
 		}
-		return nil, ai.evaluate(ai, p)
+		return nil, ai.evaluate(&ai.c, p)
 	}
 
 	ai.st.Visited++

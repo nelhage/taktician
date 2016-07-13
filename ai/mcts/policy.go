@@ -53,7 +53,7 @@ func EvalWeightedPolicy(ctx context.Context,
 		if e != nil {
 			continue
 		}
-		w := mc.eval(mc.mm, child)
+		w := mc.eval(&mc.c, child)
 		if w > ai.WinThreshold {
 			return child
 		}

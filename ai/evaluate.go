@@ -109,8 +109,8 @@ func MakeEvaluator(size int, w *Weights) EvaluationFunc {
 	if w == nil {
 		w = &DefaultWeights[size]
 	}
-	return func(m *MinimaxAI, p *tak.Position) int64 {
-		return evaluate(w, m, p)
+	return func(c *bitboard.Constants, p *tak.Position) int64 {
+		return evaluate(c, w, p)
 	}
 }
 
@@ -131,14 +131,14 @@ func evaluateTerminal(p *tak.Position, winner tak.Color) int64 {
 	}
 }
 
-func EvaluateWinner(m *MinimaxAI, p *tak.Position) int64 {
+func EvaluateWinner(_ *bitboard.Constants, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
 		return evaluateTerminal(p, winner)
 	}
 	return 0
 }
 
-func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
+func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
 		return evaluateTerminal(p, winner)
 	}
@@ -199,13 +199,13 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 		}
 	}
 
-	ws += int64(m.scoreGroups(analysis.WhiteGroups, w))
-	bs += int64(m.scoreGroups(analysis.BlackGroups, w))
+	ws += int64(scoreGroups(c, analysis.WhiteGroups, w))
+	bs += int64(scoreGroups(c, analysis.BlackGroups, w))
 
 	wr := p.White &^ p.Standing
 	br := p.Black &^ p.Standing
-	wl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.Black, wr) &^ p.White)
-	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ p.Black)
+	wl := bitboard.Popcount(bitboard.Grow(c, ^p.Black, wr) &^ p.White)
+	bl := bitboard.Popcount(bitboard.Grow(c, ^p.White, br) &^ p.Black)
 	ws += int64(w.Liberties * wl)
 	bs += int64(w.Liberties * bl)
 
@@ -215,10 +215,10 @@ func evaluate(w *Weights, m *MinimaxAI, p *tak.Position) int64 {
 	return bs - ws
 }
 
-func (ai *MinimaxAI) scoreGroups(gs []uint64, ws *Weights) int {
+func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights) int {
 	sc := 0
 	for _, g := range gs {
-		w, h := bitboard.Dimensions(&ai.c, g)
+		w, h := bitboard.Dimensions(c, g)
 
 		sc += ws.Groups[w]
 		sc += ws.Groups[h]
