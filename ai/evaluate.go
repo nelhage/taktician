@@ -27,7 +27,8 @@ type Weights struct {
 	StandingCaptives FlatScores
 	CapstoneCaptives FlatScores
 
-	Liberties int
+	Liberties      int
+	GroupLiberties int
 
 	Groups [8]int
 }
@@ -199,15 +200,17 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		}
 	}
 
-	ws += int64(scoreGroups(c, analysis.WhiteGroups, w))
-	bs += int64(scoreGroups(c, analysis.BlackGroups, w))
+	ws += int64(scoreGroups(c, analysis.WhiteGroups, w, p.Black|p.Standing))
+	bs += int64(scoreGroups(c, analysis.BlackGroups, w, p.White|p.Standing))
 
-	wr := p.White &^ p.Standing
-	br := p.Black &^ p.Standing
-	wl := bitboard.Popcount(bitboard.Grow(c, ^p.Black, wr) &^ p.White)
-	bl := bitboard.Popcount(bitboard.Grow(c, ^p.White, br) &^ p.Black)
-	ws += int64(w.Liberties * wl)
-	bs += int64(w.Liberties * bl)
+	if w.Liberties != 0 {
+		wr := p.White &^ p.Standing
+		br := p.Black &^ p.Standing
+		wl := bitboard.Popcount(bitboard.Grow(c, ^p.Black, wr) &^ p.White)
+		bl := bitboard.Popcount(bitboard.Grow(c, ^p.White, br) &^ p.Black)
+		ws += int64(w.Liberties * wl)
+		bs += int64(w.Liberties * bl)
+	}
 
 	if p.ToMove() == tak.White {
 		return ws - bs
@@ -215,13 +218,19 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	return bs - ws
 }
 
-func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights) int {
+func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) int {
 	sc := 0
+	var allg uint64
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(c, g)
 
 		sc += ws.Groups[w]
 		sc += ws.Groups[h]
+		allg |= g
+	}
+	if ws.GroupLiberties != 0 {
+		libs := bitboard.Popcount(bitboard.Grow(c, ^other, allg) &^ allg)
+		sc += libs * ws.GroupLiberties
 	}
 
 	return sc
@@ -282,13 +291,20 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 
 	fmt.Fprintf(tw, "liberties\t%d\t%d\n", wl, bl)
 
+	var allg uint64
 	for i, g := range analysis.WhiteGroups {
 		w, h := bitboard.Dimensions(&m.c, g)
 		fmt.Fprintf(tw, "g%d\t%dx%x\n", i, w, h)
+		allg |= g
 	}
+	wgl := bitboard.Popcount(bitboard.Grow(&m.c, m.c.Mask&^(p.Black|p.Standing), allg) &^ allg)
+	allg = 0
 	for i, g := range analysis.BlackGroups {
 		w, h := bitboard.Dimensions(&m.c, g)
 		fmt.Fprintf(tw, "g%d\t\t%dx%x\n", i, w, h)
+		allg |= g
 	}
+	bgl := bitboard.Popcount(bitboard.Grow(&m.c, m.c.Mask&^(p.White|p.Standing), allg) &^ allg)
+	fmt.Fprintf(tw, "gl\t%d\t%d\n", wgl, bgl)
 	tw.Flush()
 }
