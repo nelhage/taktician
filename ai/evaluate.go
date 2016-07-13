@@ -161,8 +161,8 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		bs += int64(flat/2) + 50
 	}
 
-	ws += int64(bitboard.Popcount(p.White&^p.Caps&^p.Standing) * flat)
-	bs += int64(bitboard.Popcount(p.Black&^p.Caps&^p.Standing) * flat)
+	ws += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * flat)
+	bs += int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing)) * flat)
 	ws += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
 	bs += int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
 	ws += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
@@ -239,8 +239,8 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 		captured int
 	}
 
-	scores[0].flats = bitboard.Popcount(p.White &^ p.Caps &^ p.Standing)
-	scores[1].flats = bitboard.Popcount(p.Black &^ p.Caps &^ p.Standing)
+	scores[0].flats = bitboard.Popcount(p.White &^ (p.Caps | p.Standing))
+	scores[1].flats = bitboard.Popcount(p.Black &^ (p.Caps | p.Standing))
 	scores[0].standing = bitboard.Popcount(p.White & p.Standing)
 	scores[1].standing = bitboard.Popcount(p.Black & p.Standing)
 	scores[0].caps = bitboard.Popcount(p.White & p.Caps)
