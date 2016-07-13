@@ -291,6 +291,10 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	return ms, v, m.st
 }
 
+func (m *MinimaxAI) Evaluate(p *tak.Position) int64 {
+	return m.evaluate(&m.c, p)
+}
+
 func (ai *MinimaxAI) minimax(
 	p *tak.Position,
 	ply, depth int,

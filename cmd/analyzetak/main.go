@@ -21,6 +21,7 @@ var (
 	tps     = flag.Bool("tps", false, "render position in tps")
 	quiet   = flag.Bool("quiet", false, "don't print board diagrams")
 	explain = flag.Bool("explain", false, "explain scoring")
+	eval    = flag.Bool("evaluate", false, "only show static evaluation")
 
 	move  = flag.Int("move", 0, "PTN move number to analyze")
 	final = flag.Bool("final", false, "analyze final position only")
@@ -91,10 +92,10 @@ func main() {
 			}
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
-				log.Printf("%d. %s", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
+				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
 				analyzeWith(w, p)
 			case p.ToMove() == tak.Black && color != tak.White:
-				log.Printf("%d. ... %s", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
+				fmt.Printf("%d. ... %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
 				analyzeWith(b, p)
 			}
 			var e error
@@ -125,6 +126,17 @@ func analyze(p *tak.Position) {
 }
 
 func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
+	if *eval {
+		val := player.Evaluate(p)
+		if p.ToMove() == tak.Black {
+			val = -val
+		}
+		fmt.Printf(" Val=%d\n", val)
+		if *explain {
+			ai.ExplainScore(player, os.Stdout, p)
+		}
+		return
+	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(*timeLimit))
 	defer cancel()
 	pv, val, _ := player.Analyze(ctx, p)
