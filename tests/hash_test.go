@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -14,9 +15,9 @@ import (
 var hashTests = flag.Bool("test-hash", false, "run hash collision tests")
 
 func wrapHash(tbl map[uint64][]*tak.Position, eval ai.EvaluationFunc) ai.EvaluationFunc {
-	return func(m *ai.MinimaxAI, p *tak.Position) int64 {
+	return func(c *bitboard.Constants, p *tak.Position) int64 {
 		tbl[p.Hash()] = append(tbl[p.Hash()], p.Clone())
-		return eval(m, p)
+		return eval(c, p)
 	}
 }
 
