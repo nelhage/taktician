@@ -45,6 +45,40 @@ var (
 	memProfile = flag.String("mem-profile", "", "write memory profile")
 )
 
+func addSeeds(g *ptn.PTN, ps []*tak.Position) ([]*tak.Position, error) {
+	const (
+		minPly = 5
+		maxPly = 10
+	)
+	ply := 0
+	p, e := g.InitialPosition()
+	if e != nil {
+		return nil, e
+	}
+	for _, op := range g.Ops {
+		mo, ok := op.(*ptn.Move)
+		if !ok {
+			continue
+		}
+		ply++
+		next, e := p.Move(&mo.Move)
+		if e != nil {
+			return nil, fmt.Errorf("ply %d: %v", ply, e)
+		}
+		if ok, _ := next.GameOver(); ok {
+			break
+		}
+		if ply >= minPly {
+			ps = append(ps, next)
+		}
+		p = next
+		if ply >= maxPly {
+			break
+		}
+	}
+	return ps, nil
+}
+
 func readSeeds(d string) ([]*tak.Position, error) {
 	ents, e := ioutil.ReadDir(d)
 	if e != nil {
@@ -64,11 +98,10 @@ func readSeeds(d string) ([]*tak.Position, error) {
 			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
 		}
 		f.Close()
-		p, e := g.PositionAtMove(0, tak.NoColor)
+		ps, e = addSeeds(g, ps)
 		if e != nil {
 			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
 		}
-		ps = append(ps, p)
 	}
 	return ps, nil
 }
