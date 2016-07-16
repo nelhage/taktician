@@ -96,6 +96,9 @@ type MinimaxConfig struct {
 	Debug int
 	Seed  int64
 
+	RandomizeWindow int64
+	RandomizeScale  int64
+
 	NoSort     bool
 	NoTable    bool
 	NoNullMove bool
@@ -107,6 +110,9 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m := &MinimaxAI{cfg: cfg}
 	if m.cfg.Depth == 0 {
 		m.cfg.Depth = maxDepth
+	}
+	if m.cfg.RandomizeScale == 0 {
+		m.cfg.RandomizeScale = 1
 	}
 	m.precompute()
 	m.evaluate = cfg.Evaluate
@@ -176,9 +182,46 @@ func formatpv(ms []tak.Move) string {
 	return out.String()
 }
 
-func (m *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
-	ms, _, _ := m.Analyze(ctx, p)
-	return ms[0]
+func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
+	pv, v, st := ai.Analyze(ctx, p)
+	if ai.cfg.RandomizeWindow == 0 {
+		return pv[0]
+	}
+	if v > WinThreshold || v < -WinThreshold {
+		return pv[0]
+	}
+	rv := pv[0]
+	base := v - ai.cfg.RandomizeWindow
+	var i int64
+	mg := &ai.stack[0].mg
+	*mg = moveGenerator{
+		ai:    ai,
+		ply:   0,
+		depth: st.Depth,
+		p:     p,
+		pv:    pv,
+	}
+
+	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
+		ai.stack[0].m = m
+		_, cv := ai.minimax(child, 1, st.Depth-1, pv[1:],
+			-v-1, -base)
+		cv = -cv
+		if cv <= base {
+			continue
+		}
+		pts := (cv - base) / ai.cfg.RandomizeScale
+		i += pts
+		if ai.cfg.Debug > 2 {
+			log.Printf("rand m=%s v=%d cv=%d pts=%d i=%d",
+				ptn.FormatMove(&m), v, cv, pts, i)
+		}
+		if ai.rand.Int63n(i) <= pts {
+			rv = m
+		}
+	}
+
+	return rv
 }
 
 func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, int64, Stats) {
@@ -219,6 +262,9 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		ms = append(ms[:0], te.m)
 	}
 
+	st := Stats{
+		Depth: base,
+	}
 	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
@@ -226,6 +272,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
 			break
 		}
+		st = m.st
 		ms = append(ms[:0], next...)
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)
@@ -288,7 +335,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			}
 		}
 	}
-	return ms, v, m.st
+	return ms, v, st
 }
 
 func (m *MinimaxAI) Evaluate(p *tak.Position) int64 {
