@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"reflect"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -184,7 +186,11 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 			if cancel != nil {
 				cancel()
 			}
-			p, _ = p.Move(&m)
+			var e error
+			p, e = p.Move(&m)
+			if e != nil {
+				panic(fmt.Sprintf("illegal move: %s", ptn.FormatMove(&m)))
+			}
 			ms = append(ms, m)
 			if ok, _ := p.GameOver(); ok {
 				break
