@@ -52,7 +52,7 @@ var defaultWeights = Weights{
 		Soft: -25,
 	},
 
-	GroupLiberties: 20,
+	Liberties: 20,
 
 	Groups: [8]int{
 		0,   // 0
@@ -82,7 +82,7 @@ var defaultWeights6 = Weights{
 		Soft: -50,
 	},
 
-	GroupLiberties: 20,
+	Liberties: 20,
 
 	Groups: [8]int{
 		0,   // 0
