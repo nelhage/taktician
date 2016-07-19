@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -38,6 +39,8 @@ var (
 	nullMove = flag.Bool("nullMove", true, "use null-move pruning")
 
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
+
+	weights = flag.String("weights", "", "JSON-encoded evaluation weights")
 )
 
 func main() {
@@ -109,6 +112,15 @@ func main() {
 }
 
 func makeAI(p *tak.Position) *ai.MinimaxAI {
+	var w ai.Weights
+	if *weights == "" {
+		w = ai.DefaultWeights[p.Size()]
+	} else {
+		e := json.Unmarshal([]byte(*weights), &w)
+		if e != nil {
+			log.Fatalf("parse weights: %v", e)
+		}
+	}
 	return ai.NewMinimax(ai.MinimaxConfig{
 		Size:  p.Size(),
 		Depth: *depth,
@@ -118,6 +130,8 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		NoSort:     !*sort,
 		NoTable:    !*table,
 		NoNullMove: !*nullMove,
+
+		Evaluate: ai.MakeEvaluator(p.Size(), &w),
 	})
 }
 
