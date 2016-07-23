@@ -49,7 +49,7 @@ var defaultWeights = Weights{
 	},
 	CapstoneCaptives: FlatScores{
 		Hard: 150,
-		Soft: -25,
+		Soft: -50,
 	},
 
 	Liberties: 20,
@@ -79,7 +79,7 @@ var defaultWeights6 = Weights{
 	},
 	CapstoneCaptives: FlatScores{
 		Hard: 150,
-		Soft: -50,
+		Soft: -75,
 	},
 
 	Liberties: 20,
