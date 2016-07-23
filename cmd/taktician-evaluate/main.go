@@ -11,6 +11,7 @@ import (
 	"path"
 	"runtime/pprof"
 	"strings"
+	"time"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
@@ -25,7 +26,7 @@ var (
 	c1      = flag.String("c1", "", "custom config 1")
 	c2      = flag.String("c2", "", "custom config 2")
 	perturb = flag.Float64("perturb", 0.0, "perturb weights")
-	seed    = flag.Int64("seed", 1, "starting random seed")
+	seed    = flag.Int64("seed", 0, "starting random seed")
 	games   = flag.Int("games", 10, "number of games to play")
 	cutoff  = flag.Int("cutoff", 80, "cut games off after how many plies")
 	swap    = flag.Bool("swap", true, "swap colors each game")
@@ -118,6 +119,10 @@ func main() {
 			}
 			pprof.Lookup("heap").WriteTo(f, 0)
 		}()
+	}
+
+	if *seed == 0 {
+		*seed = time.Now().Unix()
 	}
 
 	var starts []*tak.Position
