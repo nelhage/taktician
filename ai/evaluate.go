@@ -146,7 +146,7 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		return evaluateTerminal(p, winner)
 	}
 
-	var ws, bs int64
+	var score int64
 
 	analysis := p.Analysis()
 
@@ -159,17 +159,17 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	}
 	flat := w.TopFlat + ((endgameCutoff-left)*w.EndgameFlat)/endgameCutoff
 	if p.ToMove() == tak.White {
-		ws += int64(flat/2) + 50
+		score += int64(flat/2) + 50
 	} else {
-		bs += int64(flat/2) + 50
+		score -= int64(flat/2) + 50
 	}
 
-	ws += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * flat)
-	bs += int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing)) * flat)
-	ws += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
-	bs += int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
-	ws += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
-	bs += int64(bitboard.Popcount(p.Black&p.Caps) * w.Capstone)
+	score += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * flat)
+	score -= int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing)) * flat)
+	score += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
+	score -= int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
+	score += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
+	score -= int64(bitboard.Popcount(p.Black&p.Caps) * w.Capstone)
 
 	for i, h := range p.Height {
 		if h <= 1 {
@@ -178,46 +178,46 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		bit := uint64(1 << uint(i))
 		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
 		var hf, sf int
-		var ptr *int64
+		var sign int64
 		if p.White&bit != 0 {
 			sf = bitboard.Popcount(s)
 			hf = int(h) - sf - 1
-			ptr = &ws
+			sign = 1
 		} else {
 			hf = bitboard.Popcount(s)
 			sf = int(h) - hf - 1
-			ptr = &bs
+			sign = -1
 		}
 
 		switch {
 		case p.Standing&(1<<uint(i)) != 0:
-			*ptr += (int64(hf*w.StandingCaptives.Hard) +
+			score += sign * (int64(hf*w.StandingCaptives.Hard) +
 				int64(sf*w.StandingCaptives.Soft))
 		case p.Caps&(1<<uint(i)) != 0:
-			*ptr += (int64(hf*w.CapstoneCaptives.Hard) +
+			score += sign * (int64(hf*w.CapstoneCaptives.Hard) +
 				int64(sf*w.CapstoneCaptives.Soft))
 		default:
-			*ptr += (int64(hf*w.FlatCaptives.Hard) +
+			score += sign * (int64(hf*w.FlatCaptives.Hard) +
 				int64(sf*w.FlatCaptives.Soft))
 		}
 	}
 
-	ws += int64(scoreGroups(c, analysis.WhiteGroups, w, p.Black|p.Standing))
-	bs += int64(scoreGroups(c, analysis.BlackGroups, w, p.White|p.Standing))
+	score += int64(scoreGroups(c, analysis.WhiteGroups, w, p.Black|p.Standing))
+	score -= int64(scoreGroups(c, analysis.BlackGroups, w, p.White|p.Standing))
 
 	if w.Liberties != 0 {
 		wr := p.White &^ p.Standing
 		br := p.Black &^ p.Standing
 		wl := bitboard.Popcount(bitboard.Grow(c, ^p.Black, wr) &^ p.White)
 		bl := bitboard.Popcount(bitboard.Grow(c, ^p.White, br) &^ p.Black)
-		ws += int64(w.Liberties * wl)
-		bs += int64(w.Liberties * bl)
+		score += int64(w.Liberties * wl)
+		score -= int64(w.Liberties * bl)
 	}
 
 	if p.ToMove() == tak.White {
-		return ws - bs
+		return score
 	}
-	return bs - ws
+	return -score
 }
 
 func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) int {
