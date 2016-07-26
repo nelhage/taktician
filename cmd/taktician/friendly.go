@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -115,7 +116,7 @@ func (f *Friendly) HandleChat(who string, msg string) {
 		return
 	}
 
-	switch cmd {
+	switch strings.ToLower(cmd) {
 	case "level":
 		if arg == "max" {
 			f.level = 100

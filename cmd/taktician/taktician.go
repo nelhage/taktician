@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -66,7 +67,7 @@ func (t *Taktician) HandleChat(who string, msg string) {
 		return
 	}
 	log.Printf("chat from=%q msg=%q", who, msg)
-	switch cmd {
+	switch strings.ToLower(cmd) {
 	case "size":
 		sz, err := strconv.Atoi(arg)
 		if err != nil {
