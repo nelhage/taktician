@@ -31,6 +31,9 @@ type Weights struct {
 	GroupLiberties int
 
 	Groups [8]int
+
+	Potential int
+	Threat    int
 }
 
 var defaultWeights = Weights{
@@ -214,6 +217,8 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		score -= int64(w.Liberties * bl)
 	}
 
+	score += scoreThreats(c, w, p)
+
 	if p.ToMove() == tak.White {
 		return score
 	}
@@ -236,6 +241,82 @@ func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) 
 	}
 
 	return sc
+}
+
+func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
+	if ws.Potential == 0 && ws.Threat == 0 {
+		return 0
+	}
+	analysis := p.Analysis()
+	empty := c.Mask &^ (p.White | p.Black)
+
+	countOne := func(gs []uint64, pieces uint64) (int, int) {
+		var place, threat int
+		singles := pieces
+		for _, g := range gs {
+			singles &= ^g
+		}
+		for i, g := range gs {
+			if g&c.Edge == 0 {
+				continue
+			}
+			slides := bitboard.Grow(c, c.Mask&^(p.Standing|p.Caps), pieces&^g)
+			if g&c.L != 0 {
+				place += bitboard.Popcount((g >> 1) & empty & c.R)
+				threat += bitboard.Popcount((g >> 1) & slides & c.R)
+			}
+			if g&c.R != 0 {
+				place += bitboard.Popcount((g << 1) & empty & c.L)
+				threat += bitboard.Popcount((g << 1) & slides & c.L)
+			}
+			if g&c.T != 0 {
+				place += bitboard.Popcount((g >> c.Size) & empty & c.B)
+				threat += bitboard.Popcount((g >> c.Size) & slides & c.B)
+			}
+			if g&c.B != 0 {
+				place += bitboard.Popcount((g << c.Size) & empty & c.T)
+				threat += bitboard.Popcount((g << c.Size) & slides & c.T)
+			}
+			s := singles
+			j := 0
+			for {
+				var other uint64
+				if j < i {
+					other = gs[j]
+					j++
+				} else if s != 0 {
+					next := s & (s - 1)
+					other = s &^ next
+					s = next
+				} else {
+					break
+				}
+				if !((g&c.L != 0 && other&c.R != 0) ||
+					(g&c.R != 0 && other&c.L != 0) ||
+					(g&c.B != 0 && other&c.T != 0) ||
+					(g&c.T != 0 && other&c.B != 0)) {
+					continue
+				}
+				slides := bitboard.Grow(c, c.Mask&^(p.Standing|p.Caps), pieces&^(g|other))
+				isect := bitboard.Grow(c, c.Mask, g) &
+					bitboard.Grow(c, c.Mask, other)
+				place += bitboard.Popcount(isect & empty)
+				threat += bitboard.Popcount(isect & slides)
+			}
+		}
+		return place, threat
+	}
+	wp, wt := countOne(analysis.WhiteGroups, p.White)
+	bp, bt := countOne(analysis.BlackGroups, p.Black)
+
+	if wp+wt > 0 && p.ToMove() == tak.White {
+		return 1 << 20
+	}
+	if bp+bt > 0 && p.ToMove() == tak.White {
+		return -(1 << 20)
+	}
+
+	return int64((wp-bp)*ws.Potential) + int64((wt-bt)*ws.Threat)
 }
 
 func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {

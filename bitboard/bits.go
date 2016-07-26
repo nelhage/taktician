@@ -3,6 +3,7 @@ package bitboard
 type Constants struct {
 	Size       uint
 	L, R, T, B uint64
+	Edge       uint64
 	Mask       uint64
 }
 
@@ -16,12 +17,16 @@ func Precompute(size uint) Constants {
 	c.T = ((1 << size) - 1) << (size * (size - 1))
 	c.B = (1 << size) - 1
 	c.Mask = 1<<(size*size) - 1
+	c.Edge = c.L | c.R | c.B | c.T
 	return c
 }
 
 func Popcount(x uint64) int {
 	// bit population count, see
 	// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+	if x == 0 {
+		return 0
+	}
 	x -= (x >> 1) & 0x5555555555555555
 	x = (x>>2)&0x3333333333333333 + x&0x3333333333333333
 	x += x >> 4

@@ -1,10 +1,14 @@
 package ai
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/tak"
 )
 
 func TestEvaluateWinner(t *testing.T) {
@@ -45,7 +49,10 @@ func benchmarkEval(b *testing.B, tps string) {
 		b.Fatal("tps:", e)
 	}
 	c := bitboard.Precompute(uint(p.Size()))
-	eval := MakeEvaluator(p.Size(), &DefaultWeights[p.Size()])
+	w := DefaultWeights[p.Size()]
+	w.Potential = 100
+	w.Threat = 300
+	eval := MakeEvaluator(p.Size(), &w)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		eval(&c, p)
@@ -58,4 +65,129 @@ func BenchmarkEvalEarlyGame(b *testing.B) {
 
 func BenchmarkEvalMidGame(b *testing.B) {
 	benchmarkEval(b, `x3,2,x/x4,12/1,1,x,1,21C/x,1,x,12111112C,2/2,x,22121,x,2 2 20`)
+}
+
+func board(tpl string, who tak.Color) (*tak.Position, error) {
+	lines := strings.Split(strings.Trim(tpl, " \n"), "\n")
+	var pieces [][]tak.Square
+	for _, l := range lines {
+		bits := strings.Split(l, " ")
+		var row []tak.Square
+		for _, p := range bits {
+			switch p {
+			case "W":
+				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Flat)})
+			case "B":
+				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Flat)})
+			case "WC":
+				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Capstone)})
+			case "BC":
+				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Capstone)})
+			case "WS":
+				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Standing)})
+			case "BS":
+				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Standing)})
+			case ".":
+				row = append(row, tak.Square{})
+			case "":
+			default:
+				return nil, fmt.Errorf("bad piece: %v", p)
+			}
+		}
+		if len(row) != len(lines) {
+			return nil, errors.New("size mismatch")
+		}
+		pieces = append(pieces, row)
+	}
+	ply := 2
+	if who == tak.Black {
+		ply = 3
+	}
+	return tak.FromSquares(tak.Config{Size: len(pieces)}, pieces, ply)
+}
+
+func TestScoreThreats(t *testing.T) {
+	ws := Weights{
+		Potential: 1,
+		Threat:    100,
+	}
+	c := bitboard.Precompute(5)
+
+	cases := []struct {
+		board     string
+		color     tak.Color
+		potential int64
+	}{
+		{`
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+. . . . .`, tak.White, 0},
+		{`
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+W . . . B`, tak.White, 0},
+		{`
+. . . . .
+. . . . .
+. . . . .
+W . . . B
+W . . . B`, tak.White, 0},
+		{`
+. . . . .
+W . . B .
+W . . . B
+W . . . B
+W . . . B`, tak.Black, 1},
+		{`
+. . . . .
+W . . B .
+W . . . B
+W . . . B
+W . . . B`, tak.White, 1 << 20},
+		{`
+BS W . . .
+W  . . B .
+W  . . . B
+W  . . . B
+W  . . . B`, tak.Black, 1},
+		{`
+. W . . .
+W . . B .
+W . . . B
+W . . . B
+W . . . B`, tak.Black, 103},
+		{`
+. W . . .
+. W . B .
+W . . . B
+W . . . B
+W . . . B`, tak.Black, 2},
+		{`
+. W . . .
+B W . B .
+W B . . B
+W . . . B
+W . . . B`, tak.Black, 0},
+		{`
+. W . . .
+B W . B .
+W B W . B
+W . . . B
+W . . . B`, tak.Black, 100},
+	}
+	for i, tc := range cases {
+		pos, e := board(tc.board, tc.color)
+		if e != nil {
+			t.Errorf("parse %d: %v", i, e)
+			continue
+		}
+		score := scoreThreats(&c, &ws, pos)
+		if score != tc.potential {
+			t.Errorf("[%d] got potential=%d != %d", i, score, tc.potential)
+		}
+	}
 }
