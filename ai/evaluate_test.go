@@ -159,7 +159,7 @@ W  . . . B`, tak.Black, 1},
 W . . B .
 W . . . B
 W . . . B
-W . . . B`, tak.Black, 103},
+W . . . B`, tak.Black, 102},
 		{`
 . W . . .
 . W . B .

@@ -261,21 +261,22 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 				continue
 			}
 			slides := bitboard.Grow(c, c.Mask&^(p.Standing|p.Caps), pieces&^g)
+			var pmap, tmap uint64
 			if g&c.L != 0 {
-				place += bitboard.Popcount((g >> 1) & empty & c.R)
-				threat += bitboard.Popcount((g >> 1) & slides & c.R)
+				pmap |= (g >> 1) & empty & c.R
+				tmap |= (g >> 1) & slides & c.R
 			}
 			if g&c.R != 0 {
-				place += bitboard.Popcount((g << 1) & empty & c.L)
-				threat += bitboard.Popcount((g << 1) & slides & c.L)
+				pmap |= (g << 1) & empty & c.L
+				tmap |= (g << 1) & slides & c.L
 			}
 			if g&c.T != 0 {
-				place += bitboard.Popcount((g >> c.Size) & empty & c.B)
-				threat += bitboard.Popcount((g >> c.Size) & slides & c.B)
+				pmap |= (g >> c.Size) & empty & c.B
+				tmap |= (g >> c.Size) & slides & c.B
 			}
 			if g&c.B != 0 {
-				place += bitboard.Popcount((g << c.Size) & empty & c.T)
-				threat += bitboard.Popcount((g << c.Size) & slides & c.T)
+				pmap |= (g << c.Size) & empty & c.T
+				tmap |= (g << c.Size) & slides & c.T
 			}
 			s := singles
 			j := 0
@@ -300,9 +301,11 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 				slides := bitboard.Grow(c, c.Mask&^(p.Standing|p.Caps), pieces&^(g|other))
 				isect := bitboard.Grow(c, c.Mask, g) &
 					bitboard.Grow(c, c.Mask, other)
-				place += bitboard.Popcount(isect & empty)
-				threat += bitboard.Popcount(isect & slides)
+				pmap |= isect & empty
+				tmap |= isect & slides
 			}
+			place += bitboard.Popcount(pmap)
+			threat += bitboard.Popcount(tmap)
 		}
 		return place, threat
 	}
