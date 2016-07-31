@@ -115,6 +115,8 @@ func MakeEvaluator(size int, w *Weights) EvaluationFunc {
 	}
 }
 
+const moveScale = 100
+
 func evaluateTerminal(p *tak.Position, winner tak.Color) int64 {
 	var pieces int64
 	if winner == tak.White {
@@ -126,9 +128,9 @@ func evaluateTerminal(p *tak.Position, winner tak.Color) int64 {
 	case tak.NoColor:
 		return 0
 	case p.ToMove():
-		return MaxEval - int64(p.MoveNumber()) + pieces
+		return MaxEval - moveScale*int64(p.MoveNumber()) + pieces
 	default:
-		return MinEval + int64(p.MoveNumber()) - pieces
+		return MinEval + moveScale*int64(p.MoveNumber()) - pieces
 	}
 }
 
