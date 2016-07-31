@@ -26,20 +26,24 @@ func BenchmarkMinimax(b *testing.B) {
 		Seed:  *seed,
 	})
 
+	base := p.Clone()
+
+	next := tak.Alloc(*size)
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		var e error
 		m := ai.GetMove(context.Background(), p)
-		p, e = p.Move(&m)
+		next, e = p.MovePreallocated(&m, next)
 		if e != nil {
 			b.Fatal("bad move", e)
 		}
+		p, next = next, p
+
 		if over, _ := p.GameOver(); over {
-			p = tak.New(cfg)
-			p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
-			p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
+			p = base.Clone()
 		}
 	}
 }
