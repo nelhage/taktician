@@ -34,6 +34,8 @@ type Weights struct {
 
 	Potential int
 	Threat    int
+
+	Influence int
 }
 
 var defaultWeights = Weights{
@@ -218,6 +220,7 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	}
 
 	score += scoreThreats(c, w, p)
+	score += scoreInfluence(c, w, p)
 
 	if p.ToMove() == tak.White {
 		return score
@@ -340,6 +343,24 @@ func computeInfluence(c *bitboard.Constants, mine uint64, out []uint64) {
 			out[len(out)-1] |= carry
 		}
 	}
+}
+
+func scoreInfluence(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
+	if ws.Influence == 0 {
+		return 0
+	}
+	var wi, bi [3]uint64
+	computeInfluence(c, p.White&^(p.Caps|p.Standing), wi[:])
+	computeInfluence(c, p.Black&^(p.Caps|p.Standing), bi[:])
+	var bc, wc uint64
+	for i := len(wi) - 1; i >= 0; i-- {
+		wb := wi[i] &^ (wc | bc)
+		bb := bi[i] &^ (wc | bc)
+
+		wc |= (wb &^ bb)
+		bc |= (bb &^ wb)
+	}
+	return int64(ws.Influence * (bitboard.Popcount(wc) - bitboard.Popcount(bc)))
 }
 
 func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {

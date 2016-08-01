@@ -228,3 +228,63 @@ W . W . .
 		t.Error("bad saturate")
 	}
 }
+
+func TestScoreInfluence(t *testing.T) {
+	ws := Weights{
+		Influence: 1,
+	}
+	c := bitboard.Precompute(5)
+
+	cases := []struct {
+		board     string
+		influence int64
+	}{
+		{`
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+. . . . .`, 0},
+		{`
+. . . . .
+. . . . .
+. . W . .
+. . . . .
+. . . . .`, 4},
+		{`
+. . . . .
+. . . . .
+. B W B .
+. . . . .
+. . . . .`, -3},
+		{`
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+W . . . B`, 0},
+		{`
+. . . . .
+. . . . .
+. . . . .
+W . . . B
+W . . . B`, 0},
+		{`
+. . . . .
+W . . B .
+W . . . B
+W . . . B
+W . . . B`, 0},
+	}
+	for i, tc := range cases {
+		pos, e := board(tc.board, tak.White)
+		if e != nil {
+			t.Errorf("parse %d: %v", i, e)
+			continue
+		}
+		score := scoreInfluence(&c, &ws, pos)
+		if score != tc.influence {
+			t.Errorf("[%d] got influence=%d != %d", i, score, tc.influence)
+		}
+	}
+}
