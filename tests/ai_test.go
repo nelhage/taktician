@@ -170,7 +170,7 @@ func runTest(t *testing.T, tc *TestCase) {
 			return
 		}
 		var buf bytes.Buffer
-		cli.RenderBoard(&buf, p)
+		cli.RenderBoard(nil, &buf, p)
 		t.Log(buf.String())
 		start := time.Now()
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(tc.limit))

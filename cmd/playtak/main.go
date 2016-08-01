@@ -26,7 +26,16 @@ var (
 	debug = flag.Int("debug", 0, "debug level")
 	limit = flag.Duration("limit", time.Minute, "ai time limit")
 	out   = flag.String("out", "", "write ptn to file")
+
+	unicode = flag.Bool("unicode", false, "render board with utf8 glyphs")
 )
+
+func glyphs() *cli.Glyphs {
+	if *unicode {
+		return &cli.UnicodeGlyphs
+	}
+	return &cli.DefaultGlyphs
+}
 
 type aiWrapper struct {
 	p ai.TakPlayer
@@ -100,6 +109,7 @@ func main() {
 		Out:    os.Stdout,
 		White:  parsePlayer(in, *white),
 		Black:  parsePlayer(in, *black),
+		Glyphs: glyphs(),
 	}
 	st.Play()
 	if *out != "" {

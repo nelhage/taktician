@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/nelhage/taktician/ptn"
@@ -13,14 +14,51 @@ type Player interface {
 	GetMove(p *tak.Position) tak.Move
 }
 
+type GlyphSet struct {
+	Flat     string
+	Standing string
+	Capstone string
+}
+
+type Glyphs struct {
+	White, Black GlyphSet
+}
+
 type CLI struct {
 	moves []tak.Move
 	p     *tak.Position
 
 	Config tak.Config
+	Glyphs *Glyphs
 	Out    io.Writer
 	White  Player
 	Black  Player
+}
+
+var DefaultGlyphs = Glyphs{
+	White: GlyphSet{
+		Flat:     "W",
+		Standing: "WS",
+		Capstone: "WC",
+	},
+	Black: GlyphSet{
+		Flat:     "B",
+		Standing: "BS",
+		Capstone: "BC",
+	},
+}
+
+var UnicodeGlyphs = Glyphs{
+	White: GlyphSet{
+		Flat:     "□",
+		Standing: "║",
+		Capstone: "♙",
+	},
+	Black: GlyphSet{
+		Flat:     "▪",
+		Standing: "┃",
+		Capstone: "♟",
+	},
 }
 
 func (c *CLI) Play() *tak.Position {
@@ -73,17 +111,39 @@ func (c *CLI) Moves() []tak.Move {
 }
 
 func (c *CLI) render() {
-	RenderBoard(c.Out, c.p)
+	RenderBoard(c.Glyphs, c.Out, c.p)
 }
 
-func RenderBoard(out io.Writer, p *tak.Position) {
+func RenderBoard(g *Glyphs, out io.Writer, p *tak.Position) {
+	if g == nil {
+		g = &DefaultGlyphs
+	}
 	fmt.Fprintln(out)
 	fmt.Fprintf(out, "[%s to play]\n", p.ToMove())
 	w := tabwriter.NewWriter(out, 4, 8, 1, '\t', 0)
 	for y := p.Size() - 1; y >= 0; y-- {
 		fmt.Fprintf(w, "%c.\t", '1'+y)
 		for x := 0; x < p.Size(); x++ {
-			fmt.Fprintf(w, "%v\t", p.At(x, y))
+			var stk []string
+			for _, stone := range p.At(x, y) {
+				switch stone {
+				case tak.MakePiece(tak.White, tak.Flat):
+					stk = append(stk, g.White.Flat)
+				case tak.MakePiece(tak.White, tak.Standing):
+					stk = append(stk, g.White.Standing)
+				case tak.MakePiece(tak.White, tak.Capstone):
+					stk = append(stk, g.White.Capstone)
+				case tak.MakePiece(tak.Black, tak.Flat):
+					stk = append(stk, g.Black.Flat)
+				case tak.MakePiece(tak.Black, tak.Standing):
+					stk = append(stk, g.Black.Standing)
+				case tak.MakePiece(tak.Black, tak.Capstone):
+					stk = append(stk, g.Black.Capstone)
+				default:
+					panic(fmt.Sprintf("bad stone %v", stone))
+				}
+			}
+			fmt.Fprintf(w, "[%s]\t", strings.Join(stk, " "))
 		}
 		fmt.Fprintf(w, "\n")
 	}

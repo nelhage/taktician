@@ -41,7 +41,7 @@ func playPTN(t *testing.T, p *ptn.PTN) {
 			if e != nil {
 				fmt.Printf("illegal move: %s\n", ptn.FormatMove(&m.Move))
 				fmt.Printf("move=%d\n", g.MoveNumber())
-				cli.RenderBoard(os.Stdout, g)
+				cli.RenderBoard(nil, os.Stdout, g)
 				t.Fatal("illegal move")
 			}
 			g = next
