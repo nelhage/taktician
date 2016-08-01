@@ -3,6 +3,7 @@ package ai
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -189,5 +190,41 @@ W . . . B`, tak.Black, 100},
 		if score != tc.potential {
 			t.Errorf("[%d] got potential=%d != %d", i, score, tc.potential)
 		}
+	}
+}
+
+func TestCalculateInfluence(t *testing.T) {
+	p, e := board(`
+. W . . .
+W . W . .
+. W . . .
+. . . . .
+. . . . .
+`, tak.White)
+	if e != nil {
+		t.Fatal(e)
+	}
+	c := bitboard.Precompute(uint(p.Size()))
+
+	var out [3]uint64
+	computeInfluence(&c, p.White, out[:])
+	expect := []uint64{
+		0x10100,
+		0x1405,
+		0x40,
+	}
+	for i, o := range out {
+		if o != expect[i] {
+			t.Errorf("[%d]=%25s != %25s",
+				i,
+				strconv.FormatUint(o, 2),
+				strconv.FormatUint(expect[i], 2))
+		}
+	}
+
+	var sat [2]uint64
+	computeInfluence(&c, p.White, sat[:])
+	if sat[1] != expect[1]|expect[2] {
+		t.Error("bad saturate")
 	}
 }

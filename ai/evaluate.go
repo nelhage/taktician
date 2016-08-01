@@ -322,6 +322,26 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 	return int64((wp-bp)*ws.Potential) + int64((wt-bt)*ws.Threat)
 }
 
+func computeInfluence(c *bitboard.Constants, mine uint64, out []uint64) {
+	for mine != 0 {
+		next := mine & (mine - 1)
+		bit := mine &^ next
+		mine = next
+
+		g := bitboard.Grow(c, c.Mask, bit) &^ bit
+
+		carry := g
+		for i := 0; carry != 0 && i < len(out); i++ {
+			cout := out[i] & carry
+			out[i] ^= carry
+			carry = cout
+		}
+		if carry != 0 {
+			out[len(out)-1] |= carry
+		}
+	}
+}
+
 func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 	tw := tabwriter.NewWriter(out, 4, 8, 1, '\t', 0)
 	fmt.Fprintf(tw, "\twhite\tblack\n")
