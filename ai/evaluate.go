@@ -66,6 +66,9 @@ var defaultWeights = Weights{
 		100, // 3
 		300, // 4
 	},
+
+	Potential: 100,
+	Threat:    300,
 }
 
 var defaultWeights6 = Weights{
@@ -97,6 +100,9 @@ var defaultWeights6 = Weights{
 		300, // 4
 		500, // 5
 	},
+
+	Potential: 100,
+	Threat:    300,
 }
 
 var DefaultWeights = []Weights{
