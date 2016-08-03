@@ -1,0 +1,33 @@
+[Size "5"]
+[Date "2016-08-02"]
+[Time "2016-08-02T16:10:53Z"]
+[Player1 "Guest79"]
+[Player2 "TakticianBot"]
+[Result "R-0"]
+[Id "72924"]
+[Depth "5"]
+[Move "3 black"]
+[BadMove "b5"]
+[BadMove "c5"]
+[BadMove "d5"]
+[Move "4 black"]
+[BadMove_ "d5"]
+
+
+1. a5 a1
+2. b1 c1
+3. b2 b3
+4. Cc2 d5
+5. d2 e2
+6. d1 b3-
+7. e1 e2-
+8. e2 2e1+
+9. e1 c1<
+10. c1 c5
+11. c2< 2b1>
+12. c2 3c1>12
+13. d1> 3e2-
+14. d1> Cb1
+15. 4e1+112 Sa2
+16. e5
+R-0
