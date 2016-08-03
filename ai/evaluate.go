@@ -46,7 +46,7 @@ var defaultWeights = Weights{
 
 	FlatCaptives: FlatScores{
 		Hard: 125,
-		Soft: -75,
+		Soft: -100,
 	},
 	StandingCaptives: FlatScores{
 		Hard: 125,
