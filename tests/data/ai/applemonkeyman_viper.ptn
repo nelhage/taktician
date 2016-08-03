@@ -6,10 +6,6 @@
 [Result "R-0"]
 [Id "72924"]
 [Depth "5"]
-[Move "3 black"]
-[BadMove "b5"]
-[BadMove "c5"]
-[BadMove "d5"]
 [Move "4 black"]
 [BadMove "d5"]
 
