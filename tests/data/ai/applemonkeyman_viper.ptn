@@ -11,7 +11,7 @@
 [BadMove "c5"]
 [BadMove "d5"]
 [Move "4 black"]
-[BadMove_ "d5"]
+[BadMove "d5"]
 
 
 1. a5 a1
