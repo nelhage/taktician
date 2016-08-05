@@ -324,7 +324,7 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 	if wp+wt > 0 && p.ToMove() == tak.White {
 		return 1 << 20
 	}
-	if bp+bt > 0 && p.ToMove() == tak.White {
+	if bp+bt > 0 && p.ToMove() == tak.Black {
 		return -(1 << 20)
 	}
 

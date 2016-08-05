@@ -179,6 +179,18 @@ B W . B .
 W B W . B
 W . . . B
 W . . . B`, tak.Black, 100},
+		{`
+W W . . B
+. W . . B
+. W . . B
+. . . . .
+. . . . B`, tak.White, -1},
+		{`
+W W . . B
+. W . . B
+. W . . B
+. . . . .
+. . . . B`, tak.Black, -(1 << 20)},
 	}
 	for i, tc := range cases {
 		pos, e := board(tc.board, tc.color)
