@@ -228,6 +228,42 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	return rv
 }
 
+func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.Move, int64) {
+	var out [][]tak.Move
+	pv, v, st := ai.Analyze(ctx, p)
+	mg := &ai.stack[0].mg
+	*mg = moveGenerator{
+		ai:    ai,
+		ply:   0,
+		depth: st.Depth,
+		p:     p,
+		pv:    pv,
+	}
+	if ai.cfg.Debug > 1 {
+		log.Printf("[all-search] begin search depth=%d pv=%s v=%d",
+			st.Depth, formatpv(pv), v)
+	}
+	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
+		ai.stack[0].m = m
+		// we want to find moves in (v-1, v+1) (i.e. == v). We
+		// invert and negate that to find the α-β window for
+		// the child search: (-v-1, -v+1)
+		ms, cv := ai.minimax(child, 1, st.Depth-1, pv[1:],
+			-v-1, -v+1)
+		cv = -cv
+		if ai.cfg.Debug > 2 {
+			log.Printf("[all-search] m=%s v=%d pv=%s",
+				ptn.FormatMove(&m), cv, formatpv(ms))
+		}
+		if cv != v {
+			continue
+		}
+		outpv := []tak.Move{m}
+		out = append(out, append(outpv, ms...))
+	}
+	return out, v
+}
+
 func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, int64, Stats) {
 	if m.cfg.Size != p.Size() {
 		panic("Analyze: wrong size")

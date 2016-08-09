@@ -151,7 +151,7 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(*timeLimit))
 	defer cancel()
-	pv, val, _ := player.Analyze(ctx, p)
+	pvs, val := player.AnalyzeAll(ctx, p)
 	if !*quiet {
 		cli.RenderBoard(os.Stdout, p)
 		if *explain {
@@ -159,11 +159,13 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 		}
 	}
 	fmt.Printf("AI analysis:\n")
-	fmt.Printf(" pv=")
-	for _, m := range pv {
-		fmt.Printf("%s ", ptn.FormatMove(&m))
+	for _, pv := range pvs {
+		fmt.Printf(" pv=")
+		for _, m := range pv {
+			fmt.Printf("%s ", ptn.FormatMove(&m))
+		}
+		fmt.Printf("\n")
 	}
-	fmt.Printf("\n")
 	fmt.Printf(" value=%d\n", val)
 	if *tps {
 		fmt.Printf("[TPS \"%s\"]\n", ptn.FormatTPS(p))
@@ -177,7 +179,7 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 	}
 	fmt.Println()
 
-	for _, m := range pv {
+	for _, m := range pvs[0] {
 		n, e := p.Move(&m)
 		if e != nil {
 			log.Printf("illegal move in pv: %s: %v", ptn.FormatMove(&m), e)
