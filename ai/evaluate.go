@@ -35,7 +35,8 @@ type Weights struct {
 	Potential int
 	Threat    int
 
-	Influence int
+	EmptyControl int
+	FlatControl  int
 }
 
 var defaultWeights = Weights{
@@ -57,8 +58,6 @@ var defaultWeights = Weights{
 		Soft: -50,
 	},
 
-	Liberties: 20,
-
 	Groups: [8]int{
 		0,   // 0
 		0,   // 1
@@ -69,6 +68,9 @@ var defaultWeights = Weights{
 
 	Potential: 100,
 	Threat:    300,
+
+	EmptyControl: 20,
+	FlatControl:  50,
 }
 
 var defaultWeights6 = Weights{
@@ -90,8 +92,6 @@ var defaultWeights6 = Weights{
 		Soft: -75,
 	},
 
-	Liberties: 20,
-
 	Groups: [8]int{
 		0,   // 0
 		0,   // 1
@@ -103,6 +103,9 @@ var defaultWeights6 = Weights{
 
 	Potential: 100,
 	Threat:    300,
+
+	EmptyControl: 20,
+	FlatControl:  50,
 }
 
 var DefaultWeights = []Weights{
@@ -226,7 +229,7 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	}
 
 	score += scoreThreats(c, w, p)
-	score += scoreInfluence(c, w, p)
+	score += scoreControl(c, w, p)
 
 	if p.ToMove() == tak.White {
 		return score
@@ -351,10 +354,7 @@ func computeInfluence(c *bitboard.Constants, mine uint64, out []uint64) {
 	}
 }
 
-func scoreInfluence(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
-	if ws.Influence == 0 {
-		return 0
-	}
+func computeControl(c *bitboard.Constants, p *tak.Position) (uint64, uint64) {
 	var wi, bi [3]uint64
 	computeInfluence(c, p.White&^(p.Caps|p.Standing), wi[:])
 	computeInfluence(c, p.Black&^(p.Caps|p.Standing), bi[:])
@@ -366,7 +366,29 @@ func scoreInfluence(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 		wc |= (wb &^ bb)
 		bc |= (bb &^ wb)
 	}
-	return int64(ws.Influence * (bitboard.Popcount(wc) - bitboard.Popcount(bc)))
+	block := bitboard.Grow(c, c.Mask, p.Standing)
+	wcap := bitboard.Grow(c, c.Mask, p.Caps&p.White)
+	bcap := bitboard.Grow(c, c.Mask, p.Caps&p.Black)
+	wc |= wcap &^ bcap
+	bc |= bcap &^ wcap
+	wc &= ^block
+	bc &= ^block
+	return wc, bc
+}
+
+func scoreControl(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
+	if ws.EmptyControl == 0 && ws.FlatControl == 0 {
+		return 0
+	}
+	wc, bc := computeControl(c, p)
+
+	empty := c.Mask &^ (p.White | p.Black)
+	flat := (p.White | p.Black) &^ (p.Standing | p.Caps)
+	return int64(
+		ws.EmptyControl*
+			(bitboard.Popcount(wc&empty)-bitboard.Popcount(bc&empty)) +
+			ws.FlatControl*
+				(bitboard.Popcount(wc&flat)-bitboard.Popcount(bc&flat)))
 }
 
 func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {

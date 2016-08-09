@@ -241,9 +241,10 @@ W . W . .
 	}
 }
 
-func TestScoreInfluence(t *testing.T) {
+func TestScoreControl(t *testing.T) {
 	ws := Weights{
-		Influence: 1,
+		EmptyControl: 1,
+		FlatControl:  100,
 	}
 	c := bitboard.Precompute(5)
 
@@ -268,7 +269,7 @@ func TestScoreInfluence(t *testing.T) {
 . . . . .
 . B W B .
 . . . . .
-. . . . .`, -3},
+. . . . .`, 96},
 		{`
 . . . . .
 . . . . .
@@ -286,7 +287,13 @@ W . . . B`, 0},
 W . . B .
 W . . . B
 W . . . B
-W . . . B`, 0},
+W . . . B`, 99},
+		{`
+. .  .  . .
+. .  .  . .
+. B  WC . .
+. .  B  . .
+. .  .  . .`, 197},
 	}
 	for i, tc := range cases {
 		pos, e := board(tc.board, tak.White)
@@ -294,7 +301,7 @@ W . . . B`, 0},
 			t.Errorf("parse %d: %v", i, e)
 			continue
 		}
-		score := scoreInfluence(&c, &ws, pos)
+		score := scoreControl(&c, &ws, pos)
 		if score != tc.influence {
 			t.Errorf("[%d] got influence=%d != %d", i, score, tc.influence)
 		}
