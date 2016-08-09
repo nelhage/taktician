@@ -22,6 +22,9 @@ func wrapHash(tbl map[uint64][]*tak.Position, eval ai.EvaluationFunc) ai.Evaluat
 }
 
 func equal(a, b *tak.Position) bool {
+	if a.ToMove() != b.ToMove() {
+		return false
+	}
 	if a.White != b.White {
 		return false
 	}
