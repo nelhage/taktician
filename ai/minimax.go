@@ -99,6 +99,8 @@ type MinimaxConfig struct {
 	Debug int
 	Seed  int64
 
+	DebugTable bool
+
 	RandomizeWindow int64
 	RandomizeScale  int64
 
@@ -405,6 +407,14 @@ func (ai *MinimaxAI) minimax(
 
 	te := ai.ttGet(p.Hash())
 	if te != nil {
+		if ai.cfg.DebugTable {
+			saved := ptn.FormatTPS(te.p)
+			mine := ptn.FormatTPS(p)
+			if saved != mine {
+				log.Printf("tt collision saved=%q mine=%q",
+					saved, mine)
+			}
+		}
 		ai.st.TTHits++
 		teSuffices := false
 		if te.depth >= depth {
@@ -548,6 +558,9 @@ func (ai *MinimaxAI) minimax(
 			te.bound = lowerBound
 		} else {
 			te.bound = exactBound
+		}
+		if ai.cfg.DebugTable {
+			te.p = p.Clone()
 		}
 	}
 

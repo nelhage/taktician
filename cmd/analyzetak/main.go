@@ -29,9 +29,10 @@ var (
 	black = flag.Bool("black", false, "only analyze black's move")
 	white = flag.Bool("white", false, "only analyze white's move")
 
-	debug     = flag.Int("debug", 1, "debug level")
-	depth     = flag.Int("depth", 0, "minimax depth")
-	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
+	debug      = flag.Int("debug", 1, "debug level")
+	debugTable = flag.Bool("debug-table", false, "debug table")
+	depth      = flag.Int("depth", 0, "minimax depth")
+	timeLimit  = flag.Duration("limit", time.Minute, "limit of how much time to use")
 
 	seed         = flag.Int64("seed", 0, "specify a seed")
 	sort         = flag.Bool("sort", true, "sort moves via history heuristic")
@@ -119,10 +120,11 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		}
 	}
 	return ai.NewMinimax(ai.MinimaxConfig{
-		Size:  p.Size(),
-		Depth: *depth,
-		Seed:  *seed,
-		Debug: *debug,
+		Size:       p.Size(),
+		Depth:      *depth,
+		Seed:       *seed,
+		Debug:      *debug,
+		DebugTable: *debugTable,
 
 		NoSort:         !*sort,
 		NoTable:        !*table,
