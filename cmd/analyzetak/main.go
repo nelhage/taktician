@@ -89,25 +89,21 @@ func main() {
 			log.Fatal("initial:", e)
 		}
 		w, b := makeAI(p), makeAI(p)
-		for _, o := range parsed.Ops {
-			m, ok := o.(*ptn.Move)
-			if !ok {
-				continue
-			}
+		it := parsed.Iterator()
+		for it.Next() {
+			p := it.Position()
+			m := it.PeekMove()
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
-				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
+				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m))
 				analyzeWith(w, p)
 			case p.ToMove() == tak.Black && color != tak.White:
-				fmt.Printf("%d. ... %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m.Move))
+				fmt.Printf("%d. ... %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m))
 				analyzeWith(b, p)
 			}
-			var e error
-			p, e = p.Move(&m.Move)
-			if e != nil {
-				log.Fatalf("illegal move %s: %v",
-					ptn.FormatMove(&m.Move), e)
-			}
+		}
+		if e := it.Err(); e != nil {
+			log.Fatalf("%d: %v", it.PTNMove(), e)
 		}
 	}
 }

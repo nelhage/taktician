@@ -52,32 +52,17 @@ func addSeeds(g *ptn.PTN, ps []*tak.Position) ([]*tak.Position, error) {
 		maxPly = 10
 	)
 	ply := 0
-	p, e := g.InitialPosition()
-	if e != nil {
-		return nil, e
-	}
-	for _, op := range g.Ops {
-		mo, ok := op.(*ptn.Move)
-		if !ok {
-			continue
-		}
+	it := g.Iterator()
+	for it.Next() {
 		ply++
-		next, e := p.Move(&mo.Move)
-		if e != nil {
-			return nil, fmt.Errorf("ply %d: %v", ply, e)
-		}
-		if ok, _ := next.GameOver(); ok {
-			break
-		}
 		if ply >= minPly {
-			ps = append(ps, next)
+			ps = append(ps, it.Position())
 		}
-		p = next
 		if ply >= maxPly {
 			break
 		}
 	}
-	return ps, nil
+	return ps, it.Err()
 }
 
 func readSeeds(d string) ([]*tak.Position, error) {
