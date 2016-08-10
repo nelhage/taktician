@@ -502,6 +502,11 @@ func (ai *MinimaxAI) minimax(
 			ms, v = ai.minimax(child, ply+1, depth-1, newpv, -β, -α)
 		}
 		v = -v
+		if ai.cfg.Debug > 4+ply {
+			log.Printf("%*s search ply=%d d=%d e=%d m=%s w=(%d,%d) v=%d pv=%s",
+				ply, "", ply, depth, ai.st.Extensions,
+				ptn.FormatMove(&m), α, β, v, formatpv(ms))
+		}
 
 		if len(best) == 0 {
 			best = append(best[:0], m)
