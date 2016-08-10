@@ -453,7 +453,7 @@ func (ai *MinimaxAI) minimax(
 			}
 		}
 	}
-	if β != α+1 && !ai.cfg.NoExtendForces && depth+ply < 4*ai.depth/3 {
+	if /* ai.cfg.NoExtendForces && depth+ply < 4*ai.depth/3 */ false {
 		ai.stack[ply].m = tak.Move{Type: tak.Pass}
 		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
 		if e == nil {
