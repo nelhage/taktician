@@ -151,8 +151,12 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 		}
 		return
 	}
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(*timeLimit))
-	defer cancel()
+	ctx := context.Background()
+	if *timeLimit != 0 {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, *timeLimit)
+		defer cancel()
+	}
 	pvs, val := player.AnalyzeAll(ctx, p)
 	if !*quiet {
 		cli.RenderBoard(os.Stdout, p)
