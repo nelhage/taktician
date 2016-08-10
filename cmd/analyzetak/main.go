@@ -181,6 +181,10 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 	}
 	fmt.Println()
 
+	if len(pvs) == 0 || *quiet {
+		return
+	}
+
 	for _, m := range pvs[0] {
 		n, e := p.Move(&m)
 		if e != nil {
@@ -193,13 +197,11 @@ func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
 		p = n
 	}
 
-	if !*quiet {
-		fmt.Println("Resulting position:")
-		cli.RenderBoard(os.Stdout, p)
-		if *explain {
-			ai.ExplainScore(player, os.Stdout, p)
-		}
-		fmt.Println()
-		fmt.Println()
+	fmt.Println("Resulting position:")
+	cli.RenderBoard(os.Stdout, p)
+	if *explain {
+		ai.ExplainScore(player, os.Stdout, p)
 	}
+	fmt.Println()
+	fmt.Println()
 }
