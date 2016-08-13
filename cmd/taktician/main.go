@@ -103,6 +103,7 @@ func main() {
 					}
 					if strings.HasPrefix(line, "Game Start") {
 						bot.PlayGame(client, b, line)
+						time.Sleep(100 * time.Millisecond)
 						break recvLoop
 					}
 					if strings.HasPrefix(line, "Shout") {
