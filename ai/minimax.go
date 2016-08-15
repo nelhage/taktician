@@ -231,7 +231,6 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 }
 
 func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.Move, int64) {
-	var out [][]tak.Move
 	pv, v, st := ai.Analyze(ctx, p)
 	mg := &ai.stack[0].mg
 	*mg = moveGenerator{
@@ -245,6 +244,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 		log.Printf("[all-search] begin search depth=%d pv=%s v=%d",
 			st.Depth, formatpv(pv), v)
 	}
+	out := [][]tak.Move{pv}
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
 		ai.stack[0].m = m
 		// we want to find moves in (v-1, v+1) (i.e. == v). We
@@ -258,6 +258,9 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 				ptn.FormatMove(&m), cv, formatpv(ms))
 		}
 		if cv != v {
+			continue
+		}
+		if m.Equal(&pv[0]) {
 			continue
 		}
 		outpv := []tak.Move{m}
