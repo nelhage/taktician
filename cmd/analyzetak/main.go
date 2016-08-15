@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -24,10 +25,11 @@ var (
 	explain = flag.Bool("explain", false, "explain scoring")
 	eval    = flag.Bool("evaluate", false, "only show static evaluation")
 
-	move  = flag.Int("move", 0, "PTN move number to analyze")
-	final = flag.Bool("final", false, "analyze final position only")
-	black = flag.Bool("black", false, "only analyze black's move")
-	white = flag.Bool("white", false, "only analyze white's move")
+	move    = flag.Int("move", 0, "PTN move number to analyze")
+	final   = flag.Bool("final", false, "analyze final position only")
+	black   = flag.Bool("black", false, "only analyze black's move")
+	white   = flag.Bool("white", false, "only analyze white's move")
+	variant = flag.String("variant", "", "apply the listed moves after the given position")
 
 	debug      = flag.Int("debug", 1, "debug level")
 	debugTable = flag.Bool("debug-table", false, "debug table")
@@ -83,6 +85,13 @@ func main() {
 			log.Fatal("find move:", e)
 		}
 
+		if *variant != "" {
+			p, e = applyVariant(p, *variant)
+			if e != nil {
+				log.Fatal("-variant:", e)
+			}
+		}
+
 		analyze(p)
 	} else {
 		p, e := parsed.InitialPosition()
@@ -107,6 +116,21 @@ func main() {
 			log.Fatalf("%d: %v", it.PTNMove(), e)
 		}
 	}
+}
+
+func applyVariant(p *tak.Position, variant string) (*tak.Position, error) {
+	ms := strings.Split(variant, " ")
+	for _, moveStr := range ms {
+		m, e := ptn.ParseMove(moveStr)
+		if e != nil {
+			return nil, e
+		}
+		p, e = p.Move(&m)
+		if e != nil {
+			return nil, fmt.Errorf("bad move `%s': %v", moveStr, e)
+		}
+	}
+	return p, nil
 }
 
 func makeAI(p *tak.Position) *ai.MinimaxAI {
