@@ -296,7 +296,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 
 	var next []tak.Move
 	ms := make([]tak.Move, 0, maxDepth)
-	var v int64
+	var v, nv int64
 	top := time.Now()
 	var prevEval uint64
 	var branchSum uint64
@@ -314,10 +314,11 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
 		m.depth = i + base
-		next, v = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
+		next, nv = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
 		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
 			break
 		}
+		v = nv
 		st = m.st
 		ms = append(ms[:0], next...)
 		timeUsed := time.Now().Sub(top)
