@@ -37,6 +37,9 @@ type Weights struct {
 
 	EmptyControl int
 	FlatControl  int
+
+	Center        int
+	CenterControl int
 }
 
 var defaultWeights = Weights{
@@ -71,6 +74,9 @@ var defaultWeights = Weights{
 
 	EmptyControl: 20,
 	FlatControl:  50,
+
+	Center:        40,
+	CenterControl: 10,
 }
 
 var defaultWeights6 = Weights{
@@ -106,6 +112,9 @@ var defaultWeights6 = Weights{
 
 	EmptyControl: 20,
 	FlatControl:  50,
+
+	Center:        40,
+	CenterControl: 10,
 }
 
 var DefaultWeights = []Weights{
@@ -184,6 +193,9 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	score -= int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
 	score += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
 	score -= int64(bitboard.Popcount(p.Black&p.Caps) * w.Capstone)
+
+	score += int64(bitboard.Popcount(p.White&^c.Edge) * w.Center)
+	score -= int64(bitboard.Popcount(p.Black&^c.Edge) * w.Center)
 
 	for i, h := range p.Height {
 		if h <= 1 {
@@ -384,11 +396,14 @@ func scoreControl(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 
 	empty := c.Mask &^ (p.White | p.Black)
 	flat := (p.White | p.Black) &^ (p.Standing | p.Caps)
-	return int64(
-		ws.EmptyControl*
-			(bitboard.Popcount(wc&empty)-bitboard.Popcount(bc&empty)) +
-			ws.FlatControl*
-				(bitboard.Popcount(wc&flat)-bitboard.Popcount(bc&flat)))
+	var s int64
+	s += int64(ws.EmptyControl *
+		(bitboard.Popcount(wc&empty) - bitboard.Popcount(bc&empty)))
+	s += int64(ws.FlatControl *
+		(bitboard.Popcount(wc&flat) - bitboard.Popcount(bc&flat)))
+	s += int64(ws.CenterControl *
+		(bitboard.Popcount(wc&^c.Edge) - bitboard.Popcount(bc&^c.Edge)))
+	return s
 }
 
 func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
