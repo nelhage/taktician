@@ -79,6 +79,7 @@ func TestParseMoveErrors(t *testing.T) {
 		"6a1",
 		"6a1>2222",
 		"a",
+		"3a",
 	}
 	for _, b := range bad {
 		_, e := ParseMove(b)

@@ -40,6 +40,10 @@ func ParseMove(move string) (tak.Move, error) {
 			m.Type = tak.PlaceFlat
 		}
 	}
+	if len(move) < i+2 {
+		return tak.Move{}, errors.New("move too short")
+	}
+
 	if move[i] >= 'a' && move[i] <= 'h' {
 		m.X = int(move[i] - 'a')
 		i++
