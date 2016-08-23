@@ -207,6 +207,7 @@ var levels = []struct {
 	{4, ai.DefaultWeights[5]},
 	{5, ai.DefaultWeights[5]},
 	{7, ai.DefaultWeights[5]},
+	{0, ai.DefaultWeights[5]},
 }
 
 func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
