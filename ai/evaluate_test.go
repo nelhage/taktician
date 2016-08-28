@@ -112,7 +112,6 @@ func TestScoreThreats(t *testing.T) {
 		Potential: 1,
 		Threat:    100,
 	}
-	c := bitboard.Precompute(5)
 
 	cases := []struct {
 		board     string
@@ -191,6 +190,13 @@ W W . . B
 . W . . B
 . . . . .
 . . . . B`, tak.Black, -(1 << 20)},
+		{`
+. . B  . .
+. . B  . .
+. . B  . .
+. . .  . .
+. . BS . .`, tak.Black, 0,
+		},
 	}
 	for i, tc := range cases {
 		pos, e := board(tc.board, tc.color)
@@ -198,6 +204,7 @@ W W . . B
 			t.Errorf("parse %d: %v", i, e)
 			continue
 		}
+		c := bitboard.Precompute(uint(pos.Size()))
 		score := scoreThreats(&c, &ws, pos)
 		if score != tc.potential {
 			t.Errorf("[%d] got potential=%d != %d", i, score, tc.potential)

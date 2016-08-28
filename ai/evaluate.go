@@ -281,8 +281,9 @@ func countThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
 			if g&c.Edge == 0 {
 				continue
 			}
-			slides := bitboard.Grow(c, c.Mask&^(p.Standing|p.Caps), pieces&^g)
 			var pmap, tmap uint64
+
+			slides := bitboard.Grow(c, c.Mask&^(p.Standing|p.Caps), pieces&^g)
 			if g&c.L != 0 {
 				pmap |= (g >> 1) & empty & c.R
 				tmap |= (g >> 1) & slides & c.R
@@ -299,6 +300,7 @@ func countThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
 				pmap |= (g << c.Size) & empty & c.T
 				tmap |= (g << c.Size) & slides & c.T
 			}
+
 			s := singles
 			j := 0
 			for {
@@ -330,8 +332,8 @@ func countThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
 		}
 		return place, threat
 	}
-	wp, wt = countOne(analysis.WhiteGroups, p.White)
-	bp, bt = countOne(analysis.BlackGroups, p.Black)
+	wp, wt = countOne(analysis.WhiteGroups, p.White&^(p.Standing|p.Caps))
+	bp, bt = countOne(analysis.BlackGroups, p.Black&^(p.Standing|p.Caps))
 	return
 }
 
