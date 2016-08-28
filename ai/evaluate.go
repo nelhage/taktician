@@ -267,10 +267,7 @@ func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) 
 	return sc
 }
 
-func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
-	if ws.Potential == 0 && ws.Threat == 0 {
-		return 0
-	}
+func countThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
 	analysis := p.Analysis()
 	empty := c.Mask &^ (p.White | p.Black)
 
@@ -333,8 +330,17 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 		}
 		return place, threat
 	}
-	wp, wt := countOne(analysis.WhiteGroups, p.White)
-	bp, bt := countOne(analysis.BlackGroups, p.Black)
+	wp, wt = countOne(analysis.WhiteGroups, p.White)
+	bp, bt = countOne(analysis.BlackGroups, p.Black)
+	return
+}
+
+func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
+	if ws.Potential == 0 && ws.Threat == 0 {
+		return 0
+	}
+
+	wp, wt, bp, bt := countThreats(c, p)
 
 	if wp+wt > 0 && p.ToMove() == tak.White {
 		return 1 << 20
@@ -460,6 +466,10 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 	bl := bitboard.Popcount(bitboard.Grow(&m.c, ^p.White, br) &^ p.Black)
 
 	fmt.Fprintf(tw, "liberties\t%d\t%d\n", wl, bl)
+
+	wp, wt, bp, bt := countThreats(&m.c, p)
+	fmt.Fprintf(tw, "potential\t%d\t%d\n", wp, bp)
+	fmt.Fprintf(tw, "threat\t%d\t%d\n", wt, bt)
 
 	var allg uint64
 	for i, g := range analysis.WhiteGroups {
