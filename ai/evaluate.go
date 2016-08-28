@@ -197,12 +197,13 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	score += int64(bitboard.Popcount(p.White&^c.Edge) * w.Center)
 	score -= int64(bitboard.Popcount(p.Black&^c.Edge) * w.Center)
 
+	mask := uint64((1 << c.Size) - 1)
 	for i, h := range p.Height {
 		if h <= 1 {
 			continue
 		}
 		bit := uint64(1 << uint(i))
-		s := p.Stacks[i] & ((1 << (h - 1)) - 1)
+		s := p.Stacks[i] & ((1 << (h - 1)) - 1) & mask
 		var hf, sf int
 		var sign int64
 		if p.White&bit != 0 {
