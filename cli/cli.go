@@ -50,14 +50,14 @@ var DefaultGlyphs = Glyphs{
 
 var UnicodeGlyphs = Glyphs{
 	White: GlyphSet{
-		Flat:     "□",
+		Flat:     "⬜",
 		Standing: "║",
-		Capstone: "♙",
+		Capstone: "△",
 	},
 	Black: GlyphSet{
-		Flat:     "▪",
+		Flat:     "⬛",
 		Standing: "┃",
-		Capstone: "♟",
+		Capstone: "▲",
 	},
 }
 
