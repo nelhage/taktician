@@ -68,7 +68,7 @@ func TestAIRegression(t *testing.T) {
 func preparePTN(p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
 		p:     p,
-		cfg:   ai.MinimaxConfig{Depth: 5},
+		cfg:   ai.MinimaxConfig{Depth: 5, Seed: 1},
 		limit: time.Minute,
 	}
 	if *overrideConfig != "" {
