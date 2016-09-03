@@ -22,6 +22,7 @@ const (
 	tableSize uint64 = (1 << 20)
 
 	maxDepth = 15
+	maxMoves = 500
 )
 
 type EvaluationFunc func(c *bitboard.Constants, p *tak.Position) int64
@@ -41,11 +42,13 @@ type MinimaxAI struct {
 	table []tableEntry
 	depth int
 	stack [maxDepth]struct {
-		p     *tak.Position
-		mg    moveGenerator
-		moves [500]tak.Move
-		pv    [maxDepth]tak.Move
-		m     tak.Move
+		p  *tak.Position
+		mg moveGenerator
+		pv [maxDepth]tak.Move
+		m  tak.Move
+
+		moves [maxMoves]tak.Move
+		vals  [maxMoves]int
 	}
 
 	cancel *int32

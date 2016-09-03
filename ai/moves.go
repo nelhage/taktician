@@ -19,14 +19,29 @@ type moveGenerator struct {
 	i  int
 }
 
-type sortMoves struct{ m *moveGenerator }
+type sortMoves struct {
+	ms []tak.Move
+	vs []int
+}
 
-func (s sortMoves) Len() int { return len(s.m.ms) }
+func (s sortMoves) Len() int { return len(s.ms) }
 func (s sortMoves) Less(i, j int) bool {
-	return s.m.ai.history[s.m.ms[i].Hash()] > s.m.ai.history[s.m.ms[j].Hash()]
+	return s.vs[i] > s.vs[j]
 }
 func (s sortMoves) Swap(i, j int) {
-	s.m.ms[i], s.m.ms[j] = s.m.ms[j], s.m.ms[i]
+	s.ms[i], s.ms[j] = s.ms[j], s.ms[i]
+	s.vs[i], s.vs[j] = s.vs[j], s.vs[i]
+}
+
+func (mg *moveGenerator) sortMoves() {
+	s := sortMoves{
+		mg.ms,
+		mg.ai.stack[mg.ply].vals[:len(mg.ms)],
+	}
+	for i, m := range s.ms {
+		s.vs[i] = mg.ai.history[m.Hash()]
+	}
+	sort.Sort(s)
 }
 
 func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
@@ -69,7 +84,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 					mg.ms[j], mg.ms[i] = mg.ms[i], mg.ms[j]
 				}
 			} else if mg.depth > 1 && !mg.ai.cfg.NoSort {
-				sort.Sort(sortMoves{mg})
+				mg.sortMoves()
 			}
 			fallthrough
 		default:
