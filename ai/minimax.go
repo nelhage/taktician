@@ -90,7 +90,8 @@ type Stats struct {
 	TTHits     uint64
 	TTShortcut uint64
 
-	Extensions uint64
+	Extensions    uint64
+	ReducedSlides uint64
 }
 
 type MinimaxConfig struct {
@@ -108,6 +109,8 @@ type MinimaxConfig struct {
 	NoTable        bool
 	NoNullMove     bool
 	NoExtendForces bool
+
+	NoReduceSlides bool
 
 	Evaluate EvaluationFunc
 }
@@ -335,21 +338,24 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			)
 		}
 		if m.cfg.Debug > 1 {
-			log.Printf("[minimax]  stats: visited=%d scout=%d null=%d/%d cut=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f m/ms=%f all=%d research=%d extend=%d",
+			log.Printf("[minimax]  stats: visited=%d m/ms=%f cut=%d all=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f",
 				m.st.Visited,
-				m.st.Scout,
-				m.st.NullCut,
-				m.st.NullSearch,
+				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
 				m.st.CutNodes,
+				m.st.AllNodes,
 				m.st.Cut0,
 				float64(m.st.Cut0)/float64(m.st.CutNodes+1),
 				m.st.Cut1,
 				float64(m.st.Cut0+m.st.Cut1)/float64(m.st.CutNodes+1),
 				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
-				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
-				m.st.AllNodes,
+			)
+			log.Printf("[minimax]         scout=%d null=%d/%d research=%d extend=%d rslide=%d",
+				m.st.Scout,
+				m.st.NullCut,
+				m.st.NullSearch,
 				m.st.ReSearch,
 				m.st.Extensions,
+				m.st.ReducedSlides,
 			)
 		}
 		if i > 1 {
@@ -396,7 +402,7 @@ func (ai *MinimaxAI) minimax(
 	pv []tak.Move,
 	α, β int64) ([]tak.Move, int64) {
 	over, _ := p.GameOver()
-	if depth == 0 || over {
+	if depth <= 0 || over {
 		ai.st.Evaluated++
 		if over {
 			ai.st.Terminal++
@@ -488,12 +494,22 @@ func (ai *MinimaxAI) minimax(
 	improved := false
 	var i int
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
+		depth := depth
 		i++
 		var ms []tak.Move
 		var newpv []tak.Move
 		var v int64
 		if len(best) != 0 {
 			newpv = best[1:]
+		}
+		if !ai.cfg.NoReduceSlides && m.IsSlide() && len(m.Slides) == 1 {
+			i := m.X + m.Y*int(ai.c.Size)
+			dx, dy := m.Dest()
+			j := dx + dy*int(ai.c.Size)
+			if child.Height[i] == 0 && child.Height[j] == m.Slides[0] {
+				ai.st.ReducedSlides++
+				depth -= 2
+			}
 		}
 		ai.stack[ply].m = m
 		if i > 1 {

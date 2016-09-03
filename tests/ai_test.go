@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -19,6 +20,7 @@ import (
 )
 
 var debug = flag.Int("debug", 0, "debug level")
+var overrideConfig = flag.String("config", "", "override config")
 var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
 
 type moveSpec struct {
@@ -68,6 +70,12 @@ func preparePTN(p *ptn.PTN) (*TestCase, error) {
 		p:     p,
 		cfg:   ai.MinimaxConfig{Depth: 5},
 		limit: time.Minute,
+	}
+	if *overrideConfig != "" {
+		e := json.Unmarshal([]byte(*overrideConfig), &tc.cfg)
+		if e != nil {
+			return nil, fmt.Errorf("bad -config: %s", e)
+		}
 	}
 	var e error
 	var spec *moveSpec

@@ -30,7 +30,7 @@ func (m *Move) Equal(rhs *Move) bool {
 	if m.Type != rhs.Type {
 		return false
 	}
-	if m.Type < SlideLeft {
+	if !m.IsSlide() {
 		return true
 	}
 	if len(m.Slides) != len(rhs.Slides) {
@@ -42,6 +42,10 @@ func (m *Move) Equal(rhs *Move) bool {
 		}
 	}
 	return true
+}
+
+func (m *Move) IsSlide() bool {
+	return m.Type >= SlideLeft
 }
 
 func (m *Move) Dest() (int, int) {

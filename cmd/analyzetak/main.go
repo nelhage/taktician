@@ -41,6 +41,7 @@ var (
 	table        = flag.Bool("table", true, "use the transposition table")
 	nullMove     = flag.Bool("null-move", true, "use null-move pruning")
 	extendForces = flag.Bool("extend-forces", true, "extend forced moves")
+	reduceSlides = flag.Bool("reduce-slides", true, "reduce trivial slides")
 
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 
@@ -154,6 +155,7 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		NoTable:        !*table,
 		NoNullMove:     !*nullMove,
 		NoExtendForces: !*extendForces,
+		NoReduceSlides: !*reduceSlides,
 
 		Evaluate: ai.MakeEvaluator(p.Size(), &w),
 	})
