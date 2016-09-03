@@ -15,13 +15,17 @@ CREATE TABLE IF NOT EXISTS games (
 
 const createPlayerTable = `
 CREATE VIEW IF NOT EXISTS player_games (
-  day, id, player, opponent, win
+  day, id, player, opponent, color, win, result, size, moves
 ) AS
-SELECT day, id, player2, player1,
- CASE winner WHEN 'white' THEN 'lose' WHEN 'black' THEN 'win' ELSE 'tie' END FROM games
+SELECT day, id, player2, player1, 'black',
+       CASE winner WHEN 'white' THEN 'lose' WHEN 'black' THEN 'win' ELSE 'tie' END,
+       result, size, moves
+ FROM games
 UNION
-SELECT day, id, player1, player2,
- CASE winner WHEN 'white' THEN 'win' WHEN 'black' THEN 'lose' ELSE 'tie' END FROM games
+SELECT day, id, player1, player2, 'white',
+       CASE winner WHEN 'white' THEN 'win' WHEN 'black' THEN 'lose' ELSE 'tie' END,
+       result, size, moves
+ FROM games
 `
 
 const insertStmt = `
