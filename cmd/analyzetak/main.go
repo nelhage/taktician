@@ -43,6 +43,8 @@ var (
 	extendForces = flag.Bool("extend-forces", true, "extend forced moves")
 	reduceSlides = flag.Bool("reduce-slides", true, "reduce trivial slides")
 
+	precise = flag.Bool("precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
+
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 
 	weights = flag.String("weights", "", "JSON-encoded evaluation weights")
@@ -144,7 +146,7 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 			log.Fatalf("parse weights: %v", e)
 		}
 	}
-	return ai.NewMinimax(ai.MinimaxConfig{
+	cfg := ai.MinimaxConfig{
 		Size:       p.Size(),
 		Depth:      *depth,
 		Seed:       *seed,
@@ -158,7 +160,11 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		NoReduceSlides: !*reduceSlides,
 
 		Evaluate: ai.MakeEvaluator(p.Size(), &w),
-	})
+	}
+	if *precise {
+		cfg.MakePrecise()
+	}
+	return ai.NewMinimax(cfg)
 }
 
 func analyze(p *tak.Position) {

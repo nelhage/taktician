@@ -115,6 +115,20 @@ type MinimaxConfig struct {
 	Evaluate EvaluationFunc
 }
 
+// MakePrecise modifies a MinimaxConfig to produce a MinimaxAI that
+// will always produce accurate game-theoretic evaluations – i.e. it
+// disables all heuristic searches that cannot prove the correctness
+// of their results.
+//
+// In general, such configurations should be slower and weaker
+// players, but can be useful for constructing or solving puzzles,
+// debugging, or analyzing unusual positions.
+func (cfg *MinimaxConfig) MakePrecise() {
+	cfg.NoNullMove = true
+	cfg.NoExtendForces = true
+	cfg.NoReduceSlides = true
+}
+
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	m := &MinimaxAI{cfg: cfg}
 	if m.cfg.Depth == 0 {
