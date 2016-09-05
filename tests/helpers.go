@@ -9,12 +9,12 @@ import (
 	"github.com/nelhage/taktician/ptn"
 )
 
-func readPTNs(d string) ([]*ptn.PTN, error) {
+func readPTNs(d string) (map[string]*ptn.PTN, error) {
 	ents, e := ioutil.ReadDir(d)
 	if e != nil {
 		return nil, e
 	}
-	var out []*ptn.PTN
+	out := make(map[string]*ptn.PTN)
 	for _, de := range ents {
 		if !strings.HasSuffix(de.Name(), ".ptn") {
 			continue
@@ -24,7 +24,7 @@ func readPTNs(d string) ([]*ptn.PTN, error) {
 			log.Printf("parse(%s): %v", de.Name(), e)
 			continue
 		}
-		out = append(out, g)
+		out[de.Name()] = g
 	}
 	return out, nil
 }

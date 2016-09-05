@@ -51,8 +51,8 @@ func TestAIRegression(t *testing.T) {
 		panic(e)
 	}
 	cases := []*TestCase{}
-	for _, p := range ptns {
-		tc, e := preparePTN(p)
+	for path, p := range ptns {
+		tc, e := preparePTN(path, p)
 		if e != nil {
 			t.Errorf("prepare ptn: %v", e)
 			continue
@@ -65,11 +65,12 @@ func TestAIRegression(t *testing.T) {
 	}
 }
 
-func preparePTN(p *ptn.PTN) (*TestCase, error) {
+func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
 		p:     p,
 		cfg:   ai.MinimaxConfig{Depth: 5, Seed: 1},
 		limit: time.Minute,
+		name:  strings.TrimSuffix(path, ".ptn"),
 	}
 	if *overrideConfig != "" {
 		e := json.Unmarshal([]byte(*overrideConfig), &tc.cfg)
