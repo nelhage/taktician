@@ -22,6 +22,7 @@ import (
 var debug = flag.Int("debug", 0, "debug level")
 var overrideConfig = flag.String("config", "", "override config")
 var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
+var zooPath = flag.String("zoo", "data/ai", "path to test zoo")
 
 type moveSpec struct {
 	number    int
@@ -46,7 +47,7 @@ type TestCase struct {
 }
 
 func TestAIRegression(t *testing.T) {
-	ptns, e := readPTNs("data/ai")
+	ptns, e := readPTNs(*zooPath)
 	if e != nil {
 		panic(e)
 	}
@@ -183,7 +184,7 @@ func runTest(t *testing.T, tc *TestCase) {
 		t.Log(buf.String())
 		start := time.Now()
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(tc.limit))
-		pv, v, st := ai.Analyze(ctx, p)
+		pvs, v, st := ai.AnalyzeAll(ctx, p)
 		cancel()
 		elapsed := time.Now().Sub(start)
 		if *dumpPerf {
@@ -191,33 +192,35 @@ func runTest(t *testing.T, tc *TestCase) {
 				tc.id, spec.number, spec.color, st.Depth, st.Evaluated, elapsed,
 			)
 		}
-		if len(pv) == 0 {
+		if len(pvs) == 0 {
 			t.Errorf("!! %s: did not return a move!", name)
 			return
 		}
-		var ms []string
-		for _, m := range pv {
-			ms = append(ms, ptn.FormatMove(&m))
-		}
-		t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
-		_, e = p.Move(&pv[0])
-		if e != nil {
-			t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
-		}
-		for _, m := range spec.badMoves {
-			if pv[0].Equal(&m) {
-				t.Errorf("!! %s: bad move: `%s'", name, ptn.FormatMove(&pv[0]))
+		for _, pv := range pvs {
+			var ms []string
+			for _, m := range pv {
+				ms = append(ms, ptn.FormatMove(&m))
 			}
-		}
-		found := false
-		for _, m := range spec.goodMoves {
-			if pv[0].Equal(&m) {
-				found = true
-				break
+			t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
+			_, e = p.Move(&pv[0])
+			if e != nil {
+				t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
 			}
-		}
-		if len(spec.goodMoves) != 0 && !found {
-			t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(&pv[0]))
+			for _, m := range spec.badMoves {
+				if pv[0].Equal(&m) {
+					t.Errorf("!! %s: bad move: `%s'", name, ptn.FormatMove(&pv[0]))
+				}
+			}
+			found := false
+			for _, m := range spec.goodMoves {
+				if pv[0].Equal(&m) {
+					found = true
+					break
+				}
+			}
+			if len(spec.goodMoves) != 0 && !found {
+				t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(&pv[0]))
+			}
 		}
 		if spec.maxEval != 0 && st.Evaluated > spec.maxEval {
 			t.Errorf("!! %s: evaluated %d > %d positions",

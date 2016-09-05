@@ -72,7 +72,9 @@ const (
 )
 
 type Stats struct {
-	Depth     int
+	Depth    int
+	Canceled bool
+
 	Generated uint64
 	Evaluated uint64
 	Scout     uint64
@@ -95,6 +97,27 @@ type Stats struct {
 
 	Extensions    uint64
 	ReducedSlides uint64
+}
+
+func (s Stats) Merge(other Stats) Stats {
+	s.Generated += other.Generated
+	s.Evaluated += other.Evaluated
+	s.Scout += other.Scout
+	s.Terminal += other.Terminal
+	s.Visited += other.Visited
+	s.CutNodes += other.CutNodes
+	s.NullSearch += other.NullSearch
+	s.NullCut += other.NullCut
+	s.Cut0 += other.Cut0
+	s.Cut1 += other.Cut1
+	s.CutSearch += other.CutSearch
+	s.ReSearch += other.ReSearch
+	s.AllNodes += other.AllNodes
+	s.TTHits += other.TTHits
+	s.TTShortcut += other.TTShortcut
+	s.Extensions += other.Extensions
+	s.ReducedSlides += other.ReducedSlides
+	return s
 }
 
 type MinimaxConfig struct {
@@ -250,7 +273,7 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	return rv
 }
 
-func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.Move, int64) {
+func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.Move, int64, Stats) {
 	pv, v, st := ai.Analyze(ctx, p)
 	mg := &ai.stack[0].mg
 	*mg = moveGenerator{
@@ -286,7 +309,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 		outpv := []tak.Move{m}
 		out = append(out, append(outpv, ms...))
 	}
-	return out, v
+	return out, v, st
 }
 
 func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, int64, Stats) {
@@ -327,19 +350,18 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		ms = append(ms[:0], te.m)
 	}
 
-	st := Stats{
-		Depth: base,
-	}
+	var st Stats
 	for i := 1; i+base <= m.cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
 		m.depth = i + base
 		next, nv = m.minimax(p, 0, i+base, ms, MinEval-1, MaxEval+1)
 		if next == nil || atomic.LoadInt32(m.cancel) != 0 {
+			st.Canceled = true
 			break
 		}
 		v = nv
-		st = m.st
+		st = m.st.Merge(st)
 		ms = append(ms[:0], next...)
 		timeUsed := time.Now().Sub(top)
 		timeMove := time.Now().Sub(start)

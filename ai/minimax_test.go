@@ -77,6 +77,9 @@ func TestCancel(t *testing.T) {
 	if st.Depth == maxDepth {
 		t.Fatal("wtf too deep")
 	}
+	if !st.Canceled {
+		t.Fatal("didn't cancel")
+	}
 }
 
 func TestRepeatedCancel(t *testing.T) {
@@ -102,6 +105,9 @@ func TestRepeatedCancel(t *testing.T) {
 		res := <-done
 		if res.st.Depth == 6 {
 			t.Fatalf("[%d] cancel() didn't work", i)
+		}
+		if !res.st.Canceled {
+			t.Fatalf("[%d] not canceled", i)
 		}
 		if len(res.ms) == 0 {
 			t.Fatalf("[%d] canceled search did not return a move", i)
