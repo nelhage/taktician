@@ -77,13 +77,7 @@ func readPTNs(d string) ([]*ptn.PTN, error) {
 		if !strings.HasSuffix(path, ".ptn") {
 			return nil
 		}
-		f, e := os.Open(path)
-		if e != nil {
-			log.Printf("open(%s): %v", path, e)
-			return nil
-		}
-		defer f.Close()
-		g, e := ptn.ParsePTN(f)
+		g, e := ptn.ParseFile(path)
 		if e != nil {
 			log.Printf("parse(%s): %v", path, e)
 			return nil

@@ -3,7 +3,6 @@ package tests
 import (
 	"io/ioutil"
 	"log"
-	"os"
 	"path"
 	"strings"
 
@@ -20,18 +19,11 @@ func readPTNs(d string) ([]*ptn.PTN, error) {
 		if !strings.HasSuffix(de.Name(), ".ptn") {
 			continue
 		}
-		f, e := os.Open(path.Join(d, de.Name()))
-		if e != nil {
-			log.Printf("open(%s): %v", de.Name(), e)
-			continue
-		}
-		g, e := ptn.ParsePTN(f)
+		g, e := ptn.ParseFile(path.Join(d, de.Name()))
 		if e != nil {
 			log.Printf("parse(%s): %v", de.Name(), e)
-			f.Close()
 			continue
 		}
-		f.Close()
 		out = append(out, g)
 	}
 	return out, nil

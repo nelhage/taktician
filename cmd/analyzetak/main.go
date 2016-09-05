@@ -53,11 +53,7 @@ var (
 func main() {
 	flag.Parse()
 
-	f, e := os.Open(flag.Arg(0))
-	if e != nil {
-		log.Fatal("open:", e)
-	}
-	parsed, e := ptn.ParsePTN(f)
+	parsed, e := ptn.ParseFile(flag.Arg(0))
 	if e != nil {
 		log.Fatal("parse:", e)
 	}

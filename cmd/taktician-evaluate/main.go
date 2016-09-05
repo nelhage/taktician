@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -75,15 +74,10 @@ func readSeeds(d string) ([]*tak.Position, error) {
 		if !strings.HasSuffix(de.Name(), ".ptn") {
 			continue
 		}
-		f, e := os.Open(path.Join(d, de.Name()))
+		g, e := ptn.ParseFile(path.Join(d, de.Name()))
 		if e != nil {
 			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
 		}
-		g, e := ptn.ParsePTN(f)
-		if e != nil {
-			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
-		}
-		f.Close()
 		ps, e = addSeeds(g, ps)
 		if e != nil {
 			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
@@ -112,11 +106,7 @@ func main() {
 
 	var starts []*tak.Position
 	if *prefix != "" {
-		bs, e := ioutil.ReadFile(*prefix)
-		if e != nil {
-			log.Fatalf("Read %s: %v", *prefix, e)
-		}
-		pt, e := ptn.ParsePTN(bytes.NewBuffer(bs))
+		pt, e := ptn.ParseFile(*prefix)
 		if e != nil {
 			log.Fatalf("Parse PTN: %v", e)
 		}

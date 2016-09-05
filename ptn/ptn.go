@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -96,6 +97,15 @@ func ParsePTN(r io.Reader) (*PTN, error) {
 		return nil, err
 	}
 	return &ptn, nil
+}
+
+func ParseFile(path string) (*PTN, error) {
+	f, e := os.Open(path)
+	if e != nil {
+		return nil, e
+	}
+	defer f.Close()
+	return ParsePTN(f)
 }
 
 func (p *PTN) FindTag(name string) string {
