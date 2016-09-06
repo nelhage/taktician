@@ -22,7 +22,7 @@ import (
 var debug = flag.Int("debug", 0, "debug level")
 var overrideConfig = flag.String("config", "", "override config")
 var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
-var zooPath = flag.String("zoo", "data/ai", "path to test zoo")
+var zooPath = flag.String("zoo", "../testdata/ai", "path to test zoo")
 
 type moveSpec struct {
 	number    int
