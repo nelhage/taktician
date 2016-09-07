@@ -92,7 +92,7 @@ func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 			spec = &tc.moves[len(tc.moves)-1]
 			spec.number, e = strconv.Atoi(bits[0])
 			if e != nil {
-				return nil, fmt.Errorf("bad move: `%s`", t.Value)
+				return nil, fmt.Errorf("%s: bad move: `%s`", path, t.Value)
 			}
 			if len(bits) > 1 {
 				switch bits[1] {
@@ -101,49 +101,49 @@ func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 				case "black":
 					spec.color = tak.Black
 				default:
-					return nil, fmt.Errorf("bad color: `%s`", t.Value)
+					return nil, fmt.Errorf("%s: bad color: `%s`", path, t.Value)
 				}
 			}
 		case "MaxEval":
 			if spec == nil {
-				return nil, fmt.Errorf("MaxEval before Move")
+				return nil, fmt.Errorf("%s: MaxEval before Move", path)
 			}
 			spec.maxEval, e = strconv.ParseUint(t.Value, 10, 64)
 			if e != nil {
-				return nil, fmt.Errorf("bad MaxEval: %s", t.Value)
+				return nil, fmt.Errorf("%s: bad MaxEval: %s", path, t.Value)
 			}
 		case "Depth":
 			tc.cfg.Depth, e = strconv.Atoi(t.Value)
 			if e != nil {
-				return nil, fmt.Errorf("bad depth: %s", t.Value)
+				return nil, fmt.Errorf("%s: bad depth: %s", path, t.Value)
 			}
 		case "BadMove":
 			if spec == nil {
-				return nil, fmt.Errorf("BadMove before Move")
+				return nil, fmt.Errorf("%s: BadMove before Move", path)
 			}
 			move, e := ptn.ParseMove(t.Value)
 			if e != nil {
-				return nil, fmt.Errorf("bad move: `%s': %v", t.Value, e)
+				return nil, fmt.Errorf("%s: bad move: `%s': %v", path, t.Value, e)
 			}
 			spec.badMoves = append(spec.badMoves, move)
 		case "GoodMove":
 			if spec == nil {
-				return nil, fmt.Errorf("BadMove before Move")
+				return nil, fmt.Errorf("%s: GoodMove before Move", path)
 			}
 			move, e := ptn.ParseMove(t.Value)
 			if e != nil {
-				return nil, fmt.Errorf("bad move: `%s': %v", t.Value, e)
+				return nil, fmt.Errorf("%s: bad move: `%s': %v", path, t.Value, e)
 			}
 			spec.goodMoves = append(spec.goodMoves, move)
 		case "Limit":
 			tc.limit, e = time.ParseDuration(t.Value)
 			if e != nil {
-				return nil, fmt.Errorf("bad limit: `%s`: %v", t.Value, e)
+				return nil, fmt.Errorf("%s: bad limit: `%s`: %v", path, t.Value, e)
 			}
 		case "Seed":
 			tc.cfg.Seed, e = strconv.ParseInt(t.Value, 10, 64)
 			if e != nil {
-				return nil, fmt.Errorf("bad MaxEval: %s", t.Value)
+				return nil, fmt.Errorf("%s: bad MaxEval: %s", path, t.Value)
 			}
 		case "Speed":
 			tc.speed = t.Value
@@ -154,7 +154,7 @@ func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 		case "Size":
 			sz, e := strconv.ParseInt(t.Value, 10, 64)
 			if e != nil {
-				return nil, fmt.Errorf("bad Size: %v", e)
+				return nil, fmt.Errorf("%s: bad Size: %v", path, e)
 			}
 			tc.cfg.Size = int(sz)
 		}
