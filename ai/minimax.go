@@ -74,6 +74,7 @@ const (
 type Stats struct {
 	Depth    int
 	Canceled bool
+	Elapsed  time.Duration
 
 	Generated uint64
 	Evaluated uint64
@@ -363,8 +364,8 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		v = nv
 		st = m.st.Merge(st)
 		ms = append(ms[:0], next...)
-		timeUsed := time.Now().Sub(top)
-		timeMove := time.Now().Sub(start)
+		timeUsed := time.Since(top)
+		timeMove := time.Since(start)
 		if m.cfg.Debug > 0 {
 			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d/%d branch=%d",
 				base+i, v, formatpv(ms),
@@ -418,7 +419,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				// returns a deep move
 				branch = 20
 			}
-			estimate := time.Now().Add(time.Now().Sub(start) * time.Duration(branch))
+			estimate := time.Now().Add(time.Since(start) * time.Duration(branch))
 			if estimate.After(deadline) {
 				if m.cfg.Debug > 0 {
 					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
@@ -428,6 +429,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			}
 		}
 	}
+	st.Elapsed = time.Since(top)
 	return ms, v, st
 }
 

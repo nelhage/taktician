@@ -201,7 +201,8 @@ func runTest(t *testing.T, tc *TestCase) {
 			for _, m := range pv {
 				ms = append(ms, ptn.FormatMove(&m))
 			}
-			t.Logf("ai: pv=[%s] value=%v evaluated=%d", strings.Join(ms, " "), v, st.Evaluated)
+			t.Logf("ai: pv=[%s] value=%v evaluated=%d elaped=%s",
+				strings.Join(ms, " "), v, st.Evaluated, st.Elapsed)
 			_, e = p.Move(&pv[0])
 			if e != nil {
 				t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
