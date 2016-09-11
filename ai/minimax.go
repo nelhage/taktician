@@ -517,6 +517,19 @@ func (ai *MinimaxAI) minimax(
 		}
 	}
 
+	if !ai.cfg.NoReduceSlides && β == α+1 && ply > 0 {
+		m := ai.stack[ply-1].m
+		if m.IsSlide() && len(m.Slides) == 1 {
+			i := m.X + m.Y*int(ai.c.Size)
+			dx, dy := m.Dest()
+			j := dx + dy*int(ai.c.Size)
+			if p.Height[i] == 0 && p.Height[j] == m.Slides[0] {
+				ai.st.ReducedSlides++
+				depth -= 2
+			}
+		}
+	}
+
 	// As of 1.6.2, Go's escape analysis can't tell that a
 	// stack-allocated object here doesn't escape. So we force it
 	// into our manual stack.
@@ -535,22 +548,12 @@ func (ai *MinimaxAI) minimax(
 	improved := false
 	var i int
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
-		depth := depth
 		i++
 		var ms []tak.Move
 		var newpv []tak.Move
 		var v int64
 		if len(best) != 0 {
 			newpv = best[1:]
-		}
-		if !ai.cfg.NoReduceSlides && m.IsSlide() && len(m.Slides) == 1 {
-			i := m.X + m.Y*int(ai.c.Size)
-			dx, dy := m.Dest()
-			j := dx + dy*int(ai.c.Size)
-			if child.Height[i] == 0 && child.Height[j] == m.Slides[0] {
-				ai.st.ReducedSlides++
-				depth -= 2
-			}
 		}
 		ai.stack[ply].m = m
 		if i > 1 {
