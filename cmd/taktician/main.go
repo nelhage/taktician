@@ -109,7 +109,7 @@ func main() {
 					if strings.HasPrefix(line, "Shout") {
 						who, msg := playtak.ParseShout(line)
 						if who != "" {
-							b.HandleChat(who, msg)
+							b.HandleChat("", who, msg)
 						}
 					}
 				case <-sigs:

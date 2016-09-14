@@ -75,7 +75,7 @@ func (t *BotBase) GameOver() {}
 func (t *BotBase) AcceptUndo() bool {
 	return false
 }
-func (t *BotBase) HandleChat(who, msg string) {}
+func (t *BotBase) HandleChat(room, who, msg string) {}
 
 type TestBotStatic struct {
 	BotBase

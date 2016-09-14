@@ -61,12 +61,7 @@ func (t *Taktician) GameOver() {
 	t.ai = nil
 }
 
-func (t *Taktician) HandleChat(who string, msg string) {
-	cmd, arg := parseCommand(msg)
-	if cmd == "" {
-		return
-	}
-	log.Printf("chat from=%q msg=%q", who, msg)
+func (t *Taktician) handleCommand(cmd, arg string) {
 	switch strings.ToLower(cmd) {
 	case "size":
 		sz, err := strconv.Atoi(arg)
@@ -82,6 +77,25 @@ func (t *Taktician) HandleChat(who string, msg string) {
 				strconv.Itoa(int(increment.Seconds())))
 		}
 	}
+}
+
+func (t *Taktician) HandleTell(who string, msg string) {
+	bits := strings.SplitN(msg, " ", 2)
+	cmd := bits[0]
+	var arg string
+	if len(bits) == 2 {
+		arg = bits[1]
+	}
+	t.handleCommand(cmd, arg)
+}
+
+func (t *Taktician) HandleChat(room string, who string, msg string) {
+	cmd, arg := parseCommand(msg)
+	if cmd == "" {
+		return
+	}
+	log.Printf("chat room=%q from=%q msg=%q", room, who, msg)
+	t.handleCommand(cmd, arg)
 }
 
 func (t *Taktician) AcceptUndo() bool {

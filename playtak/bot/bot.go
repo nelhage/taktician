@@ -43,7 +43,8 @@ type Bot interface {
 		p *tak.Position,
 		mine, theirs time.Duration) tak.Move
 	AcceptUndo() bool
-	HandleChat(who, msg string)
+	HandleChat(room, who, msg string)
+	HandleTell(who, msg string)
 }
 
 type Client interface {
@@ -146,12 +147,23 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 		bits := strings.Split(line, " ")
 		switch bits[0] {
 		case g.GameStr:
+		case "Tell":
+			who, msg := playtak.ParseTell(line)
+			if who != "" {
+				g.bot.HandleTell(who, msg)
+			}
 		case "Shout":
 			who, msg := playtak.ParseShout(line)
 			if who != "" {
-				g.bot.HandleChat(who, msg)
+				g.bot.HandleChat("", who, msg)
 			}
-			fallthrough
+			continue
+		case "ShoutRoom":
+			room, who, msg := playtak.ParseShoutRoom(line)
+			if who != "" {
+				g.bot.HandleChat(room, who, msg)
+			}
+			continue
 		default:
 			continue
 		}

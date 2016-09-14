@@ -167,6 +167,18 @@ func (c *Client) Login(user, pass string) error {
 	return errors.New("login failed")
 }
 
+func (c *Client) Shout(room, msg string) {
+	if room == "" {
+		c.SendCommand("Shout", msg)
+	} else {
+		c.SendCommand("ShoutRoom", room, msg)
+	}
+}
+
+func (c *Client) Tell(who, msg string) {
+	c.SendCommand("Tell", who, msg)
+}
+
 func (c *Client) LoginGuest() error {
 	return c.Login("Guest", "")
 }
@@ -177,7 +189,19 @@ func (c *Client) Shutdown() {
 	c.conn.Close()
 }
 
-var shoutRE = regexp.MustCompile(`^Shout <([^> ]+)> (.+)$`)
+var (
+	tellRE      = regexp.MustCompile(`^Tell <([^> ]+)> (.+)$`)
+	shoutRE     = regexp.MustCompile(`^Shout <([^> ]+)> (.+)$`)
+	shoutRoomRE = regexp.MustCompile(`^ShoutRoom (\S+) <([^> ]+)> (.+)$`)
+)
+
+func ParseTell(line string) (string, string) {
+	gs := tellRE.FindStringSubmatch(line)
+	if gs == nil {
+		return "", ""
+	}
+	return gs[1], gs[2]
+}
 
 func ParseShout(line string) (string, string) {
 	gs := shoutRE.FindStringSubmatch(line)
@@ -185,4 +209,12 @@ func ParseShout(line string) (string, string) {
 		return "", ""
 	}
 	return gs[1], gs[2]
+}
+
+func ParseShoutRoom(line string) (string, string, string) {
+	gs := shoutRoomRE.FindStringSubmatch(line)
+	if gs == nil {
+		return "", "", ""
+	}
+	return gs[1], gs[2], gs[3]
 }

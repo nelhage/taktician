@@ -34,14 +34,9 @@ type Friendly struct {
 
 	level    int
 	levelSet time.Time
-
-	greeted map[string]time.Time
 }
 
 func (f *Friendly) NewGame(g *bot.Game) {
-	if f.greeted == nil {
-		f.greeted = make(map[string]time.Time)
-	}
 	if time.Now().Sub(f.levelSet) > 1*time.Hour {
 		f.level = defaultLevel
 	}
@@ -53,19 +48,9 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		Debug:    0,
 		Evaluate: ai.EvaluateWinner,
 	})
-	/*
-		f.client.SendCommand("Shout",
-			fmt.Sprintf("[FriendlyBot@level %d] Good luck %s!",
-				f.level, g.opponent,
-			))
-	*/
-	if t := f.greeted[g.Opponent]; time.Now().Sub(t) > time.Hour {
-		log.Printf("greeting user=%q greeted=%s", g.Opponent, t)
-		f.client.SendCommand("Shout",
-			fmt.Sprintf("FriendlyBot@level %d: %s",
-				f.level, docURL))
-		f.greeted[g.Opponent] = time.Now()
-	}
+	f.client.Tell(g.Opponent,
+		fmt.Sprintf("FriendlyBot@level %d: %s",
+			f.level, docURL))
 }
 
 func (f *Friendly) GameOver() {
@@ -109,45 +94,35 @@ func (f *Friendly) waitUndo(p *tak.Position) bool {
 	return false
 }
 
-func (f *Friendly) HandleChat(who string, msg string) {
-	log.Printf("chat from=%q msg=%q", who, msg)
-	cmd, arg := parseCommand(msg)
-	if cmd == "" {
-		return
-	}
-
+func (f *Friendly) handleCommand(who, cmd, arg string) string {
 	switch strings.ToLower(cmd) {
 	case "level":
 		if arg == "max" {
 			f.level = 100
 			f.levelSet = time.Now()
-			f.client.SendCommand("Shout", "OK! I'll play as best as I can!")
-			break
+			return "OK! I'll play as best as I can!"
 		}
 		l, e := strconv.ParseUint(arg, 10, 64)
 		if e != nil {
 			log.Printf("bad level: %v", e)
-			return
+			return ""
 		}
 		if int(l) < 1 || int(l) > len(levels)+1 {
-			f.client.SendCommand("Shout", fmt.Sprintf("I only know about levels up to %d", len(levels)+1))
-			break
+			return fmt.Sprintf("I only know about levels up to %d", len(levels)+1)
 		}
 		f.level = int(l)
 		f.levelSet = time.Now()
 		if f.g == nil || who != f.g.Opponent {
-			f.client.SendCommand("Shout",
-				fmt.Sprintf("OK! I'll play at level %d for future games.", l))
+			return fmt.Sprintf("OK! I'll play at level %d for future games.", l)
 		} else if f.g != nil {
 			f.ai = ai.NewMinimax(f.Config())
-			f.client.SendCommand("Shout",
-				fmt.Sprintf("OK! I'll play at level %d, starting right now.", l))
+			return fmt.Sprintf("OK! I'll play at level %d, starting right now.", l)
 		}
 	case "size":
 		sz, err := strconv.Atoi(arg)
 		if err != nil {
 			log.Printf("bad size size=%q", arg)
-			return
+			return ""
 		}
 		if sz >= 4 && sz <= 6 {
 			*size = sz
@@ -157,9 +132,33 @@ func (f *Friendly) HandleChat(who string, msg string) {
 				strconv.Itoa(int(increment.Seconds())))
 		}
 	case "help":
-		f.client.SendCommand("Shout",
-			fmt.Sprintf("[FriendlyBot@level %d]: %s",
-				f.level, docURL))
+		return fmt.Sprintf("[FriendlyBot@level %d]: %s",
+			f.level, docURL)
+	}
+	return ""
+}
+
+func (f *Friendly) HandleTell(who string, msg string) {
+	bits := strings.SplitN(msg, " ", 2)
+	cmd := bits[0]
+	var arg string
+	if len(bits) == 2 {
+		arg = bits[1]
+	}
+
+	if reply := f.handleCommand(who, cmd, arg); reply != "" {
+		f.client.Tell(who, reply)
+	}
+}
+
+func (f *Friendly) HandleChat(room string, who string, msg string) {
+	log.Printf("chat room=%q from=%q msg=%q", room, who, msg)
+	cmd, arg := parseCommand(msg)
+	if cmd == "" {
+		return
+	}
+	if reply := f.handleCommand(who, cmd, arg); reply != "" {
+		f.client.Shout(room, reply)
 	}
 }
 
