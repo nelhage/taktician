@@ -50,15 +50,15 @@ var defaultWeights = Weights{
 
 	FlatCaptives: FlatScores{
 		Hard: 200,
-		Soft: -100,
+		Soft: -200,
 	},
 	StandingCaptives: FlatScores{
 		Hard: 300,
-		Soft: -50,
+		Soft: -100,
 	},
 	CapstoneCaptives: FlatScores{
 		Hard: 250,
-		Soft: -50,
+		Soft: -100,
 	},
 
 	Groups: [8]int{
@@ -95,7 +95,7 @@ var defaultWeights6 = Weights{
 	},
 	CapstoneCaptives: FlatScores{
 		Hard: 250,
-		Soft: -75,
+		Soft: -150,
 	},
 
 	Groups: [8]int{
