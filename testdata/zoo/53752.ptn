@@ -1,0 +1,39 @@
+[Size "5"]
+[Date "2016-06-15"]
+[Time "2016-06-15T20:07:02Z"]
+[Player1 "TakticianBot"]
+[Player2 "NohatCoder"]
+[Result "0-R"]
+[Id "53752"]
+[Depth "7"]
+[Move "1 white"]
+[Move "4 black"]
+
+1. e3 e5
+2. d5 c4
+3. c5 b5
+4. d4 d3
+5. b4 a4
+6. c3 Cb3
+7. Ca5 b3+
+8. a5> a5
+9. a3 b3
+10. a3+ 2b4<
+11. 2b5< b5
+12. c3> d2
+13. 3a5> a5
+14. c3 b3>
+15. 2d3> Se4
+16. 4b5< b5
+17. b4 3a4>
+18. 5a5> a5
+19. c2 e4-
+20. Se4 d3
+21. c5- b3
+22. c2+ 3e3<12
+23. d4- 3c3>
+24. 2c4- 5d3<
+25. e4- b2
+26. Sb1 d1
+27. 2e3- c2
+0-R

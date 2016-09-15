@@ -1,11 +1,10 @@
 package tests
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -14,14 +13,12 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
-	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
 var debug = flag.Int("debug", 0, "debug level")
 var overrideConfig = flag.String("config", "", "override config")
-var dumpPerf = flag.Bool("debug-perf", false, "debug perf")
 var zooPath = flag.String("zoo", "../testdata/ai", "path to test zoo")
 
 type moveSpec struct {
@@ -46,6 +43,12 @@ type TestCase struct {
 	limit time.Duration
 }
 
+type sortCases []*TestCase
+
+func (s sortCases) Len() int           { return len(s) }
+func (s sortCases) Less(i, j int) bool { return s[i].name < s[j].name }
+func (s sortCases) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
 func TestAIRegression(t *testing.T) {
 	ptns, e := readPTNs(*zooPath)
 	if e != nil {
@@ -60,6 +63,8 @@ func TestAIRegression(t *testing.T) {
 		}
 		cases = append(cases, tc)
 	}
+
+	sort.Sort(sortCases(cases))
 
 	for _, tc := range cases {
 		runTest(t, tc)
@@ -149,8 +154,6 @@ func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 			tc.speed = t.Value
 		case "Id":
 			tc.id = t.Value
-		case "Name":
-			tc.name = t.Value
 		case "Size":
 			sz, e := strconv.ParseInt(t.Value, 10, 64)
 			if e != nil {
@@ -163,37 +166,24 @@ func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 }
 
 func runTest(t *testing.T, tc *TestCase) {
-	name := ""
-	if tc.id != "" {
-		name = fmt.Sprintf("[%s]", tc.id)
-	}
-	name = fmt.Sprintf("%s%s", name, tc.name)
-	t.Logf("considering %s...", name)
+	t.Logf("considering %s...", tc.name)
 	cfg := tc.cfg
 	cfg.Debug = *debug
 	ai := ai.NewMinimax(cfg)
 	for _, spec := range tc.moves {
-		t.Logf("evaluating %d. %s", spec.number, spec.color)
+		t.Logf("evaluating move=%d. %s", spec.number, spec.color)
 		p, e := tc.p.PositionAtMove(spec.number, spec.color)
 		if e != nil {
-			t.Errorf("!! %s: find move: %v", name, e)
+			t.Errorf("!! %s: find move: %v", tc.name, e)
 			return
 		}
-		var buf bytes.Buffer
-		cli.RenderBoard(nil, &buf, p)
-		t.Log(buf.String())
-		start := time.Now()
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(tc.limit))
 		pvs, v, st := ai.AnalyzeAll(ctx, p)
 		cancel()
-		elapsed := time.Now().Sub(start)
-		if *dumpPerf {
-			log.Printf("%s move=%d color=%s depth=%d evaluated=%d time=%s",
-				tc.id, spec.number, spec.color, st.Depth, st.Evaluated, elapsed,
-			)
-		}
+		t.Logf("  move=%d color=%s value=%d depth=%d evaluated=%d time=%s",
+			spec.number, spec.color, v, st.Depth, st.Evaluated, st.Elapsed)
 		if len(pvs) == 0 {
-			t.Errorf("!! %s: did not return a move!", name)
+			t.Errorf("!! %s: did not return a move!", tc.name)
 			return
 		}
 		for _, pv := range pvs {
@@ -201,15 +191,14 @@ func runTest(t *testing.T, tc *TestCase) {
 			for _, m := range pv {
 				ms = append(ms, ptn.FormatMove(&m))
 			}
-			t.Logf("ai: pv=[%s] value=%v evaluated=%d elaped=%s",
-				strings.Join(ms, " "), v, st.Evaluated, st.Elapsed)
+			t.Logf("  pv=[%s]", strings.Join(ms, " "))
 			_, e = p.Move(&pv[0])
 			if e != nil {
-				t.Errorf("!! %s: illegal move: `%s'", name, ptn.FormatMove(&pv[0]))
+				t.Errorf("!! %s: illegal move: `%s'", tc.name, ptn.FormatMove(&pv[0]))
 			}
 			for _, m := range spec.badMoves {
 				if pv[0].Equal(&m) {
-					t.Errorf("!! %s: bad move: `%s'", name, ptn.FormatMove(&pv[0]))
+					t.Errorf("!! %s: bad move: `%s'", tc.name, ptn.FormatMove(&pv[0]))
 				}
 			}
 			found := false
@@ -225,7 +214,7 @@ func runTest(t *testing.T, tc *TestCase) {
 		}
 		if spec.maxEval != 0 && st.Evaluated > spec.maxEval {
 			t.Errorf("!! %s: evaluated %d > %d positions",
-				name, st.Evaluated, spec.maxEval)
+				tc.name, st.Evaluated, spec.maxEval)
 		}
 	}
 }

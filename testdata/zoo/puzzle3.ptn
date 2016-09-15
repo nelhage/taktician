@@ -1,0 +1,26 @@
+[Site "PlayTak.com"]
+[Event "Online Play"]
+[Date "2016.09.05"]
+[Time "18:18:12"]
+[Player1 "fwwwwibib"]
+[Player2 "TakkerusBot"]
+[Result "0-R"]
+[Size "5"]
+[Depth "5"]
+[Move "14 black"]
+[GoodMove "4a4-22"]
+
+1. a1 e1
+2. e2 a2
+3. e3 d3
+4. e4 1d3>1
+5. Cd3 2e3-2
+6. d2 a3
+7. a4 b4
+8. b3 1b4<1
+9. Sa5 Cb4
+10. 1a5-1 1b4<1
+11. Sa5 b4
+12. 1b3<1 b5
+13. 2a3-11 a3
+14. 2a1+2 {Black to win}
