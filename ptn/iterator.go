@@ -9,10 +9,10 @@ type Iterator struct {
 	err  error
 	over bool
 
-	initial  bool
-	position *tak.Position
-	ptnMove  int
-	move     tak.Move
+	initial        bool
+	position       *tak.Position
+	ptnMove        int
+	lastMove, move tak.Move
 }
 
 func (p *PTN) Iterator() *Iterator {
@@ -36,6 +36,7 @@ func (i *Iterator) apply() bool {
 		return false
 	}
 	i.position = next
+	i.lastMove = i.move
 	i.move = tak.Move{}
 	return true
 }
@@ -78,6 +79,10 @@ func (i *Iterator) Position() *tak.Position {
 
 func (i *Iterator) PTNMove() int {
 	return i.ptnMove
+}
+
+func (i *Iterator) Move() tak.Move {
+	return i.lastMove
 }
 
 func (i *Iterator) PeekMove() tak.Move {
