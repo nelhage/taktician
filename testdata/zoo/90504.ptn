@@ -1,0 +1,38 @@
+[Size "5"]
+[Date "2016-09-17"]
+[Time "2016-09-17T17:27:12Z"]
+[Player1 "applemonkeyman"]
+[Player2 "TakticianBot"]
+[Result "R-0"]
+[Id "90504"]
+[Depth "7"]
+[Move "3 black"]
+[Move "4 black"]
+[Move "7 black"]
+
+
+1. a5 a1
+2. b1 c4
+3. c1 Cc2
+4. d1 c2-
+5. Cc2 d4
+6. b2 d2
+7. e2 2c1<
+8. a2 3b1+
+9. b1 Sc1
+10. e1 c1<
+11. e4 b5
+12. e5 e3
+13. d3 d4-
+14. c2> b4
+15. 2d2+ e3+
+16. d4 2e4+
+17. d5 3e5<
+18. e5 4d5>
+19. d5 5e5<
+20. e5 e4
+21. e5< e4<
+22. 4d5- c4>
+23. 2d5- b3
+24. 3d3-
+R-0

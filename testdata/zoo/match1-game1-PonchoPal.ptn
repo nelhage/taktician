@@ -1,0 +1,42 @@
+[Site "PlayTak.com"]
+[Event "Online Play"]
+[Date "2016.09.15"]
+[Time "04:42:58"]
+[Player1 "nelhage"]
+[Player2 "PonchoPal"]
+[Clock "10:0 +15"]
+[Result "0-F"]
+[Size "5"]
+[Move "6 white"]
+[Move "10 black"]
+
+1. a1 e1
+2. d3 d1
+3. d2 Ce2
+4. c3 c2
+5. c1 b1
+6. 1d2<1 d2
+7. c4 1d1<1
+8. Sd1 1e2<1
+9. 1d1<1 2d2<2
+10. Cd2 c5
+11. b4 b2
+12. 2c1<2 a2
+13. 1c4+1 b3
+14. 1b4-1 3c2+3
+15. d4 e3
+16. 1d2+1 4c3<4
+17. Sb4 b5
+18. 2c5<2 d2
+19. Se2 a5
+20. Sa3 a4
+21. 1a3-1 a3
+22. 1b4<1 1a5>1
+23. d1 b4
+24. 2a4>2 3b5>12
+25. e5 Se4
+26. 1e5<1 1e4<1
+27. 3d5<12 a5
+28. c4 a4
+29. 3b1+3 b1
+30. 2a2+2 a2
