@@ -562,17 +562,6 @@ func (ai *MinimaxAI) pvSearch(
 			α = v
 			if α >= β {
 				ai.recordCut(&m, i, depth, ply)
-				if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
-					var tm tak.Move
-					td := 0
-					if te != nil {
-						tm = te.m
-						td = te.depth
-					}
-					log.Printf("[minimax] late cutoff depth=%d m=%d pv=%s te=%d:%s killer=%s pos=%q",
-						depth, i, formatpv(pv), td, ptn.FormatMove(&tm), ptn.FormatMove(&m), ptn.FormatTPS(p),
-					)
-				}
 				break
 			}
 		}
@@ -696,17 +685,6 @@ func (ai *MinimaxAI) zwSearch(
 			best = append(best, ms...)
 			didCut = true
 			ai.recordCut(&m, i, depth, ply)
-			if ai.cfg.Debug > 3 && i > 20 && depth >= 3 {
-				var tm tak.Move
-				td := 0
-				if te != nil {
-					tm = te.m
-					td = te.depth
-				}
-				log.Printf("[minimax] late cutoff depth=%d m=%d pv=%s te=%d:%s killer=%s pos=%q",
-					depth, i, formatpv(pv), td, ptn.FormatMove(&tm), ptn.FormatMove(&m), ptn.FormatTPS(p),
-				)
-			}
 			break
 		}
 		if atomic.LoadInt32(ai.cancel) != 0 {
