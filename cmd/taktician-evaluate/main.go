@@ -46,22 +46,11 @@ var (
 )
 
 func addSeeds(g *ptn.PTN, ps []*tak.Position) ([]*tak.Position, error) {
-	const (
-		minPly = 5
-		maxPly = 10
-	)
-	ply := 0
-	it := g.Iterator()
-	for it.Next() {
-		ply++
-		if ply >= minPly {
-			ps = append(ps, it.Position())
-		}
-		if ply >= maxPly {
-			break
-		}
+	p, e := g.PositionAtMove(0, tak.NoColor)
+	if e != nil {
+		return nil, e
 	}
-	return ps, it.Err()
+	return append(ps, p), nil
 }
 
 func readSeeds(d string) ([]*tak.Position, error) {
