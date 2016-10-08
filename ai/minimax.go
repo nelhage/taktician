@@ -536,7 +536,7 @@ func (ai *MinimaxAI) pvSearch(
 		}
 		ai.stack[ply].m = m
 		if i > 1 {
-			ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1)
+			ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1, true)
 			if -v > α && -v < β {
 				ai.st.ReSearch++
 				ms, v = ai.pvSearch(child, ply+1, depth-1, newpv, -β, -α)
@@ -596,7 +596,7 @@ func (ai *MinimaxAI) zwSearch(
 	p *tak.Position,
 	ply, depth int,
 	pv []tak.Move,
-	α int64) ([]tak.Move, int64) {
+	α int64, cut bool) ([]tak.Move, int64) {
 	over, _ := p.GameOver()
 	if depth <= 0 || over {
 		ai.st.Evaluated++
@@ -628,7 +628,7 @@ func (ai *MinimaxAI) zwSearch(
 		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
 		if e == nil {
 			ai.st.NullSearch++
-			_, v := ai.zwSearch(child, ply+1, depth-3, nil, -α-1)
+			_, v := ai.zwSearch(child, ply+1, depth-3, nil, -α-1, true)
 			v = -v
 			if v >= α+1 {
 				ai.st.NullCut++
@@ -673,7 +673,7 @@ func (ai *MinimaxAI) zwSearch(
 			newpv = best[1:]
 		}
 		ai.stack[ply].m = m
-		ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1)
+		ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1, !cut)
 		v = -v
 
 		if len(best) == 0 {
