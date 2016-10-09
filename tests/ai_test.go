@@ -49,7 +49,7 @@ func (s sortCases) Len() int           { return len(s) }
 func (s sortCases) Less(i, j int) bool { return s[i].name < s[j].name }
 func (s sortCases) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func TestAIRegression(t *testing.T) {
+func TestZoo(t *testing.T) {
 	ptns, e := readPTNs(*zooPath)
 	if e != nil {
 		panic(e)
