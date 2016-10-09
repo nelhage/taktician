@@ -26,7 +26,7 @@ var (
 	c2      = flag.String("c2", "", "custom config 2")
 	perturb = flag.Float64("perturb", 0.0, "perturb weights")
 	seed    = flag.Int64("seed", 0, "starting random seed")
-	games   = flag.Int("games", 10, "number of games to play")
+	games   = flag.Int("games", 10, "number of games to play per opening/color")
 	cutoff  = flag.Int("cutoff", 80, "cut games off after how many plies")
 	swap    = flag.Bool("swap", true, "swap colors each game")
 
@@ -38,7 +38,8 @@ var (
 
 	threads = flag.Int("threads", 4, "number of parallel threads")
 
-	out = flag.String("out", "", "directory to write ptns to")
+	out     = flag.String("out", "", "directory to write ptns to")
+	verbose = flag.Bool("v", false, "verbose output")
 
 	search = flag.Bool("search", false, "search for a good set of weights")
 
@@ -112,6 +113,9 @@ func main() {
 			log.Fatalf("-seeds: %v", e)
 		}
 	}
+	if len(starts) == 0 {
+		starts = []*tak.Position{tak.New(tak.Config{Size: *size})}
+	}
 
 	weights1 := ai.DefaultWeights[*size]
 	weights2 := ai.DefaultWeights[*size]
@@ -167,6 +171,7 @@ func main() {
 		Limit:   *limit,
 		Perturb: *perturb,
 		Initial: starts,
+		Verbose: *verbose,
 	})
 
 	if *out != "" {
@@ -187,7 +192,7 @@ func main() {
 		log.Printf("p2c=%s", *c2)
 	}
 	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d",
-		*games, *seed, st.Ties, st.Cutoff, st.White, st.Black)
+		len(st.Games), *seed, st.Ties, st.Cutoff, st.White, st.Black)
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
@@ -202,10 +207,10 @@ func writeGame(d string, r *Result) {
 	os.MkdirAll(d, 0755)
 	p := &ptn.PTN{}
 	p.Tags = []ptn.Tag{
-		{"Size", fmt.Sprintf("%d", r.Position.Size())},
-		{"Player1", r.spec.p1color.String()},
+		{Name: "Size", Value: fmt.Sprintf("%d", r.Position.Size())},
+		{Name: "Player1", Value: r.spec.p1color.String()},
 	}
-	if r.Initial != nil {
+	if r.Initial.MoveNumber() != 0 {
 		p.Tags = append(p.Tags, ptn.Tag{
 			Name: "TPS", Value: ptn.FormatTPS(r.Initial)})
 	}

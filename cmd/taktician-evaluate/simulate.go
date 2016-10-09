@@ -48,6 +48,7 @@ type Stats struct {
 
 type gameSpec struct {
 	c            *Config
+	opening      *tak.Position
 	i            int
 	white, black *ai.MinimaxConfig
 	r            *rand.Rand
@@ -118,40 +119,47 @@ func startGames(c *Config, rc chan<- Result) {
 		}()
 	}
 	r := rand.New(rand.NewSource(c.Seed))
-	for g := 0; g < c.Games; g++ {
-		var white, black *ai.MinimaxConfig
-		w1 := c.W1
-		w2 := c.W2
-		if c.Perturb != 0.0 {
-			w1 = perturbWeights(c.Perturb, w1)
-			w2 = perturbWeights(c.Perturb, w2)
+	for _, pos := range c.Initial {
+		n := c.Games
+		if c.Swap {
+			n *= 2
 		}
-		cfg1 := c.Cfg1
-		cfg1.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w1)
-		cfg1.Seed = r.Int63()
+		for g := 0; g < n; g++ {
+			var white, black *ai.MinimaxConfig
+			w1 := c.W1
+			w2 := c.W2
+			if c.Perturb != 0.0 {
+				w1 = perturbWeights(c.Perturb, w1)
+				w2 = perturbWeights(c.Perturb, w2)
+			}
+			cfg1 := c.Cfg1
+			cfg1.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w1)
+			cfg1.Seed = r.Int63()
 
-		cfg2 := c.Cfg2
-		cfg2.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w2)
-		cfg2.Seed = r.Int63()
+			cfg2 := c.Cfg2
+			cfg2.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w2)
+			cfg2.Seed = r.Int63()
 
-		var p1color tak.Color
-		if g%2 == 0 || !c.Swap {
-			white, black = &cfg1, &cfg2
-			p1color = tak.White
-		} else {
-			black, white = &cfg1, &cfg2
-			p1color = tak.Black
+			var p1color tak.Color
+			if g%2 == 0 || !c.Swap {
+				white, black = &cfg1, &cfg2
+				p1color = tak.White
+			} else {
+				black, white = &cfg1, &cfg2
+				p1color = tak.Black
+			}
+
+			spec := gameSpec{
+				opening: pos,
+				c:       c,
+				i:       g,
+				white:   white,
+				black:   black,
+				p1color: p1color,
+				r:       rand.New(rand.NewSource(r.Int63())),
+			}
+			gc <- spec
 		}
-
-		spec := gameSpec{
-			c:       c,
-			i:       g,
-			white:   white,
-			black:   black,
-			p1color: p1color,
-			r:       rand.New(rand.NewSource(r.Int63())),
-		}
-		gc <- spec
 	}
 	close(gc)
 	wg.Wait()
@@ -163,14 +171,7 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		white := ai.NewMinimax(*g.white)
 		black := ai.NewMinimax(*g.black)
 		var ms []tak.Move
-		var initial *tak.Position
-		if len(g.c.Initial) != 0 {
-			initial = g.c.Initial[g.r.Intn(len(g.c.Initial))]
-		}
-		p := initial
-		if p == nil {
-			p = tak.New(tak.Config{Size: g.c.Cfg1.Size})
-		}
+		p := g.opening
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
 			var cancel context.CancelFunc
@@ -198,7 +199,7 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 		}
 		out <- Result{
 			spec:     g,
-			Initial:  initial,
+			Initial:  g.opening,
 			Position: p,
 			Moves:    ms,
 		}
