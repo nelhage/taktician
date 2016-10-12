@@ -63,7 +63,6 @@ type tableEntry struct {
 	value int64
 	bound boundType
 	m     tak.Move
-	p     *tak.Position
 }
 
 type boundType byte
@@ -134,8 +133,6 @@ type MinimaxConfig struct {
 	Depth int
 	Debug int
 	Seed  int64
-
-	DebugTable bool
 
 	RandomizeWindow int64
 	RandomizeScale  int64
@@ -504,14 +501,6 @@ func (ai *MinimaxAI) pvSearch(
 
 	te := ai.ttGet(p.Hash())
 	if te != nil {
-		if ai.cfg.DebugTable {
-			saved := ptn.FormatTPS(te.p)
-			mine := ptn.FormatTPS(p)
-			if saved != mine {
-				log.Printf("tt collision saved=%q mine=%q",
-					saved, mine)
-			}
-		}
 		ai.st.TTHits++
 		if teSuffices(te, depth, α, β) {
 			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
@@ -598,9 +587,6 @@ func (ai *MinimaxAI) pvSearch(
 			te.bound = lowerBound
 		} else {
 			te.bound = exactBound
-		}
-		if ai.cfg.DebugTable {
-			te.p = p.Clone()
 		}
 	}
 
