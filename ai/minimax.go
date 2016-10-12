@@ -450,9 +450,12 @@ func (m *MinimaxAI) Evaluate(p *tak.Position) int64 {
 
 func teSuffices(te *tableEntry, depth int, α, β int64) bool {
 	if te.depth >= depth {
-		if te.bound == exactBound ||
-			(te.value < α && te.bound == upperBound) ||
-			(te.value > β && te.bound == lowerBound) {
+		switch {
+		case te.bound == exactBound:
+			return true
+		case te.value < α && te.bound == upperBound:
+			return true
+		case te.value > β && te.bound == lowerBound:
 			return true
 		}
 	}
