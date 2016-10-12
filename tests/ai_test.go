@@ -73,10 +73,9 @@ func TestZoo(t *testing.T) {
 
 func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
-		p:     p,
-		cfg:   ai.MinimaxConfig{Depth: 5, Seed: 1},
-		limit: time.Minute,
-		name:  strings.TrimSuffix(path, ".ptn"),
+		p:    p,
+		cfg:  ai.MinimaxConfig{Depth: 5, Seed: 1},
+		name: strings.TrimSuffix(path, ".ptn"),
 	}
 	if *overrideConfig != "" {
 		e := json.Unmarshal([]byte(*overrideConfig), &tc.cfg)
@@ -140,11 +139,6 @@ func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 				return nil, fmt.Errorf("%s: bad move: `%s': %v", path, t.Value, e)
 			}
 			spec.goodMoves = append(spec.goodMoves, move)
-		case "Limit":
-			tc.limit, e = time.ParseDuration(t.Value)
-			if e != nil {
-				return nil, fmt.Errorf("%s: bad limit: `%s`: %v", path, t.Value, e)
-			}
 		case "Seed":
 			tc.cfg.Seed, e = strconv.ParseInt(t.Value, 10, 64)
 			if e != nil {
@@ -177,9 +171,7 @@ func runTest(t *testing.T, tc *TestCase) {
 			t.Errorf("!! %s: find move: %v", tc.name, e)
 			return
 		}
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(tc.limit))
-		pvs, v, st := ai.AnalyzeAll(ctx, p)
-		cancel()
+		pvs, v, st := ai.AnalyzeAll(context.Background(), p)
 		t.Logf("  move=%d color=%s value=%d depth=%d evaluated=%d time=%s",
 			spec.number, spec.color, v, st.Depth, st.Evaluated, st.Elapsed)
 		if len(pvs) == 0 {
