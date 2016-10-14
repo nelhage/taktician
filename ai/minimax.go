@@ -2,8 +2,10 @@ package ai
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"math/rand"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -48,6 +50,8 @@ type MinimaxAI struct {
 	stack [maxDepth]frame
 
 	cancel *int32
+
+	cuts *json.Encoder
 }
 
 type frame struct {
@@ -194,6 +198,14 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	for i := range m.stack {
 		m.stack[i].p = tak.Alloc(m.cfg.Size)
 	}
+	f, e := os.OpenFile("cuts.log",
+		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
+		0644)
+	if e != nil {
+		panic(e)
+	}
+	m.cuts = json.NewEncoder(f)
+	m.cuts.SetEscapeHTML(false)
 	return m
 }
 
@@ -478,7 +490,7 @@ func teSuffices(te *tableEntry, depth int, α, β int64) bool {
 	return false
 }
 
-func (ai *MinimaxAI) recordCut(m *tak.Move, move, depth, ply int) {
+func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply int) {
 	ai.st.CutNodes++
 	switch move {
 	case 1:
@@ -492,6 +504,21 @@ func (ai *MinimaxAI) recordCut(m *tak.Move, move, depth, ply int) {
 	if ply > 0 {
 		ai.response[ai.stack[ply-1].m.Hash()] = *m
 	}
+	if depth < 2 {
+		return
+	}
+	cut := struct {
+		TPS      string
+		Move     string
+		Depth    int
+		Searched int
+	}{
+		ptn.FormatTPS(p),
+		ptn.FormatMove(m),
+		depth,
+		move,
+	}
+	ai.cuts.Encode(&cut)
 }
 
 func (ai *MinimaxAI) pvSearch(
@@ -579,7 +606,7 @@ func (ai *MinimaxAI) pvSearch(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.recordCut(&m, i, depth, ply)
+				ai.recordCut(p, &m, i, depth, ply)
 				break
 			}
 		}
@@ -719,7 +746,7 @@ func (ai *MinimaxAI) zwSearch(
 			best = append(best[:0], m)
 			best = append(best, ms...)
 			didCut = true
-			ai.recordCut(&m, i, depth, ply)
+			ai.recordCut(p, &m, i, depth, ply)
 			break
 		}
 		if atomic.LoadInt32(ai.cancel) != 0 {
