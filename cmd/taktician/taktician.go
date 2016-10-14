@@ -27,8 +27,9 @@ func (t *Taktician) NewGame(g *bot.Game) {
 		Depth: *depth,
 		Debug: *debug,
 
-		NoSort:  !*sort,
-		NoTable: !*table,
+		NoSort:     !*sort,
+		NoTable:    !*table,
+		NoMultiCut: true,
 	})
 }
 
