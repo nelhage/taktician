@@ -678,7 +678,9 @@ func (ai *MinimaxAI) zwSearch(
 			}
 		}
 	}
+
 	mg.Reset()
+	i = 0
 
 	best := ai.stack[ply].pv[:0]
 	best = append(best, pv...)
