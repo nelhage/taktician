@@ -490,7 +490,11 @@ func teSuffices(te *tableEntry, depth int, α, β int64) bool {
 	return false
 }
 
-func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply int) {
+func (ai *MinimaxAI) recordCut(
+	p *tak.Position,
+	te *tableEntry,
+	pv []tak.Move,
+	m *tak.Move, move, depth, ply int) {
 	ai.st.CutNodes++
 	switch move {
 	case 1:
@@ -508,15 +512,29 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 		return
 	}
 	cut := struct {
-		TPS      string
-		Move     string
-		Depth    int
-		Searched int
+		TPS        string
+		Move       string
+		Prev       string
+		PV         string
+		Table      string `json:",omitempty"`
+		TableDepth int    `json:",omitempty"`
+		Depth      int
+		Searched   int
 	}{
-		ptn.FormatTPS(p),
-		ptn.FormatMove(m),
-		depth,
-		move,
+		TPS:      ptn.FormatTPS(p),
+		Move:     ptn.FormatMove(m),
+		Depth:    depth,
+		Searched: move,
+	}
+	if ply > 0 {
+		cut.Prev = ptn.FormatMove(&ai.stack[ply-1].m)
+	}
+	if len(pv) > 0 {
+		cut.PV = ptn.FormatMove(&pv[0])
+	}
+	if te != nil {
+		cut.Table = ptn.FormatMove(&te.m)
+		cut.TableDepth = te.depth
 	}
 	ai.cuts.Encode(&cut)
 }
@@ -579,6 +597,10 @@ func (ai *MinimaxAI) pvSearch(
 		i++
 		var ms []tak.Move
 		var v int64
+		if ai.cfg.Debug > 4+ply {
+			log.Printf("%*s>search ply=%d d=%d m=%s w=(%d,%d)",
+				ply, "", ply, depth, ptn.FormatMove(&m), α, β)
+		}
 		ai.stack[ply].m = m
 		if i > 1 {
 			ms, v = ai.zwSearch(child, ply+1, depth-1, best[1:], -α-1, true)
@@ -591,8 +613,8 @@ func (ai *MinimaxAI) pvSearch(
 		}
 		v = -v
 		if ai.cfg.Debug > 4+ply {
-			log.Printf("%*s search ply=%d d=%d e=%d m=%s w=(%d,%d) v=%d pv=%s",
-				ply, "", ply, depth, ai.st.Extensions,
+			log.Printf("%*s search ply=%d d=%d m=%s w=(%d,%d) v=%d pv=%s",
+				ply, "", ply, depth,
 				ptn.FormatMove(&m), α, β, v, formatpv(ms))
 		}
 
@@ -606,7 +628,7 @@ func (ai *MinimaxAI) pvSearch(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.recordCut(p, &m, i, depth, ply)
+				ai.recordCut(p, te, pv, &m, i, depth, ply)
 				break
 			}
 		}
@@ -735,18 +757,27 @@ func (ai *MinimaxAI) zwSearch(
 		var ms []tak.Move
 		var v int64
 		ai.stack[ply].m = m
+		if ai.cfg.Debug > 4+ply {
+			log.Printf("%*s>search ply=%d d=%d m=%s w=(%d,%d)",
+				ply, "", ply, depth, ptn.FormatMove(&m), α, α+1)
+		}
 		ms, v = ai.zwSearch(child, ply+1, depth-1, best[1:], -α-1, !cut)
 		v = -v
+		if ai.cfg.Debug > 4+ply {
+			log.Printf("%*s<search ply=%d d=%d m=%s w=(%d,%d) v=%d pv=%s",
+				ply, "", ply, depth,
+				ptn.FormatMove(&m), α, α+1, v, formatpv(ms))
+		}
 
 		if len(best) == 0 {
 			best = append(best[:0], m)
 			best = append(best, ms...)
 		}
 		if v > α {
+			ai.recordCut(p, te, pv, &m, i, depth, ply)
 			best = append(best[:0], m)
 			best = append(best, ms...)
 			didCut = true
-			ai.recordCut(p, &m, i, depth, ply)
 			break
 		}
 		if atomic.LoadInt32(ai.cancel) != 0 {
