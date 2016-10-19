@@ -45,7 +45,7 @@ WHERE r1.name = g.player1
  AND r2.name = g.player2
  AND r1.rating >= ?
  AND r2.rating >= ?
- AND g.size = *size
+ AND g.size = ?
 `, *minRating, *minRating, *size)
 	defer rows.Close()
 
@@ -143,11 +143,20 @@ func insertTree(t *tree, ms []tak.Move, winner tak.Color) {
 
 func writeTree(f io.Writer, t *tree) {
 	fmt.Fprintf(f, "digraph G {\n")
-	writeTreeNode(f, t)
+	writeTreeNode(0, f, t)
 	fmt.Fprintf(f, "}\n")
 }
 
-func writeTreeNode(f io.Writer, t *tree) {
+func writeTreeNode(ply int, f io.Writer, t *tree) {
+	var mno string
+	if ply > 0 {
+		move := (ply + 1) / 2
+		if ply%2 == 1 {
+			mno = fmt.Sprintf("%d. ", move)
+		} else {
+			mno = fmt.Sprintf("%d. .. ", move)
+		}
+	}
 	fmt.Fprintf(f, `  n%d [shape=box, label="%s %d-%d/%0.2f%%"]`,
 		t.id, t.Move, t.White, t.Black, 100*float64(t.White)/float64(t.Count))
 	fmt.Fprintln(f)
@@ -155,9 +164,10 @@ func writeTreeNode(f io.Writer, t *tree) {
 		if ch.Count < *minCount {
 			continue
 		}
-		fmt.Fprintf(f, `  n%d -> n%d [label="%s %d/%0.2f%%"]`,
-			t.id, ch.id, ch.Move, ch.Count, 100*float64(ch.Count)/float64(t.Count))
+		fmt.Fprintf(f, `  n%d -> n%d [label="%s%s %d/%0.2f%%"]`,
+			t.id, ch.id, mno, ch.Move,
+			ch.Count, 100*float64(ch.Count)/float64(t.Count))
 		fmt.Fprintln(f)
-		writeTreeNode(f, ch)
+		writeTreeNode(ply+1, f, ch)
 	}
 }
