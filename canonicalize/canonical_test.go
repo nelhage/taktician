@@ -35,7 +35,7 @@ func TestCanonical(t *testing.T) {
 				}
 				ms = append(ms, m)
 			}
-			out := Canonical(5, ms)
+			out, _ := Canonical(5, ms)
 			bits = nil
 			for _, o := range out {
 				bits = append(bits, ptn.FormatMove(&o))
