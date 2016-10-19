@@ -149,14 +149,13 @@ func writeTree(f io.Writer, t *tree) {
 
 func writeTreeNode(ply int, f io.Writer, t *tree) {
 	var mno string
-	if ply > 0 {
-		move := (ply + 1) / 2
-		if ply%2 == 1 {
-			mno = fmt.Sprintf("%d. ", move)
-		} else {
-			mno = fmt.Sprintf("%d. .. ", move)
-		}
+	move := ply/2 + 1
+	if ply%2 == 0 {
+		mno = fmt.Sprintf("%d. ", move)
+	} else {
+		mno = fmt.Sprintf("%d. .. ", move)
 	}
+
 	fmt.Fprintf(f, `  n%d [shape=box, label="%s %d-%d/%0.2f%%"]`,
 		t.id, t.Move, t.White, t.Black, 100*float64(t.White)/float64(t.Count))
 	fmt.Fprintln(f)
