@@ -43,6 +43,7 @@ SELECT day, id
 FROM games g, rankings r1, rankings r2
 WHERE r1.name = g.player1
  AND r2.name = g.player2
+ AND NOT r1.bot AND NOT r2.bot
  AND r1.rating >= ?
  AND r2.rating >= ?
  AND g.size = ?
