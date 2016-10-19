@@ -100,6 +100,7 @@ WHERE r1.name = g.player1
 	f, e := os.Create("gametree.dot")
 	defer f.Close()
 	writeTree(f, tree)
+	printLines(tree)
 }
 
 type tree struct {
@@ -168,5 +169,28 @@ func writeTreeNode(ply int, f io.Writer, t *tree) {
 			ch.Count, 100*float64(ch.Count)/float64(t.Count))
 		fmt.Fprintln(f)
 		writeTreeNode(ply+1, f, ch)
+	}
+}
+
+func printLines(t *tree) {
+	walkLines([]*tree{}, t)
+}
+
+func walkLines(line []*tree, t *tree) {
+	found := false
+	for _, ch := range t.Children {
+		if ch.Count >= *minCount && float64(ch.Count) >= 0.05*float64(t.Count) {
+			walkLines(append(line, t), ch)
+			found = true
+		}
+	}
+	if !found {
+		for _, m := range line {
+			if m.Move == "" {
+				continue
+			}
+			fmt.Printf("%s ", m.Move)
+		}
+		fmt.Printf("%s\n", t.Move)
 	}
 }
