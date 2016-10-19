@@ -101,7 +101,20 @@ WHERE r1.name = g.player1
 	f, e := os.Create("gametree.dot")
 	defer f.Close()
 	writeTree(f, tree)
+	fmt.Printf("Common openings:\n")
 	printLines(tree)
+
+	line := minmax(tree)
+	fmt.Printf("Best line:\n")
+	for i, t := range line {
+		dots := ""
+		if i%2 == 1 {
+			dots = ".. "
+		}
+		fmt.Printf("%d. %s%s %d-%d %0.2f%%\n",
+			i/2+1, dots, t.Move, t.White, t.Black,
+			100*float64(t.White)/float64(t.Count))
+	}
 }
 
 type tree struct {
@@ -194,4 +207,35 @@ func walkLines(line []*tree, t *tree) {
 		}
 		fmt.Printf("%s\n", t.Move)
 	}
+}
+
+func minmax(t *tree) []*tree {
+	var line []*tree
+	who := tak.White
+	for t != nil {
+		var best *tree
+		var max float64 = -1
+		for _, ch := range t.Children {
+			if ch.Count < *minCount {
+				continue
+			}
+			var wins int
+			if who == tak.White {
+				wins = ch.White
+			} else {
+				wins = ch.Black
+			}
+			score := float64(wins) / float64(ch.Count)
+			if score > max {
+				max = score
+				best = ch
+			}
+		}
+		if best != nil {
+			line = append(line, best)
+		}
+		t = best
+		who = who.Flip()
+	}
+	return line
 }
