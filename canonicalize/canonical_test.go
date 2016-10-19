@@ -34,6 +34,8 @@ func TestCanonical(t *testing.T) {
 		{"e1 a5", "a1 e5"},
 
 		{"a1 e5 b4", "a1 e5 d2"},
+
+		{"a1 a5 e5 e1 c4 b4", "a1 e1 e5 a5 d3 d2"},
 	}
 	for _, tc := range cases {
 		tc := tc
