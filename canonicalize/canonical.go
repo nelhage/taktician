@@ -97,7 +97,7 @@ type state struct {
 	moves []tak.Move
 }
 
-func Canonical(size int, ms []tak.Move) []tak.Move {
+func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 	p := tak.New(tak.Config{Size: size})
 	syms := symmetries(size)
 	boards := make([]*state, len(syms))
@@ -111,7 +111,7 @@ func Canonical(size int, ms []tak.Move) []tak.Move {
 	var rots []symmetry
 	tfn := syms[0]
 
-	for _, m := range ms {
+	for ply, m := range ms {
 		var e error
 		h := boards[0].p.Hash()
 		best := m
@@ -138,12 +138,12 @@ func Canonical(size int, ms []tak.Move) []tak.Move {
 			rm = rotateMove(st.s, &rm)
 			st.p, e = st.p.Move(&rm)
 			if e != nil {
-				panic(fmt.Sprintf("[%d] move %#v->%#v(%s): %v",
-					i, &m, rm, ptn.FormatMove(&rm), e))
+				return nil, fmt.Errorf("canonical: move %d: rot %d: %s: %v",
+					ply, i, ptn.FormatMove(&rm), e)
 			}
 			st.moves = append(st.moves, rm)
 		}
 	}
 
-	return boards[0].moves
+	return boards[0].moves, nil
 }

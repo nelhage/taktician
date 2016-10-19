@@ -35,7 +35,7 @@ func main() {
 		}
 	}
 
-	out := canonicalize.Canonical(5, ms)
+	out, e := canonicalize.Canonical(5, ms)
 	if e != nil {
 		log.Fatalf("canonicalize: %v", e)
 	}
