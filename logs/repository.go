@@ -81,3 +81,7 @@ func (r *Repository) InsertGames(gs []*Game) error {
 func (r *Repository) Close() {
 	r.db.Close()
 }
+
+func (r *Repository) DB() *sql.DB {
+	return r.db
+}
