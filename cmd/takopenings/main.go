@@ -21,6 +21,7 @@ var (
 )
 
 var (
+	size      = flag.Int("size", 5, "what size to analyze")
 	minRating = flag.Int("rating", 1600, "minimum rating to consider")
 	minCount  = flag.Int("count", 100, "render games with >= [this many] moves")
 	maxDepth  = flag.Int("depth", 8, "track tree to this many plies")
@@ -43,7 +44,9 @@ FROM games g, rankings r1, rankings r2
 WHERE r1.name = g.player1
  AND r2.name = g.player2
  AND r1.rating >= ?
- AND r2.rating >= ?`, *minRating, *minRating)
+ AND r2.rating >= ?
+ AND g.size = *size
+`, *minRating, *minRating, *size)
 	defer rows.Close()
 
 	tree := &tree{}
