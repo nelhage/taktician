@@ -1,7 +1,6 @@
 package canonicalize
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -18,14 +17,27 @@ func TestCanonical(t *testing.T) {
 		{"e5", "a1"},
 		{"e1", "a1"},
 
+		{"a1 a5", "a1 e1"},
+		{"a5 e5", "a1 e1"},
+		{"e5 e1", "a1 e1"},
+		{"e1 a1", "a1 e1"},
+
+		{"a5 a1", "a1 e1"},
+		{"a1 e1", "a1 e1"},
+		{"e1 e5", "a1 e1"},
 		{"e5 a5", "a1 e1"},
+
 		{"e5 a1", "a1 e5"},
+		{"a1 e5", "a1 e5"},
+
+		{"a5 e1", "a1 e5"},
+		{"e1 a5", "a1 e5"},
 
 		{"a1 e5 b4", "a1 e5 d2"},
 	}
-	for i, tc := range cases {
+	for _, tc := range cases {
 		tc := tc
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+		t.Run(tc.in, func(t *testing.T) {
 			bits := strings.Split(tc.in, " ")
 			var ms []tak.Move
 			for _, b := range bits {

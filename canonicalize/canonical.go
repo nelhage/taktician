@@ -114,6 +114,7 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 	for ply, m := range ms {
 		var e error
 		h := boards[0].p.Hash()
+		m := rotateMove(tfn, &m)
 		best := m
 		var rot symmetry
 		for i, st := range boards {
@@ -132,10 +133,10 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 		if rot != nil {
 			rots = append([]symmetry{rot}, rots...)
 			tfn = compose(rots...)
+			m = best
 		}
 		for i, st := range boards {
-			rm := rotateMove(tfn, &m)
-			rm = rotateMove(st.s, &rm)
+			rm := rotateMove(st.s, &m)
 			st.p, e = st.p.Move(&rm)
 			if e != nil {
 				return nil, fmt.Errorf("canonical: move %d: rot %d: %s: %v",
