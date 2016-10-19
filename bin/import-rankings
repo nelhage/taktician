@@ -4,17 +4,12 @@ ROOT=$(readlink -f "$(dirname $0)/..")
 rankings=$1
 db=${2-$ROOT/games/games.db}
 
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' exit
-exec <"$tmp"
-tail -n +2 "$rankings" > "$tmp"
-
-sqlite3 "$db" 3<"$tmp" <<EOF
+sqlite3 "$db" 3<"$rankings" <<EOF
 create table if not exists rankings (
   rank int,
   name text,
-  rating int,
-  development int,
+  bot boolean,
+  rating float,
   games int
 );
 delete from rankings;
