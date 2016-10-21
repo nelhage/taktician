@@ -111,7 +111,7 @@ WHERE r1.name = g.player1
 		if i%2 == 1 {
 			dots = ".. "
 		}
-		fmt.Printf("%d. %s%s %d-%d %0.2f%%\n",
+		fmt.Printf("%d. %s%s %d-%d %0.0f%%\n",
 			i/2+1, dots, t.Move, t.White, t.Black,
 			100*float64(t.White)/float64(t.Count))
 	}
@@ -171,14 +171,14 @@ func writeTreeNode(ply int, f io.Writer, t *tree) {
 		mno = fmt.Sprintf("%d. .. ", move)
 	}
 
-	fmt.Fprintf(f, `  n%d [shape=box, label="%s %d-%d/%0.2f%%"]`,
+	fmt.Fprintf(f, `  n%d [shape=box, label="%s %d-%d/%0.0f%%"]`,
 		t.id, t.Move, t.White, t.Black, 100*float64(t.White)/float64(t.Count))
 	fmt.Fprintln(f)
 	for _, ch := range t.Children {
 		if ch.Count < *minCount {
 			continue
 		}
-		fmt.Fprintf(f, `  n%d -> n%d [label="%s%s %d/%0.2f%%"]`,
+		fmt.Fprintf(f, `  n%d -> n%d [label="%s%s %d/%0.0f%%"]`,
 			t.id, ch.id, mno, ch.Move,
 			ch.Count, 100*float64(ch.Count)/float64(t.Count))
 		fmt.Fprintln(f)
