@@ -13,6 +13,8 @@ import (
 )
 
 var hashTests = flag.Bool("test-hash", false, "run hash collision tests")
+var tps = flag.String("tps", "112S,12,1112S,x2/x2,121C,12S,x/1,21,2,2,2/x,2,1,1,1/2,x3,21 2 24", "run hash collision tests on tps")
+var depth = flag.Int("depth", 5, "run hash collision tests to depth")
 
 func wrapHash(tbl map[uint64][]*tak.Position, eval ai.EvaluationFunc) ai.EvaluationFunc {
 	return func(c *bitboard.Constants, p *tak.Position) int64 {
@@ -73,7 +75,7 @@ func TestHash(t *testing.T) {
 		t.SkipNow()
 	}
 	testCollisions(t, tak.New(tak.Config{Size: 5}))
-	p, e := ptn.ParseTPS("112S,12,1112S,x2/x2,121C,12S,x/1,21,2,2,2/x,2,1,1,1/2,x3,21 2 24")
+	p, e := ptn.ParseTPS(*tps)
 	if e != nil {
 		panic("bad tps")
 	}
@@ -84,7 +86,7 @@ func testCollisions(t *testing.T, p *tak.Position) {
 	tbl := make(map[uint64][]*tak.Position)
 	ai := ai.NewMinimax(ai.MinimaxConfig{
 		Size:     5,
-		Depth:    5,
+		Depth:    *depth,
 		Evaluate: wrapHash(tbl, ai.MakeEvaluator(5, nil)),
 		NoTable:  true,
 	})
