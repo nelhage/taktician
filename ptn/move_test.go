@@ -9,48 +9,57 @@ import (
 
 func TestParseMove(t *testing.T) {
 	cases := []struct {
-		in  string
-		out tak.Move
-		str string
+		in   string
+		out  tak.Move
+		str  string
+		long string
 	}{
 		{
 			"a1",
 			tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat},
 			"a1",
+			"Fa1",
 		},
 		{
 			"Sa4",
 			tak.Move{X: 0, Y: 3, Type: tak.PlaceStanding},
+			"Sa4",
 			"Sa4",
 		},
 		{
 			"Ch7",
 			tak.Move{X: 7, Y: 6, Type: tak.PlaceCapstone},
 			"Ch7",
+			"Ch7",
 		},
 		{
 			"Fh7",
 			tak.Move{X: 7, Y: 6, Type: tak.PlaceFlat},
 			"h7",
+			"Fh7",
 		},
 		{
 			"a1>",
 			tak.Move{X: 0, Y: 0, Type: tak.SlideRight, Slides: []byte{1}},
 			"a1>",
+			"1a1>1",
 		},
 		{
 			"2a2<",
 			tak.Move{X: 0, Y: 1, Type: tak.SlideLeft, Slides: []byte{2}},
 			"2a2<",
+			"2a2<2",
 		},
 		{
 			"3a1+111",
 			tak.Move{X: 0, Y: 0, Type: tak.SlideUp, Slides: []byte{1, 1, 1}},
 			"3a1+111",
+			"3a1+111",
 		},
 		{
 			"5d4-22",
 			tak.Move{X: 3, Y: 3, Type: tak.SlideDown, Slides: []byte{2, 2, 1}},
+			"5d4-221",
 			"5d4-221",
 		},
 	}
@@ -66,6 +75,10 @@ func TestParseMove(t *testing.T) {
 		rt := FormatMove(&tc.out)
 		if rt != tc.str {
 			t.Errorf("FormatMove(%s)=%s not %s", tc.in, rt, tc.str)
+		}
+		long := FormatMoveLong(&tc.out)
+		if long != tc.long {
+			t.Errorf("FormatMoveLong(%s)=%s not %s", tc.in, long, tc.long)
 		}
 	}
 }

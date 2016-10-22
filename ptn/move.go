@@ -93,18 +93,29 @@ func ParseMove(move string) (tak.Move, error) {
 }
 
 func FormatMove(m *tak.Move) string {
+	return formatMove(m, false)
+}
+
+func FormatMoveLong(m *tak.Move) string {
+	return formatMove(m, true)
+}
+
+func formatMove(m *tak.Move, long bool) string {
 	var out []byte
 	stack := 0
 	if len(m.Slides) > 0 {
 		for _, c := range m.Slides {
 			stack += int(c)
 		}
-		if stack != 1 {
+		if long || stack != 1 {
 			out = append(out, byte('0'+stack))
 		}
 	}
 	switch m.Type {
 	case tak.PlaceFlat:
+		if long {
+			out = append(out, 'F')
+		}
 	case tak.PlaceCapstone:
 		out = append(out, 'C')
 	case tak.PlaceStanding:
@@ -122,7 +133,7 @@ func FormatMove(m *tak.Move) string {
 	case tak.SlideDown:
 		out = append(out, '-')
 	}
-	if len(m.Slides) > 0 && int(m.Slides[0]) != stack {
+	if len(m.Slides) > 0 && (long || int(m.Slides[0]) != stack) {
 		for _, s := range m.Slides {
 			out = append(out, byte('0'+s))
 		}
