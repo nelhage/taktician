@@ -94,7 +94,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 			}
 			fallthrough
 		default:
-			j := mg.i - 3
+			j := mg.i - 4
 			mg.i++
 			if j >= len(mg.ms) {
 				return tak.Move{}, nil
