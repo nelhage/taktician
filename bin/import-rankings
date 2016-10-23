@@ -5,14 +5,14 @@ rankings=$1
 db=${2-$ROOT/games/games.db}
 
 sqlite3 "$db" 3<"$rankings" <<EOF
-create table if not exists rankings (
+create table if not exists ratings (
   rank int,
   name text,
   bot boolean,
   rating float,
   games int
 );
-delete from rankings;
+delete from ratings;
 .mode csv
-.import /dev/fd/3 rankings
+.import /dev/fd/3 ratings
 EOF
