@@ -420,11 +420,11 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			if i > 2 {
 				branchEstimate = branchSum / uint64(i-1)
 			} else {
-				// conservative estimate if we haven't
-				// run enough plies to have one
+				// default estimate if we haven't run
+				// enough plies to have a good guess
 				// yet. This can matter if the table
 				// returns a deep move
-				branchEstimate = 10
+				branchEstimate = 5
 			}
 			estimate := time.Now().Add(time.Since(start) * time.Duration(branchEstimate))
 			if estimate.After(deadline) {
