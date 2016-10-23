@@ -350,6 +350,8 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	top := time.Now()
 	var prevEval uint64
 	var branchSum uint64
+	var branchEstimate uint64
+
 	base := 0
 	te := m.ttGet(p.Hash())
 	if te != nil && te.bound == exactBound {
@@ -373,7 +375,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		timeUsed := time.Since(top)
 		timeMove := time.Since(start)
 		if m.cfg.Debug > 0 {
-			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d/%d branch=%d",
+			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d/%d branch=%d(%d)",
 				base+i, v, formatpv(ms),
 				timeMove,
 				timeUsed,
@@ -381,6 +383,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				m.st.TTShortcut,
 				m.st.TTHits,
 				m.st.Evaluated/(prevEval+1),
+				branchEstimate,
 			)
 		}
 		if m.cfg.Debug > 1 {
@@ -414,20 +417,16 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			break
 		}
 		if limited && i+base != m.cfg.Depth {
-			var branch uint64
 			if i > 2 {
-				// conservatively multiply by 2 to
-				// account for the bimodal branching
-				// factor
-				branch = 2 * branchSum / uint64(i-1)
+				branchEstimate = branchSum / uint64(i-1)
 			} else {
 				// conservative estimate if we haven't
 				// run enough plies to have one
 				// yet. This can matter if the table
 				// returns a deep move
-				branch = 20
+				branchEstimate = 10
 			}
-			estimate := time.Now().Add(time.Since(start) * time.Duration(branch))
+			estimate := time.Now().Add(time.Since(start) * time.Duration(branchEstimate))
 			if estimate.After(deadline) {
 				if m.cfg.Debug > 0 {
 					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
