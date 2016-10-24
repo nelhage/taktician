@@ -74,7 +74,7 @@ func TestZoo(t *testing.T) {
 func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
 		p:    p,
-		cfg:  ai.MinimaxConfig{Depth: 5, Seed: 1},
+		cfg:  ai.MinimaxConfig{Depth: 5, Seed: 1, NoMultiCut: true},
 		name: strings.TrimSuffix(path, ".ptn"),
 	}
 	if *overrideConfig != "" {
@@ -165,7 +165,8 @@ func runTest(t *testing.T, tc *TestCase) {
 	cfg.Debug = *debug
 	ai := ai.NewMinimax(cfg)
 	for _, spec := range tc.moves {
-		t.Logf("evaluating move=%d. %s", spec.number, spec.color)
+		t.Logf("evaluating file=%s move=%d. %s",
+			tc.name, spec.number, spec.color)
 		p, e := tc.p.PositionAtMove(spec.number, spec.color)
 		if e != nil {
 			t.Errorf("!! %s: find move: %v", tc.name, e)
