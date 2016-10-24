@@ -74,7 +74,7 @@ func TestZoo(t *testing.T) {
 func preparePTN(path string, p *ptn.PTN) (*TestCase, error) {
 	tc := TestCase{
 		p:    p,
-		cfg:  ai.MinimaxConfig{Depth: 5, Seed: 1, NoMultiCut: true},
+		cfg:  ai.MinimaxConfig{Depth: 5, Seed: 1},
 		name: strings.TrimSuffix(path, ".ptn"),
 	}
 	if *overrideConfig != "" {
