@@ -665,8 +665,9 @@ func (ai *MinimaxAI) zwSearch(
 	if cut && depth > 3 && !ai.cfg.NoMultiCut {
 		cuts := 0
 		ai.st.MCSearch++
-		for _, child := mg.Next(); child != nil && i < multiCutSearch; _, child = mg.Next() {
+		for m, child := mg.Next(); child != nil && i < multiCutSearch; _, child = mg.Next() {
 			i++
+			ai.stack[ply].m = m
 			_, v := ai.zwSearch(child, ply+1, depth-1-2, nil, -α-1, !cut)
 			if -v > α {
 				cuts++
