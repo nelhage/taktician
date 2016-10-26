@@ -25,11 +25,11 @@ var (
 	explain = flag.Bool("explain", false, "explain scoring")
 	eval    = flag.Bool("evaluate", false, "only show static evaluation")
 
-	move    = flag.Int("move", 0, "PTN move number to analyze")
-	final   = flag.Bool("final", false, "analyze final position only")
-	black   = flag.Bool("black", false, "only analyze black's move")
-	white   = flag.Bool("white", false, "only analyze white's move")
-	variant = flag.String("variant", "", "apply the listed moves after the given position")
+	move      = flag.Int("move", 0, "PTN move number to analyze")
+	final     = flag.Bool("final", false, "analyze final position only")
+	black     = flag.Bool("black", false, "only analyze black's move")
+	white     = flag.Bool("white", false, "only analyze white's move")
+	variation = flag.String("variation", "", "apply the listed moves after the given position")
 
 	debug     = flag.Int("debug", 1, "debug level")
 	depth     = flag.Int("depth", 0, "minimax depth")
@@ -84,10 +84,10 @@ func main() {
 			log.Fatal("find move:", e)
 		}
 
-		if *variant != "" {
-			p, e = applyVariant(p, *variant)
+		if *variation != "" {
+			p, e = applyVariation(p, *variation)
 			if e != nil {
-				log.Fatal("-variant:", e)
+				log.Fatal("-variation:", e)
 			}
 		}
 
@@ -117,7 +117,7 @@ func main() {
 	}
 }
 
-func applyVariant(p *tak.Position, variant string) (*tak.Position, error) {
+func applyVariation(p *tak.Position, variant string) (*tak.Position, error) {
 	ms := strings.Split(variant, " ")
 	for _, moveStr := range ms {
 		m, e := ptn.ParseMove(moveStr)
