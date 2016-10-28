@@ -143,7 +143,8 @@ type MinimaxConfig struct {
 	NoExtendForces bool
 
 	NoReduceSlides bool
-	NoMultiCut     bool
+
+	MultiCut bool
 
 	Evaluate EvaluationFunc
 }
@@ -160,7 +161,7 @@ func (cfg *MinimaxConfig) MakePrecise() {
 	cfg.NoNullMove = true
 	cfg.NoExtendForces = true
 	cfg.NoReduceSlides = true
-	cfg.NoMultiCut = true
+	cfg.MultiCut = false
 }
 
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
@@ -662,7 +663,7 @@ func (ai *MinimaxAI) zwSearch(
 
 	var i int
 
-	if cut && depth > 3 && !ai.cfg.NoMultiCut {
+	if ai.cfg.MultiCut && cut && depth > 3 {
 		cuts := 0
 		ai.st.MCSearch++
 		for m, child := mg.Next(); child != nil && i < multiCutSearch; _, child = mg.Next() {

@@ -167,9 +167,9 @@ func (f *Friendly) Config() ai.MinimaxConfig {
 		Size:  f.g.Size,
 		Debug: *debug,
 
-		NoSort:     !*sort,
-		NoTable:    !*table,
-		NoMultiCut: true,
+		NoSort:   !*sort,
+		NoTable:  !*table,
+		MultiCut: false,
 	}
 	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.Size, f.level)
 
