@@ -124,7 +124,7 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 			log.Printf("bad size size=%q", arg)
 			return ""
 		}
-		if sz >= 4 && sz <= 6 {
+		if sz >= 4 && sz <= 8 {
 			*size = sz
 			f.client.SendCommand("Seek",
 				strconv.Itoa(*size),
@@ -187,27 +187,40 @@ var (
 		FlatCaptives:     ai.FlatScores{Hard: 50},
 		StandingCaptives: ai.FlatScores{Hard: 50},
 		CapstoneCaptives: ai.FlatScores{Hard: 50},
-		Groups:           [8]int{0, 0, 0, 100, 200},
+		Groups:           [8]int{0, 0, 0, 100, 200, 300, 310, 320},
 	}
 )
 
+func constw(w ai.Weights) func(int) *ai.Weights {
+	return func(int) *ai.Weights { return &w }
+}
+
+func indexw(ws []ai.Weights) func(int) *ai.Weights {
+	return func(sz int) *ai.Weights {
+		if sz < len(ws) {
+			return &ws[sz]
+		}
+		panic("bad weights/size")
+	}
+}
+
 var levels = []struct {
 	depth   int
-	weights ai.Weights
+	weights func(size int) *ai.Weights
 }{
-	{2, easyWeights},
-	{2, medWeights},
-	{2, ai.DefaultWeights[5]},
-	{3, easyWeights},
-	{3, medWeights},
-	{4, medWeights},
-	{3, ai.DefaultWeights[5]},
-	{5, easyWeights},
-	{5, medWeights},
-	{4, ai.DefaultWeights[5]},
-	{5, ai.DefaultWeights[5]},
-	{7, ai.DefaultWeights[5]},
-	{0, ai.DefaultWeights[5]},
+	{2, constw(easyWeights)},
+	{2, constw(medWeights)},
+	{2, indexw(ai.DefaultWeights)},
+	{3, constw(easyWeights)},
+	{3, constw(medWeights)},
+	{4, constw(medWeights)},
+	{3, indexw(ai.DefaultWeights)},
+	{5, constw(easyWeights)},
+	{5, constw(medWeights)},
+	{4, indexw(ai.DefaultWeights)},
+	{5, indexw(ai.DefaultWeights)},
+	{7, indexw(ai.DefaultWeights)},
+	{0, indexw(ai.DefaultWeights)},
 }
 
 func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
@@ -218,7 +231,7 @@ func (f *Friendly) levelSettings(size int, level int) (int, ai.EvaluationFunc) {
 		level = len(levels)
 	}
 	s := levels[level-1]
-	return s.depth, ai.MakeEvaluator(size, &s.weights)
+	return s.depth, ai.MakeEvaluator(size, s.weights(size))
 }
 
 func (f *Friendly) AcceptUndo() bool {
