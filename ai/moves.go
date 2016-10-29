@@ -14,6 +14,7 @@ type moveGenerator struct {
 
 	te *tableEntry
 	pv []tak.Move
+	r  tak.Move
 
 	ms []tak.Move
 	i  int
@@ -74,8 +75,9 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 			if mg.ply == 0 {
 				continue
 			}
-			if r, ok := mg.ai.response[mg.ai.stack[mg.ply-1].m.Hash()]; ok {
-				m = r
+			var ok bool
+			if mg.r, ok = mg.ai.response[mg.ai.stack[mg.ply-1].m.Hash()]; ok {
+				m = mg.r
 				break
 			}
 			fallthrough
@@ -104,6 +106,9 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 				continue
 			}
 			if len(mg.pv) != 0 && mg.pv[0].Equal(&m) {
+				continue
+			}
+			if mg.r.Equal(&m) {
 				continue
 			}
 		}
