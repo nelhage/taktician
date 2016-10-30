@@ -1,0 +1,35 @@
+[Site "PlayTak.com"]
+[Event "Online Play"]
+[Date "2016.10.30"]
+[Time "18:31:54"]
+[Player1 "nelhage"]
+[Player2 "pythoner6"]
+[Clock "10:0 +15"]
+[Result "F-0"]
+[Size "5"]
+[Depth "9"]
+[Move "12 white"]
+
+1. a1 e1
+2. d2 a2
+3. a3 Cb3
+4. Cb2 1b3<1
+5. c2 a4
+6. 1b2<1 Sb2
+7. e2 b1
+8. d3 d4
+9. c4 b4
+10. e4 Sd1
+11. e3 Se5
+{ There's what looks like a Tinue here after 12. e4<, but
+  understanding it requires following a wall bouncing back and forth
+  eating pieces. }
+12. c5 1d4<1
+13. d4 Sd5
+14. 1d4<1 1b4>1
+15. 1c5-1 Sc3
+16. 4c4<22 2a3+2
+17. b5 4a4>13
+18. a3 b3
+19. a5 c1
+20. c5 d4
