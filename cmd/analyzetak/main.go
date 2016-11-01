@@ -13,41 +13,44 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
-	"github.com/nelhage/taktician/cli"
+	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
 var (
-	all     = flag.Bool("all", false, "show all possible moves")
-	tps     = flag.Bool("tps", false, "render position in tps")
-	quiet   = flag.Bool("quiet", false, "don't print board diagrams")
-	explain = flag.Bool("explain", false, "explain scoring")
-	eval    = flag.Bool("evaluate", false, "only show static evaluation")
+	/* Global options / output options */
+	all        = flag.Bool("all", false, "show all possible moves")
+	tps        = flag.Bool("tps", false, "render position in tps")
+	quiet      = flag.Bool("quiet", false, "don't print board diagrams")
+	monteCarlo = flag.Bool("mcts", false, "Use the MCTS evaluator")
+	debug      = flag.Int("debug", 1, "debug level")
 
+	/* Options to select which position(s) to analyze */
 	move      = flag.Int("move", 0, "PTN move number to analyze")
 	final     = flag.Bool("final", false, "analyze final position only")
 	black     = flag.Bool("black", false, "only analyze black's move")
 	white     = flag.Bool("white", false, "only analyze white's move")
 	variation = flag.String("variation", "", "apply the listed moves after the given position")
 
-	debug     = flag.Int("debug", 1, "debug level")
-	depth     = flag.Int("depth", 0, "minimax depth")
+	/* Options which apply to both engines  */
 	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
+	seed      = flag.Int64("seed", 0, "specify a seed")
 
-	seed         = flag.Int64("seed", 0, "specify a seed")
+	/* minimax options */
+	eval         = flag.Bool("evaluate", false, "only show static evaluation")
+	explain      = flag.Bool("explain", false, "explain scoring")
+	depth        = flag.Int("depth", 0, "minimax depth")
 	sort         = flag.Bool("sort", true, "sort moves via history heuristic")
 	table        = flag.Bool("table", true, "use the transposition table")
 	nullMove     = flag.Bool("null-move", true, "use null-move pruning")
 	extendForces = flag.Bool("extend-forces", true, "extend forced moves")
 	reduceSlides = flag.Bool("reduce-slides", true, "reduce trivial slides")
 	multiCut     = flag.Bool("multi-cut", false, "use multi-cut pruning")
-
-	precise = flag.Bool("precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
+	precise      = flag.Bool("precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
+	weights      = flag.String("weights", "", "JSON-encoded evaluation weights")
 
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
-
-	weights = flag.String("weights", "", "JSON-encoded evaluation weights")
 )
 
 func main() {
@@ -97,7 +100,7 @@ func main() {
 		if e != nil {
 			log.Fatal("initial:", e)
 		}
-		w, b := makeAI(p), makeAI(p)
+		w, b := buildAnalysis(p), buildAnalysis(p)
 		it := parsed.Iterator()
 		for it.Next() {
 			p := it.Position()
@@ -163,77 +166,30 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 	return ai.NewMinimax(cfg)
 }
 
-func analyze(p *tak.Position) {
-	analyzeWith(makeAI(p), p)
+func buildAnalysis(p *tak.Position) Analyzer {
+	if *monteCarlo {
+		return &monteCarloAnalysis{
+			mcts.NewMonteCarlo(mcts.MCTSConfig{
+				Seed:  *seed,
+				Debug: *debug,
+				Size:  p.Size(),
+				Limit: *timeLimit,
+			}),
+		}
+	}
+	return &minimaxAnalysis{makeAI(p)}
 }
 
-func analyzeWith(player *ai.MinimaxAI, p *tak.Position) {
-	if *eval {
-		val := player.Evaluate(p)
-		if p.ToMove() == tak.Black {
-			val = -val
-		}
-		fmt.Printf(" Val=%d\n", val)
-		if *explain {
-			ai.ExplainScore(player, os.Stdout, p)
-		}
-		return
-	}
+func analyze(p *tak.Position) {
+	analyzeWith(buildAnalysis(p), p)
+}
+
+func analyzeWith(analysis Analyzer, p *tak.Position) {
 	ctx := context.Background()
 	if *timeLimit != 0 {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(ctx, *timeLimit)
 		defer cancel()
 	}
-	pvs, val, _ := player.AnalyzeAll(ctx, p)
-	if !*quiet {
-		cli.RenderBoard(nil, os.Stdout, p)
-		if *explain {
-			ai.ExplainScore(player, os.Stdout, p)
-		}
-	}
-	fmt.Printf("AI analysis:\n")
-	for _, pv := range pvs {
-		fmt.Printf(" pv=")
-		for _, m := range pv {
-			fmt.Printf("%s ", ptn.FormatMove(&m))
-		}
-		fmt.Printf("\n")
-	}
-	fmt.Printf(" value=%d\n", val)
-	if *tps {
-		fmt.Printf("[TPS \"%s\"]\n", ptn.FormatTPS(p))
-	}
-	if *all {
-		fmt.Printf(" all moves:")
-		for _, m := range p.AllMoves(nil) {
-			fmt.Printf(" %s", ptn.FormatMove(&m))
-		}
-		fmt.Printf("\n")
-	}
-	fmt.Println()
-
-	if len(pvs) == 0 || *quiet {
-		return
-	}
-
-	for _, m := range pvs[0] {
-		n, e := p.Move(&m)
-		if e != nil {
-			log.Printf("illegal move in pv: %s: %v", ptn.FormatMove(&m), e)
-			if val < ai.WinThreshold && val > -ai.WinThreshold {
-				log.Fatal("illegal move in non-terminal pv!")
-			}
-			return
-		}
-		p = n
-	}
-
-	fmt.Println("Resulting position:")
-	cli.RenderBoard(nil, os.Stdout, p)
-	if *explain {
-		ai.ExplainScore(player, os.Stdout, p)
-	}
-	fmt.Println()
-	fmt.Println()
+	analysis.Analyze(ctx, p)
 }

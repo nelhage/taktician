@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,6 +57,14 @@ func proven(v int64) bool {
 	return v > ai.WinThreshold || v < -ai.WinThreshold
 }
 
+type bySims []*tree
+
+func (b bySims) Len() int           { return len(b) }
+func (b bySims) Less(i, j int) bool { return b[j].simulations < b[i].simulations }
+func (b bySims) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
 func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	tree := &tree{
 		position: p,
@@ -93,9 +102,12 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	}
 	best := tree.children[0]
 	i := 0
+	sort.Sort(bySims(tree.children))
 	for _, c := range tree.children {
 		if ai.cfg.Debug > 2 {
-			log.Printf("[mcts][%s]: n=%d v=%d", ptn.FormatMove(&c.move), c.simulations, c.value)
+			log.Printf("[mcts][%s]: n=%d v=%d(%0.3f)",
+				ptn.FormatMove(&c.move), c.simulations, c.value,
+				float64(c.value)/float64(c.simulations))
 		}
 		if c.simulations > best.simulations {
 			best = c
