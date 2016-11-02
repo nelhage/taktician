@@ -48,6 +48,7 @@ func EvalWeightedPolicy(ctx context.Context,
 	moves := p.AllMoves(buf[:])
 	var best tak.Move
 	var sum int64
+	base := mc.eval(&mc.c, p) - 500
 	for _, m := range moves {
 		child, e := p.MovePreallocated(&m, alloc)
 		if e != nil {
@@ -57,7 +58,7 @@ func EvalWeightedPolicy(ctx context.Context,
 		if w > ai.WinThreshold {
 			return child
 		}
-		w += 1000
+		w -= base
 		if w <= 0 {
 			w = 1
 		}
