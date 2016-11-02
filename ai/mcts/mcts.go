@@ -80,6 +80,11 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	next := start.Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		node := ai.descend(tree)
+		ai.populate(ctx, node)
+		var val int64
+		if !proven(node.value) {
+			val = ai.evaluate(ctx, node)
+		}
 		if ai.cfg.Debug > 4 {
 			var s []string
 			t := node
@@ -87,12 +92,8 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 				s = append(s, ptn.FormatMove(&t.move))
 				t = t.parent
 			}
-			log.Printf("evaluate: [%s]", strings.Join(s, "<-"))
-		}
-		ai.populate(ctx, node)
-		var val int64
-		if !proven(node.value) {
-			val = ai.evaluate(ctx, node)
+			log.Printf("evaluate: [%s] = %d",
+				strings.Join(s, "<-"), val)
 		}
 		ai.update(node, val)
 		if time.Now().After(next) && ai.cfg.Debug > 0 {
