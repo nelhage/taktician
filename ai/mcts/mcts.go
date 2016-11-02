@@ -240,7 +240,7 @@ const maxMoves = 50
 const evalThreshold = 500
 
 func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) int64 {
-	p := t.position
+	p := t.position.Clone()
 	alloc := tak.Alloc(p.Size())
 
 	for i := 0; i < maxMoves; i++ {
