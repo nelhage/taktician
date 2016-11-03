@@ -19,6 +19,7 @@ var (
 	user      = flag.String("user", "", "username for login")
 	pass      = flag.String("pass", "", "password for login")
 	accept    = flag.String("accept", "", "accept a game from specified user")
+	observe   = flag.String("observe", "", "observe a game by a specified user")
 	gameTime  = flag.Duration("time", 20*time.Minute, "Length of game to offer")
 	increment = flag.Duration("increment", 0, "time increment to offer")
 	size      = flag.Int("size", 5, "size of game to offer")
@@ -75,7 +76,7 @@ func main() {
 			b = &Taktician{client: client}
 		}
 		for {
-			if *accept == "" {
+			if *accept == "" && *observe == "" {
 				client.SendCommand("Seek",
 					strconv.Itoa(*size),
 					strconv.Itoa(int(gameTime.Seconds())),
@@ -93,24 +94,31 @@ func main() {
 					if !ok {
 						break recvLoop
 					}
-					if strings.HasPrefix(line, "Seek new") {
+					switch {
+					case strings.HasPrefix(line, "Seek new"):
 						bits := strings.Split(line, " ")
 						if bits[3] == *accept {
 							log.Printf("accepting game %s from %s", bits[2], bits[3])
 							client.SendCommand("Accept", bits[2])
-							break
 						}
-					}
-					if strings.HasPrefix(line, "Game Start") {
+					case strings.HasPrefix(line, "Game Start"):
 						bot.PlayGame(client, b, line)
 						time.Sleep(100 * time.Millisecond)
 						break recvLoop
-					}
-					if strings.HasPrefix(line, "Shout") {
+					case strings.HasPrefix(line, "Shout"):
 						who, msg := playtak.ParseShout(line)
 						if who != "" {
 							b.HandleChat("", who, msg)
 						}
+					case strings.HasPrefix(line, "GameList Add"):
+						bits := strings.Split(line, " ")
+						white := bits[3]
+						black := strings.TrimRight(bits[5], ",")
+						if white == *observe || black == *observe {
+							client.SendCommand("Observe", bits[2][len("Game#"):])
+						}
+					case strings.HasPrefix(line, "Observe"):
+						bot.ObserveGame(client, b, line)
 					}
 				case <-sigs:
 					return

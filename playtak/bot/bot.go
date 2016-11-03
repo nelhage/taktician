@@ -73,6 +73,19 @@ func parseGameStart(line string) *Game {
 	return &g
 }
 
+func parseObserveStart(line string) *Game {
+	// Observe Game#58818 ShlktBot vs Gray_Mouser, 5x5, 1800, 0, 0 half-moves played, ShlktBot to move
+	var g Game
+	bits := strings.Split(line, " ")
+	g.Size, _ = strconv.Atoi(bits[5][:1])
+	g.GameStr = bits[1]
+	g.ID = g.GameStr[len("Game#"):]
+	g.Color = tak.NoColor
+	secs, _ := strconv.Atoi(strings.TrimRight(bits[6], ","))
+	g.Time = time.Duration(secs) * time.Second
+	return &g
+}
+
 func PlayGame(c Client, b Bot, line string) {
 	ctx := context.Background()
 	g := parseGameStart(line)
@@ -86,6 +99,26 @@ func PlayGame(c Client, b Bot, line string) {
 
 	log.Printf("new game game-id=%q size=%d opponent=%q color=%q time=%q",
 		g.ID, g.Size, g.Opponent, g.Color, g.Time)
+
+	g.times.mine = g.Time
+	g.times.theirs = g.Time
+
+	for !handleMove(ctx, g, c) {
+	}
+}
+
+func ObserveGame(c Client, b Bot, observe string) {
+	ctx := context.Background()
+	g := parseObserveStart(observe)
+
+	g.p = tak.New(tak.Config{Size: g.Size})
+	g.Positions = append(g.Positions, g.p)
+	g.bot = b
+	b.NewGame(g)
+	defer b.GameOver()
+
+	log.Printf("observe game-id=%q size=%d time=%q",
+		g.ID, g.Size, g.Time)
 
 	g.times.mine = g.Time
 	g.times.theirs = g.Time

@@ -242,6 +242,9 @@ func formatpv(ms []tak.Move) string {
 
 func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	pv, v, st := ai.Analyze(ctx, p)
+	if len(pv) == 0 {
+		return tak.Move{}
+	}
 	if ai.cfg.RandomizeWindow == 0 {
 		return pv[0]
 	}
