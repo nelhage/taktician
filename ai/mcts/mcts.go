@@ -42,6 +42,12 @@ type MonteCarloAI struct {
 	r *rand.Rand
 }
 
+const (
+	visitThreshold = 10
+	maxMoves       = 50
+	evalThreshold  = 2000
+)
+
 type tree struct {
 	position    *tak.Position
 	move        tak.Move
@@ -179,8 +185,6 @@ func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
 	}
 }
 
-const visitThreshold = 10
-
 func (mc *MonteCarloAI) descendPolicy(t *tree) *tree {
 	var best *tree
 	val := ai.MinEval
@@ -216,7 +220,7 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 		if c.simulations == 0 {
 			s = 10
 		} else {
-			s = float64(c.value)/float64(c.simulations) +
+			s = -float64(c.value)/float64(c.simulations) +
 				ai.cfg.C*math.Sqrt(math.Log(float64(t.simulations))/float64(c.simulations))
 		}
 		if s > val {
@@ -235,9 +239,6 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 	}
 	return ai.descend(best)
 }
-
-const maxMoves = 50
-const evalThreshold = 500
 
 func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) int64 {
 	p := t.position.Clone()
@@ -288,6 +289,7 @@ func (mc *MonteCarloAI) update(t *tree, value int64) {
 			t.value = -ai.WinThreshold
 		} else {
 			t.value += value
+			value = -value
 		}
 
 		t.simulations++
