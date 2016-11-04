@@ -33,13 +33,13 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		}
 		return
 	}
-	pvs, val, _ := m.ai.AnalyzeAll(ctx, p)
 	if !*quiet {
 		cli.RenderBoard(nil, os.Stdout, p)
 		if *explain {
 			ai.ExplainScore(m.ai, os.Stdout, p)
 		}
 	}
+	pvs, val, _ := m.ai.AnalyzeAll(ctx, p)
 	fmt.Printf("AI analysis:\n")
 	for _, pv := range pvs {
 		fmt.Printf(" pv=")
@@ -91,10 +91,10 @@ type monteCarloAnalysis struct {
 }
 
 func (m *monteCarloAnalysis) Analyze(ctx context.Context, p *tak.Position) {
-	pv := m.ai.GetMove(ctx, p)
 	if !*quiet {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
+	pv := m.ai.GetMove(ctx, p)
 	fmt.Printf("AI analysis:\n")
 	fmt.Printf("  PV=%s\n", ptn.FormatMove(&pv))
 }
