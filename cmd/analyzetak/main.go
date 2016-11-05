@@ -51,6 +51,9 @@ var (
 	logCuts      = flag.String("log-cuts", "", "log all cuts")
 	symmetry     = flag.Bool("symmetry", false, "ignore symmetries")
 
+	/* MCTS options */
+	dumpTree = flag.String("dump-tree", "", "dump MCTS tree as a dot file to PATH")
+
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 )
 
@@ -174,10 +177,11 @@ func buildAnalysis(p *tak.Position) Analyzer {
 	if *monteCarlo {
 		return &monteCarloAnalysis{
 			mcts.NewMonteCarlo(mcts.MCTSConfig{
-				Seed:  *seed,
-				Debug: *debug,
-				Size:  p.Size(),
-				Limit: *timeLimit,
+				Seed:     *seed,
+				Debug:    *debug,
+				Size:     p.Size(),
+				Limit:    *timeLimit,
+				DumpTree: *dumpTree,
 			}),
 		}
 	}

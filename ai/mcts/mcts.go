@@ -28,6 +28,8 @@ type MCTSConfig struct {
 	EvalThreshold int64
 
 	Size int
+
+	DumpTree string
 }
 
 type PolicyFunc func(ctx context.Context,
@@ -127,6 +129,9 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	}
 	if ai.cfg.Debug > 1 {
 		log.Printf("[mcts] evaluated simulations=%d value=%d", tree.simulations, tree.value)
+	}
+	if ai.cfg.DumpTree != "" {
+		ai.dumpTree(tree)
 	}
 	return best.move
 }
