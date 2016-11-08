@@ -49,8 +49,8 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		Evaluate: ai.EvaluateWinner,
 	})
 	f.client.Tell(g.Opponent,
-		fmt.Sprintf("FriendlyBot@level %d: %s",
-			f.level, docURL))
+		fmt.Sprintf("%s@level %d: %s",
+			*user, f.level, docURL))
 }
 
 func (f *Friendly) GameOver() {
@@ -63,6 +63,12 @@ func (f *Friendly) GetMove(
 	mine, theirs time.Duration) tak.Move {
 	if p.ToMove() != f.g.Color {
 		return tak.Move{}
+	}
+	if *fpa && p.MoveNumber() == 0 {
+		return tak.Move{
+			X: 2, Y: 2,
+			Type: tak.PlaceFlat,
+		}
 	}
 	var deadline <-chan time.Time
 	if f.waitUndo(p) {
@@ -79,6 +85,28 @@ func (f *Friendly) GetMove(
 	}
 
 	return m
+}
+
+func (f *Friendly) OpponentMove(m *tak.Move, p *tak.Position) {
+	if !*fpa || p.MoveNumber() != 1 {
+		return
+	}
+	ok := true
+	s := p.Size()
+	if s%2 == 0 {
+		ok = ok && (m.X == s/2 || m.X == s/2-1)
+		ok = ok && (m.Y == s/2 || m.Y == s/2-1)
+	} else {
+		ok = ok && m.X == s/2 && m.Y == s/2
+	}
+	if ok {
+		return
+	}
+	f.client.SendCommand(f.g.GameStr, "Resign")
+	f.client.Tell(f.g.Opponent,
+		"I'm testing rules to balance white's advantage. "+
+			"To play me as white, you must place Black's first "+
+			"piece in the center of the board.")
 }
 
 func (f *Friendly) waitUndo(p *tak.Position) bool {
@@ -132,8 +160,8 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 				strconv.Itoa(int(increment.Seconds())))
 		}
 	case "help":
-		return fmt.Sprintf("[FriendlyBot@level %d]: %s",
-			f.level, docURL)
+		return fmt.Sprintf("[%s@level %d]: %s",
+			*user, f.level, docURL)
 	}
 	return ""
 }

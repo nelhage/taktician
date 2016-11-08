@@ -27,6 +27,7 @@ var (
 	takbot    = flag.String("takbot", "", "challenge TakBot AI")
 
 	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
+	fpa      = flag.Bool("fpa", false, "play as FPABot")
 
 	debug           = flag.Int("debug", 1, "debug level")
 	depth           = flag.Int("depth", 5, "minimax depth")
