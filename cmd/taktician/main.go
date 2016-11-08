@@ -42,7 +42,7 @@ const ClientName = "Taktician AI"
 
 func main() {
 	flag.Parse()
-	if *accept != "" || *takbot != "" {
+	if *accept != "" || *takbot != "" || *observe != "" {
 		*once = true
 	}
 
