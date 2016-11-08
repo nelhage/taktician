@@ -21,8 +21,8 @@ const (
 
 	tableSize uint64 = (1 << 20)
 
-	maxDepth = 15
-	maxMoves = 500
+	maxDepth   = 15
+	allocMoves = 500
 
 	multiCutSearch    = 6
 	multiCutThreshold = 3
@@ -44,17 +44,25 @@ type MinimaxAI struct {
 
 	table []tableEntry
 	depth int
-	stack [maxDepth]struct {
-		p  *tak.Position
-		mg moveGenerator
-		pv [maxDepth]tak.Move
-		m  tak.Move
-
-		moves [maxMoves]tak.Move
-		vals  [maxMoves]int
-	}
+	stack [maxDepth]frame
 
 	cancel *int32
+}
+
+type frame struct {
+	p  *tak.Position
+	mg moveGenerator
+	pv [maxDepth]tak.Move
+	m  tak.Move
+
+	moves struct {
+		slice []tak.Move
+		alloc [allocMoves]tak.Move
+	}
+	vals struct {
+		slice []int
+		alloc [allocMoves]int
+	}
 }
 
 type tableEntry struct {
@@ -257,6 +265,7 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	mg := &ai.stack[0].mg
 	*mg = moveGenerator{
 		ai:    ai,
+		f:     &ai.stack[0],
 		ply:   0,
 		depth: st.Depth,
 		p:     p,
@@ -290,6 +299,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 	mg := &ai.stack[0].mg
 	*mg = moveGenerator{
 		ai:    ai,
+		f:     &ai.stack[0],
 		ply:   0,
 		depth: st.Depth,
 		p:     p,
@@ -522,6 +532,7 @@ func (ai *MinimaxAI) pvSearch(
 	mg := &ai.stack[ply].mg
 	*mg = moveGenerator{
 		ai:    ai,
+		f:     &ai.stack[0],
 		ply:   ply,
 		depth: depth,
 		p:     p,
@@ -657,6 +668,7 @@ func (ai *MinimaxAI) zwSearch(
 	mg := &ai.stack[ply].mg
 	*mg = moveGenerator{
 		ai:    ai,
+		f:     &ai.stack[0],
 		ply:   ply,
 		depth: depth,
 		p:     p,

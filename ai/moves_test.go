@@ -24,6 +24,7 @@ func TestMoveGenerator(t *testing.T) {
 	mg := &ai.stack[1].mg
 	*mg = moveGenerator{
 		p:     p,
+		f:     &ai.stack[1],
 		ai:    ai,
 		ply:   1,
 		depth: 5,

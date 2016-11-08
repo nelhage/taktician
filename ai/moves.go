@@ -8,6 +8,7 @@ import (
 
 type moveGenerator struct {
 	ai    *MinimaxAI
+	f     *frame
 	ply   int
 	depth int
 	p     *tak.Position
@@ -35,9 +36,16 @@ func (s sortMoves) Swap(i, j int) {
 }
 
 func (mg *moveGenerator) sortMoves() {
+	vs := mg.f.vals.slice
+	if vs == nil {
+		vs = mg.f.vals.alloc[:]
+	}
+	if len(vs) < len(mg.ms) {
+		vs = make([]int, len(mg.ms))
+	}
 	s := sortMoves{
 		mg.ms,
-		mg.ai.stack[mg.ply].vals[:len(mg.ms)],
+		vs,
 	}
 	for i, m := range s.ms {
 		s.vs[i] = mg.ai.history[m.Hash()]
@@ -84,7 +92,12 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 		case 3:
 			mg.i++
 			if mg.ms == nil {
-				mg.ms = mg.p.AllMoves(mg.ai.stack[mg.ply].moves[:0])
+				ms := mg.f.moves.slice
+				if ms == nil {
+					ms = mg.f.moves.alloc[:]
+				}
+				mg.ms = mg.p.AllMoves(ms[:0])
+				mg.f.moves.slice = ms[:]
 			}
 			if mg.ply == 0 {
 				for i := len(mg.ms) - 1; i > 0; i-- {
