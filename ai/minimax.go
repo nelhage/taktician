@@ -532,7 +532,7 @@ func (ai *MinimaxAI) pvSearch(
 	mg := &ai.stack[ply].mg
 	*mg = moveGenerator{
 		ai:    ai,
-		f:     &ai.stack[0],
+		f:     &ai.stack[ply],
 		ply:   ply,
 		depth: depth,
 		p:     p,
@@ -668,7 +668,7 @@ func (ai *MinimaxAI) zwSearch(
 	mg := &ai.stack[ply].mg
 	*mg = moveGenerator{
 		ai:    ai,
-		f:     &ai.stack[0],
+		f:     &ai.stack[ply],
 		ply:   ply,
 		depth: depth,
 		p:     p,
