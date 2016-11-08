@@ -53,14 +53,13 @@ func main() {
 	backoff := 1 * time.Second
 	var b bot.Bot
 	for {
-		client := &playtak.Client{
-			Debug: *debugClient,
-		}
-		err := client.Connect(*server)
+		var client *playtak.Commands
+		cl, err := playtak.Dial(*debugClient, *server)
 		if err != nil {
 			goto reconnect
 		}
 		backoff = time.Second
+		client = &playtak.Commands{cl}
 		client.SendClient(ClientName)
 		if *user != "" {
 			err = client.Login(*user, *pass)
@@ -71,8 +70,8 @@ func main() {
 			log.Fatal("login: ", err)
 		}
 		log.Printf("login OK")
-		if *friendly {
-			b = &Friendly{client: client}
+		if *friendly || *fpa {
+			b = &Friendly{client: client, fpa: *fpa}
 		} else {
 			b = &Taktician{client: client}
 		}

@@ -64,13 +64,11 @@ func main() {
 		}
 	}
 
-	client := &playtak.Client{
-		Debug: true,
-	}
-	err := client.Connect(*server)
+	cl, err := playtak.Dial(true, *server)
 	if err != nil {
 		log.Fatal(err)
 	}
+	client := &playtak.Commands{cl}
 	client.SendClient(ClientName)
 	err = client.LoginGuest()
 	if err != nil {
@@ -94,7 +92,7 @@ type Game struct {
 	Result string
 }
 
-func logGames(repo *logs.Repository, client *playtak.Client, out string) error {
+func logGames(repo *logs.Repository, client *playtak.Commands, out string) error {
 	e := os.MkdirAll(out, 0755)
 	if e != nil {
 		return e

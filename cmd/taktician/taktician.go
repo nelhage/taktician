@@ -16,7 +16,7 @@ import (
 
 type Taktician struct {
 	g      *bot.Game
-	client *playtak.Client
+	client *playtak.Commands
 	ai     *ai.MinimaxAI
 }
 

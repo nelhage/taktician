@@ -2,7 +2,6 @@ package playtak
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -12,7 +11,15 @@ import (
 	"time"
 )
 
-type Client struct {
+type Client interface {
+	Recv() <-chan string
+	SendCommand(...string)
+
+	Error() error
+	Shutdown()
+}
+
+type client struct {
 	conn net.Conn
 
 	Debug bool
@@ -31,33 +38,36 @@ type Client struct {
 	}
 }
 
-func (c *Client) Error() error {
+func (c *client) Error() error {
 	return c.err
 }
 
-func (c *Client) Connect(host string) error {
+func Dial(debug bool, host string) (Client, error) {
+	client := &client{
+		Debug: debug,
+	}
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	c.conn = conn
-	c.recv = make(chan string)
-	c.send = make(chan string)
-	c.shutdown = make(chan struct{})
-	c.wg.Add(2)
-	go c.recvThread()
-	go c.sendThread()
-	return nil
+	client.conn = conn
+	client.recv = make(chan string)
+	client.send = make(chan string)
+	client.shutdown = make(chan struct{})
+	client.wg.Add(2)
+	go client.recvThread()
+	go client.sendThread()
+	return client, nil
 }
 
-func (c *Client) logSent(l string) {
+func (c *client) logSent(l string) {
 	c.last.Lock()
 	defer c.last.Unlock()
 	c.last.buf[c.last.i] = l
 	c.last.i = (c.last.i + 1) % len(c.last.buf)
 }
 
-func (c *Client) lastSent() []string {
+func (c *client) lastSent() []string {
 	out := make([]string, 0, len(c.last.buf))
 	c.last.Lock()
 	defer c.last.Unlock()
@@ -70,7 +80,7 @@ func (c *Client) lastSent() []string {
 	return out
 }
 
-func (c *Client) recvThread() {
+func (c *client) recvThread() {
 	r := bufio.NewReader(c.conn)
 	defer c.wg.Done()
 	for {
@@ -100,7 +110,7 @@ func (c *Client) recvThread() {
 	}
 }
 
-func (c *Client) ping() {
+func (c *client) ping() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -113,7 +123,7 @@ func (c *Client) ping() {
 	}
 }
 
-func (c *Client) sendThread() {
+func (c *client) sendThread() {
 	go c.ping()
 	defer c.wg.Done()
 	for {
@@ -130,60 +140,15 @@ func (c *Client) sendThread() {
 	}
 }
 
-func (c *Client) SendCommand(words ...string) {
+func (c *client) SendCommand(words ...string) {
 	c.send <- strings.Join(words, " ")
 }
 
-func (c *Client) Recv() <-chan string {
+func (c *client) Recv() <-chan string {
 	return c.recv
 }
 
-func (c *Client) SendClient(name string) {
-	c.SendCommand("Client", name)
-}
-
-func (c *Client) Login(user, pass string) error {
-	for line := range c.recv {
-		if strings.HasPrefix(line, "Login ") {
-			break
-		}
-	}
-	if pass == "" {
-		c.SendCommand("Login", user)
-	} else {
-		c.SendCommand("Login", user, pass)
-	}
-	for line := range c.recv {
-		if line == "Login or Register" {
-			return errors.New("bad password")
-		}
-		if line == "You're already logged in" {
-			return errors.New("user is already logged in")
-		}
-		if strings.HasPrefix(line, "Welcome ") {
-			return nil
-		}
-	}
-	return errors.New("login failed")
-}
-
-func (c *Client) Shout(room, msg string) {
-	if room == "" {
-		c.SendCommand("Shout", msg)
-	} else {
-		c.SendCommand("ShoutRoom", room, msg)
-	}
-}
-
-func (c *Client) Tell(who, msg string) {
-	c.SendCommand("Tell", who, msg)
-}
-
-func (c *Client) LoginGuest() error {
-	return c.Login("Guest", "")
-}
-
-func (c *Client) Shutdown() {
+func (c *client) Shutdown() {
 	close(c.shutdown)
 	c.wg.Wait()
 	c.conn.Close()

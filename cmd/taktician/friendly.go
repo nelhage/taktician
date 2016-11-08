@@ -27,10 +27,12 @@ const (
 )
 
 type Friendly struct {
-	client *playtak.Client
+	client *playtak.Commands
 	ai     *ai.MinimaxAI
 	check  *ai.MinimaxAI
 	g      *bot.Game
+
+	fpa bool
 
 	level    int
 	levelSet time.Time
@@ -64,7 +66,7 @@ func (f *Friendly) GetMove(
 	if p.ToMove() != f.g.Color {
 		return tak.Move{}
 	}
-	if *fpa && p.MoveNumber() == 0 {
+	if f.fpa && p.MoveNumber() == 0 {
 		return tak.Move{
 			X: 2, Y: 2,
 			Type: tak.PlaceFlat,
@@ -88,7 +90,7 @@ func (f *Friendly) GetMove(
 }
 
 func (f *Friendly) OpponentMove(m *tak.Move, p *tak.Position) {
-	if !*fpa || p.MoveNumber() != 1 {
+	if !f.fpa || p.MoveNumber() != 1 {
 		return
 	}
 	ok := true
