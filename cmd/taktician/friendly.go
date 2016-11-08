@@ -68,7 +68,7 @@ func (f *Friendly) GetMove(
 	}
 	if f.fpa && p.MoveNumber() == 0 {
 		return tak.Move{
-			X: 2, Y: 2,
+			X: p.Size() / 2, Y: p.Size() / 2,
 			Type: tak.PlaceFlat,
 		}
 	}
