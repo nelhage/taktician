@@ -42,8 +42,14 @@ func symmetries(size int) []symmetry {
 		return flip(y), flip(x)
 	}
 
-	rotate := func(x, y int) (int, int) {
+	rotate2 := func(x, y int) (int, int) {
 		return flip(x), flip(y)
+	}
+	rotCW := func(x, y int) (int, int) {
+		return y, flip(x)
+	}
+	rotCCW := func(x, y int) (int, int) {
+		return flip(y), x
 	}
 
 	return []symmetry{
@@ -52,7 +58,9 @@ func symmetries(size int) []symmetry {
 		flipY,
 		flipDiag1,
 		flipDiag2,
-		rotate,
+		rotate2,
+		rotCW,
+		rotCCW,
 	}
 }
 

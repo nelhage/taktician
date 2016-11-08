@@ -10,32 +10,80 @@ import (
 
 func TestCanonical(t *testing.T) {
 	cases := []struct {
+		size    int
 		in, out string
 	}{
-		{"a1", "a1"},
-		{"a5", "a1"},
-		{"e5", "a1"},
-		{"e1", "a1"},
+		{5, "a1", "a1"},
+		{5, "a5", "a1"},
+		{5, "e5", "a1"},
+		{5, "e1", "a1"},
 
-		{"a1 a5", "a1 e1"},
-		{"a5 e5", "a1 e1"},
-		{"e5 e1", "a1 e1"},
-		{"e1 a1", "a1 e1"},
+		{5, "a1 a5", "a1 e1"},
+		{5, "a5 e5", "a1 e1"},
+		{5, "e5 e1", "a1 e1"},
+		{5, "e1 a1", "a1 e1"},
 
-		{"a5 a1", "a1 e1"},
-		{"a1 e1", "a1 e1"},
-		{"e1 e5", "a1 e1"},
-		{"e5 a5", "a1 e1"},
+		{5, "a5 a1", "a1 e1"},
+		{5, "a1 e1", "a1 e1"},
+		{5, "e1 e5", "a1 e1"},
+		{5, "e5 a5", "a1 e1"},
 
-		{"e5 a1", "a1 e5"},
-		{"a1 e5", "a1 e5"},
+		{5, "e5 a1", "a1 e5"},
+		{5, "a1 e5", "a1 e5"},
 
-		{"a5 e1", "a1 e5"},
-		{"e1 a5", "a1 e5"},
+		{5, "a5 e1", "a1 e5"},
+		{5, "e1 a5", "a1 e5"},
 
-		{"a1 e5 b4", "a1 e5 d2"},
+		{5, "a1 e5 b4", "a1 e5 d2"},
 
-		{"a1 a5 e5 e1 c4 b4", "a1 e1 e5 a5 d3 d2"},
+		{5, "a1 a5 e5 e1 c4 b4", "a1 e1 e5 a5 d3 d2"},
+
+		{5, "b1 a1", "b1 a1"},
+		{5, "a2 a1", "b1 a1"},
+		{5, "d1 e1", "b1 a1"},
+		{5, "e2 e1", "b1 a1"},
+		{5, "d5 e5", "b1 a1"},
+		{5, "e4 e5", "b1 a1"},
+		{5, "a4 a5", "b1 a1"},
+		{5, "b5 a5", "b1 a1"},
+
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5",
+		},
+
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 c1",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 d1",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 f3",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 f4",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 c6",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 d6",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 a3",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
+		{6,
+			"a2 b2 e2 f2 e5 f5 b5 a5 c4 b6 d4 e6 d3 e1 c3 b1 a4",
+			"b1 b2 b5 b6 e2 e1 e5 e6 c3 a2 c4 a5 d3 f2 d4 f5 c1",
+		},
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -49,7 +97,7 @@ func TestCanonical(t *testing.T) {
 				}
 				ms = append(ms, m)
 			}
-			out, _ := Canonical(5, ms)
+			out, _ := Canonical(tc.size, ms)
 			bits = nil
 			for _, o := range out {
 				bits = append(bits, ptn.FormatMove(&o))
