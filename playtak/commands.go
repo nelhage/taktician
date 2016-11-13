@@ -25,11 +25,8 @@ func (c *Commands) Login(user, pass string) error {
 		c.SendCommand("Login", user, pass)
 	}
 	for line := range c.Recv() {
-		if line == "Login or Register" {
-			return errors.New("bad password")
-		}
-		if line == "You're already logged in" {
-			return errors.New("user is already logged in")
+		if line == "Authentication failure" {
+			return errors.New("bad username or password")
 		}
 		if strings.HasPrefix(line, "Welcome ") {
 			return nil
