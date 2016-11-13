@@ -43,7 +43,6 @@ type Bot interface {
 		p *tak.Position,
 		mine, theirs time.Duration) tak.Move
 	AcceptUndo() bool
-	OpponentMove(m *tak.Move, p *tak.Position)
 	HandleChat(room, who, msg string)
 	HandleTell(who, msg string)
 }
@@ -220,7 +219,6 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 			g.p = next
 			g.Positions = append(g.Positions, g.p)
 			g.moves = append(g.moves, move)
-			g.bot.OpponentMove(&move, g.p)
 			timeout = time.After(500 * time.Millisecond)
 		case "Abandoned.":
 			log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",

@@ -66,10 +66,26 @@ func (f *Friendly) GetMove(
 	if p.ToMove() != f.g.Color {
 		return tak.Move{}
 	}
-	if f.fpa && p.MoveNumber() == 0 {
-		return tak.Move{
-			X: p.Size() / 2, Y: p.Size() / 2,
-			Type: tak.PlaceFlat,
+	if f.fpa {
+		switch p.MoveNumber() {
+		case 0:
+			// I am white; first move
+			return tak.Move{
+				X: p.Size() / 2, Y: p.Size() / 2,
+				Type: tak.PlaceFlat,
+			}
+		case 1:
+			// I am black; respond to the opponent's first
+			// move
+			if !f.fpaWhiteOK(p) {
+				f.client.SendCommand(f.g.GameStr, "Resign")
+				f.client.Tell(f.g.Opponent,
+					"I'm testing rules to balance white's advantage. "+
+						"To play me as white, you must place Black's first "+
+						"piece in the center of the board.")
+				<-ctx.Done()
+				return tak.Move{}
+			}
 		}
 	}
 	var deadline <-chan time.Time
@@ -89,26 +105,18 @@ func (f *Friendly) GetMove(
 	return m
 }
 
-func (f *Friendly) OpponentMove(m *tak.Move, p *tak.Position) {
-	if !f.fpa || p.MoveNumber() != 1 {
-		return
+func (f *Friendly) fpaWhiteOK(p *tak.Position) bool {
+	m := p.Size() / 2
+	if p.Top(m, m).Color() == tak.Black {
+		return true
 	}
-	ok := true
-	s := p.Size()
-	if s%2 == 0 {
-		ok = ok && (m.X == s/2 || m.X == s/2-1)
-		ok = ok && (m.Y == s/2 || m.Y == s/2-1)
-	} else {
-		ok = ok && m.X == s/2 && m.Y == s/2
+	if p.Size()%2 == 1 {
+		return false
 	}
-	if ok {
-		return
-	}
-	f.client.SendCommand(f.g.GameStr, "Resign")
-	f.client.Tell(f.g.Opponent,
-		"I'm testing rules to balance white's advantage. "+
-			"To play me as white, you must place Black's first "+
-			"piece in the center of the board.")
+
+	return p.Top(m-1, m).Color() == tak.Black ||
+		p.Top(m, m-1).Color() == tak.Black ||
+		p.Top(m-1, m-1).Color() == tak.Black
 }
 
 func (f *Friendly) waitUndo(p *tak.Position) bool {

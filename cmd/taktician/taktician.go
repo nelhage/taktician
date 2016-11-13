@@ -51,9 +51,6 @@ func (t *Taktician) GetMove(
 	return t.ai.GetMove(ctx, p)
 }
 
-func (t *Taktician) OpponentMove(m *tak.Move, p *tak.Position) {
-}
-
 func (t *Taktician) timeBound(remaining time.Duration) time.Duration {
 	if t.g.Size == 4 {
 		return *limit
