@@ -29,7 +29,7 @@ func (t *Taktician) NewGame(g *bot.Game) {
 
 		NoSort:   !*sort,
 		NoTable:  !*table,
-		MultiCut: false,
+		MultiCut: *multicut,
 	})
 }
 

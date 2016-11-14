@@ -31,6 +31,7 @@ var (
 
 	debug           = flag.Int("debug", 1, "debug level")
 	depth           = flag.Int("depth", 5, "minimax depth")
+	multicut        = flag.Bool("multi-cut", false, "use multi-cut")
 	limit           = flag.Duration("limit", time.Minute, "time limit per move")
 	sort            = flag.Bool("sort", true, "sort moves via history heuristic")
 	table           = flag.Bool("table", true, "use the transposition table")
