@@ -542,25 +542,24 @@ func (ai *MinimaxAI) pvSearch(
 
 	best := ai.stack[ply].pv[:0]
 	best = append(best, pv...)
+	if len(best) == 0 {
+		best = best[:1]
+	}
 	improved := false
 	var i int
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
 		i++
 		var ms []tak.Move
-		var newpv []tak.Move
 		var v int64
-		if len(best) != 0 {
-			newpv = best[1:]
-		}
 		ai.stack[ply].m = m
 		if i > 1 {
-			ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1, true)
+			ms, v = ai.zwSearch(child, ply+1, depth-1, best[1:], -α-1, true)
 			if -v > α && -v < β {
 				ai.st.ReSearch++
-				ms, v = ai.pvSearch(child, ply+1, depth-1, newpv, -β, -α)
+				ms, v = ai.pvSearch(child, ply+1, depth-1, best[1:], -β, -α)
 			}
 		} else {
-			ms, v = ai.pvSearch(child, ply+1, depth-1, newpv, -β, -α)
+			ms, v = ai.pvSearch(child, ply+1, depth-1, best[1:], -β, -α)
 		}
 		v = -v
 		if ai.cfg.Debug > 4+ply {
@@ -699,18 +698,16 @@ func (ai *MinimaxAI) zwSearch(
 	i = 0
 
 	best := ai.stack[ply].pv[:0]
-	best = append(best, pv...)
+	if len(best) == 0 {
+		best = best[:1]
+	}
 	var didCut bool
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
 		i++
 		var ms []tak.Move
-		var newpv []tak.Move
 		var v int64
-		if len(best) != 0 {
-			newpv = best[1:]
-		}
 		ai.stack[ply].m = m
-		ms, v = ai.zwSearch(child, ply+1, depth-1, newpv, -α-1, !cut)
+		ms, v = ai.zwSearch(child, ply+1, depth-1, best[1:], -α-1, !cut)
 		v = -v
 
 		if len(best) == 0 {
