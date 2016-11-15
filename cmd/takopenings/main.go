@@ -40,7 +40,7 @@ func main() {
 	rows, e := sql.Query(
 		`
 SELECT day, id
-FROM games g, rankings r1, rankings r2
+FROM games g, ratings r1, ratings r2
 WHERE r1.name = g.player1
  AND r2.name = g.player2
  AND NOT r1.bot AND NOT r2.bot
@@ -48,6 +48,9 @@ WHERE r1.name = g.player1
  AND r2.rating >= ?
  AND g.size = ?
 `, *minRating, *minRating, *size)
+	if e != nil {
+		log.Fatal("select: ", e)
+	}
 	defer rows.Close()
 
 	tree := &tree{}
