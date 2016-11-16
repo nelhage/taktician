@@ -216,8 +216,8 @@ func TestHash(t *testing.T) {
 		Move{X: 1, Y: 3, Type: PlaceFlat},
 		Move{X: 3, Y: 1, Type: PlaceFlat},
 
-		Move{X: 3, Y: 2, Type: SlideLeft, Slides: []byte{1}},
-		Move{X: 4, Y: 3, Type: SlideLeft, Slides: []byte{1}},
+		Move{X: 3, Y: 2, Type: SlideLeft, Slides: [8]byte{1}},
+		Move{X: 4, Y: 3, Type: SlideLeft, Slides: [8]byte{1}},
 	})
 	if d.Hash() != a.Hash() {
 		t.Fatalf("hash fail")

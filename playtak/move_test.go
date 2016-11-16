@@ -34,28 +34,28 @@ func TestParseServer(t *testing.T) {
 			"M C1 C3 4 1",
 			tak.Move{
 				X: 2, Y: 0, Type: tak.SlideUp,
-				Slides: []byte{4, 1},
+				Slides: [8]byte{4, 1},
 			},
 		},
 		{
 			"M D2 E2 1",
 			tak.Move{
 				X: 3, Y: 1, Type: tak.SlideRight,
-				Slides: []byte{1},
+				Slides: [8]byte{1},
 			},
 		},
 		{
 			"M D4 D1 1 1 1",
 			tak.Move{
 				X: 3, Y: 3, Type: tak.SlideDown,
-				Slides: []byte{1, 1, 1},
+				Slides: [8]byte{1, 1, 1},
 			},
 		},
 		{
 			"M D4 A4 3 1 1",
 			tak.Move{
 				X: 3, Y: 3, Type: tak.SlideLeft,
-				Slides: []byte{3, 1, 1},
+				Slides: [8]byte{3, 1, 1},
 			},
 		},
 	}

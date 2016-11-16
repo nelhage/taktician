@@ -77,7 +77,7 @@ func ParseServer(server string) (tak.Move, error) {
 		default:
 			return tak.Move{}, fmt.Errorf("bad slide: %s", server)
 		}
-		m.Slides = make([]byte, len(words)-3)
+
 		for i, drop := range words[3:] {
 			n, e := strconv.Atoi(drop)
 			if e != nil {
@@ -101,13 +101,13 @@ func FormatServer(m *tak.Move) string {
 	case tak.PlaceStanding:
 		return fmt.Sprintf("P %s W", formatSquare(m.X, m.Y))
 	case tak.SlideRight:
-		ex = m.X + int8(len(m.Slides))
+		ex = m.X + int8(m.SlideLen())
 	case tak.SlideLeft:
-		ex = m.X - int8(len(m.Slides))
+		ex = m.X - int8(m.SlideLen())
 	case tak.SlideDown:
-		ey = m.Y - int8(len(m.Slides))
+		ey = m.Y - int8(m.SlideLen())
 	case tak.SlideUp:
-		ey = m.Y + int8(len(m.Slides))
+		ey = m.Y + int8(m.SlideLen())
 	}
 	var out bytes.Buffer
 	out.WriteString("M ")
@@ -115,6 +115,9 @@ func FormatServer(m *tak.Move) string {
 	out.WriteString(" ")
 	out.WriteString(formatSquare(ex, ey))
 	for _, s := range m.Slides {
+		if s == 0 {
+			break
+		}
 		fmt.Fprintf(&out, " %d", s)
 	}
 	return out.String()

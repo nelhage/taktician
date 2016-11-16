@@ -78,13 +78,15 @@ func ParseMove(move string) (tak.Move, error) {
 		stack = 1
 	}
 	i++
+	j := 0
 	for ; i != len(move); i++ {
 		d := move[i]
-		m.Slides = append(m.Slides, byte(d-'0'))
+		m.Slides[j] = byte(d - '0')
+		j++
 		stack -= int(d - '0')
 	}
 	if stack > 0 {
-		m.Slides = append(m.Slides, byte(stack))
+		m.Slides[j] = byte(stack)
 	} else if stack < 0 {
 		return tak.Move{}, errors.New("malformed move: bad count")
 	}
@@ -103,8 +105,11 @@ func FormatMoveLong(m *tak.Move) string {
 func formatMove(m *tak.Move, long bool) string {
 	var out []byte
 	stack := 0
-	if len(m.Slides) > 0 {
+	if m.Slides[0] > 0 {
 		for _, c := range m.Slides {
+			if c == 0 {
+				break
+			}
 			stack += int(c)
 		}
 		if long || stack != 1 {
@@ -133,8 +138,11 @@ func formatMove(m *tak.Move, long bool) string {
 	case tak.SlideDown:
 		out = append(out, '-')
 	}
-	if len(m.Slides) > 0 && (long || int(m.Slides[0]) != stack) {
+	if m.Slides[0] > 0 && (long || int(m.Slides[0]) != stack) {
 		for _, s := range m.Slides {
+			if s == 0 {
+				break
+			}
 			out = append(out, byte('0'+s))
 		}
 	}

@@ -20,7 +20,7 @@ const TypeMask MoveType = 0xf
 type Move struct {
 	X, Y   int8
 	Type   MoveType
-	Slides []byte
+	Slides [8]byte
 }
 
 func (m *Move) Equal(rhs *Move) bool {
@@ -33,15 +33,21 @@ func (m *Move) Equal(rhs *Move) bool {
 	if !m.IsSlide() {
 		return true
 	}
-	if len(m.Slides) != len(rhs.Slides) {
-		return false
-	}
 	for i, s := range m.Slides {
 		if rhs.Slides[i] != s {
 			return false
 		}
 	}
 	return true
+}
+
+func (m *Move) SlideLen() int {
+	for i := len(m.Slides); i > 0; i-- {
+		if m.Slides[i-1] != 0 {
+			return i
+		}
+	}
+	return 0
 }
 
 func (m *Move) IsSlide() bool {
@@ -53,13 +59,13 @@ func (m *Move) Dest() (int8, int8) {
 	case PlaceFlat, PlaceStanding, PlaceCapstone:
 		return m.X, m.Y
 	case SlideLeft:
-		return m.X - int8(len(m.Slides)), m.Y
+		return m.X - int8(m.SlideLen()), m.Y
 	case SlideRight:
-		return m.X + int8(len(m.Slides)), m.Y
+		return m.X + int8(m.SlideLen()), m.Y
 	case SlideUp:
-		return m.X, m.Y + int8(len(m.Slides))
+		return m.X, m.Y + int8(m.SlideLen())
 	case SlideDown:
-		return m.X, m.Y - int8(len(m.Slides))
+		return m.X, m.Y - int8(m.SlideLen())
 	}
 	panic("bad type")
 }
@@ -165,8 +171,16 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	}
 
 	ct := uint(0)
+	z := false
 	for _, c := range m.Slides {
-		ct += uint(c)
+		if z {
+			if c != 0 {
+				return nil, ErrIllegalSlide
+			}
+		} else {
+			ct += uint(c)
+			z = c == 0
+		}
 	}
 	if ct > uint(p.cfg.Size) || ct < 1 || ct > uint(p.Height[i]) {
 		return nil, ErrIllegalSlide
@@ -205,6 +219,9 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 
 	x, y := m.X, m.Y
 	for _, c := range m.Slides {
+		if c == 0 {
+			break
+		}
 		x += dx
 		y += dy
 		if x < 0 || x >= int8(next.cfg.Size) ||
@@ -293,11 +310,11 @@ func (p *Position) AllMoves(moves []Move) []Move {
 		for y := 0; y < p.cfg.Size; y++ {
 			i := uint(y*p.cfg.Size + x)
 			if p.Height[i] == 0 {
-				moves = append(moves, Move{int8(x), int8(y), PlaceFlat, nil})
+				moves = append(moves, Move{X: int8(x), Y: int8(y), Type: PlaceFlat})
 				if p.move >= 2 {
-					moves = append(moves, Move{int8(x), int8(y), PlaceStanding, nil})
+					moves = append(moves, Move{X: int8(x), Y: int8(y), Type: PlaceStanding})
 					if cap {
-						moves = append(moves, Move{int8(x), int8(y), PlaceCapstone, nil})
+						moves = append(moves, Move{X: int8(x), Y: int8(y), Type: PlaceCapstone})
 					}
 				}
 				continue
@@ -328,7 +345,9 @@ func (p *Position) AllMoves(moves []Move) []Move {
 				}
 				for _, s := range slides[h] {
 					if len(s) <= d.c {
-						moves = append(moves, Move{int8(x), int8(y), d.d, s})
+						var s8 [8]byte
+						copy(s8[:len(s)], s)
+						moves = append(moves, Move{X: int8(x), Y: int8(y), Type: d.d, Slides: s8})
 					}
 				}
 			}
