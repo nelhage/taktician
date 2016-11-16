@@ -7,10 +7,10 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type symmetry func(int, int) (int, int)
+type symmetry func(int8, int8) (int8, int8)
 
 func compose(ss ...symmetry) symmetry {
-	return func(x, y int) (int, int) {
+	return func(x, y int8) (int8, int8) {
 		for i := range ss {
 			s := ss[len(ss)-i-1]
 			x, y = s(x, y)
@@ -20,35 +20,35 @@ func compose(ss ...symmetry) symmetry {
 }
 
 func symmetries(size int) []symmetry {
-	flip := func(i int) int {
-		return size - 1 - i
+	flip := func(i int8) int8 {
+		return int8(size) - 1 - i
 	}
 
-	identity := func(x, y int) (int, int) {
+	identity := func(x, y int8) (int8, int8) {
 		return x, y
 	}
 
-	flipX := func(x, y int) (int, int) {
+	flipX := func(x, y int8) (int8, int8) {
 		return flip(x), y
 	}
 
-	flipY := func(x, y int) (int, int) {
+	flipY := func(x, y int8) (int8, int8) {
 		return x, flip(y)
 	}
-	flipDiag1 := func(x, y int) (int, int) {
+	flipDiag1 := func(x, y int8) (int8, int8) {
 		return y, x
 	}
-	flipDiag2 := func(x, y int) (int, int) {
+	flipDiag2 := func(x, y int8) (int8, int8) {
 		return flip(y), flip(x)
 	}
 
-	rotate2 := func(x, y int) (int, int) {
+	rotate2 := func(x, y int8) (int8, int8) {
 		return flip(x), flip(y)
 	}
-	rotCW := func(x, y int) (int, int) {
+	rotCW := func(x, y int8) (int8, int8) {
 		return y, flip(x)
 	}
-	rotCCW := func(x, y int) (int, int) {
+	rotCCW := func(x, y int8) (int8, int8) {
 		return flip(y), x
 	}
 

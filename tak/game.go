@@ -167,8 +167,8 @@ func (p *Position) Top(x, y int) Piece {
 	return MakePiece(c, k)
 }
 
-func set(p *Position, x, y int, s Square) {
-	i := uint(y*p.cfg.Size + x)
+func set(p *Position, x, y int8, s Square) {
+	i := uint(y*int8(p.cfg.Size) + x)
 	p.White &= ^(1 << i)
 	p.Black &= ^(1 << i)
 	p.Standing &= ^(1 << i)

@@ -19,7 +19,7 @@ func BenchmarkMinimax(b *testing.B) {
 	var cfg = tak.Config{Size: *size}
 	p := tak.New(cfg)
 	p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
-	p, _ = p.Move(&tak.Move{X: *size - 1, Y: *size - 1, Type: tak.PlaceFlat})
+	p, _ = p.Move(&tak.Move{X: int8(*size - 1), Y: int8(*size - 1), Type: tak.PlaceFlat})
 	ai := NewMinimax(MinimaxConfig{
 		Size:  *size,
 		Depth: *depth,

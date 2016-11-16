@@ -77,7 +77,7 @@ func (f *Friendly) GetMove(
 		case 0:
 			// I am white; first move
 			return tak.Move{
-				X: p.Size() / 2, Y: p.Size() / 2,
+				X: int8(p.Size() / 2), Y: int8(p.Size() / 2),
 				Type: tak.PlaceFlat,
 			}
 		case 1:

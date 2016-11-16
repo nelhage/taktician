@@ -45,13 +45,13 @@ func ParseMove(move string) (tak.Move, error) {
 	}
 
 	if move[i] >= 'a' && move[i] <= 'h' {
-		m.X = int(move[i] - 'a')
+		m.X = int8(move[i] - 'a')
 		i++
 	} else {
 		return tak.Move{}, errors.New("illegal move")
 	}
 	if move[i] >= '1' && move[i] <= '8' {
-		m.Y = int(move[i] - '1')
+		m.Y = int8(move[i] - '1')
 		i++
 	} else {
 		return tak.Move{}, errors.New("illegal move")

@@ -22,7 +22,7 @@ func parseSquare(square string) (x, y int, err error) {
 	return int(square[0] - 'A'), int(square[1] - '1'), nil
 }
 
-func formatSquare(x, y int) string {
+func formatSquare(x, y int8) string {
 	return string([]byte{byte(x) + 'A', byte(y) + '1'})
 }
 
@@ -38,7 +38,7 @@ func ParseServer(server string) (tak.Move, error) {
 			return tak.Move{}, err
 		}
 		m := tak.Move{
-			X: x, Y: y, Type: tak.PlaceFlat,
+			X: int8(x), Y: int8(y), Type: tak.PlaceFlat,
 		}
 		if len(words) == 3 {
 			switch words[2] {
@@ -64,7 +64,7 @@ func ParseServer(server string) (tak.Move, error) {
 		if err != nil {
 			return tak.Move{}, err
 		}
-		m := tak.Move{X: sx, Y: sy}
+		m := tak.Move{X: int8(sx), Y: int8(sy)}
 		switch {
 		case ex > sx && ey == sy:
 			m.Type = tak.SlideRight
@@ -101,13 +101,13 @@ func FormatServer(m *tak.Move) string {
 	case tak.PlaceStanding:
 		return fmt.Sprintf("P %s W", formatSquare(m.X, m.Y))
 	case tak.SlideRight:
-		ex = m.X + len(m.Slides)
+		ex = m.X + int8(len(m.Slides))
 	case tak.SlideLeft:
-		ex = m.X - len(m.Slides)
+		ex = m.X - int8(len(m.Slides))
 	case tak.SlideDown:
-		ey = m.Y - len(m.Slides)
+		ey = m.Y - int8(len(m.Slides))
 	case tak.SlideUp:
-		ey = m.Y + len(m.Slides)
+		ey = m.Y + int8(len(m.Slides))
 	}
 	var out bytes.Buffer
 	out.WriteString("M ")

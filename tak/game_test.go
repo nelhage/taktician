@@ -12,7 +12,7 @@ func TestHasRoad(t *testing.T) {
 	}
 
 	for y := 0; y < 5; y++ {
-		set(p, 2, y, Square{MakePiece(Black, Flat)})
+		set(p, 2, int8(y), Square{MakePiece(Black, Flat)})
 	}
 
 	p.analyze()
@@ -124,7 +124,7 @@ func BenchmarkFullHasRoad(b *testing.B) {
 			} else {
 				piece = MakePiece(Black, Flat)
 			}
-			set(p, i, j, Square{piece})
+			set(p, int8(i), int8(j), Square{piece})
 		}
 	}
 	b.ReportAllocs()
@@ -138,10 +138,10 @@ func BenchmarkFullHasRoad(b *testing.B) {
 func BenchmarkHasRoadWindy(b *testing.B) {
 	p := New(Config{Size: 5})
 	for y := 0; y < 4; y++ {
-		set(p, 3, y, Square{MakePiece(White, Flat)})
+		set(p, 3, int8(y), Square{MakePiece(White, Flat)})
 	}
 	for x := 0; x < 4; x++ {
-		set(p, x, 3, Square{MakePiece(White, Flat)})
+		set(p, int8(x), 3, Square{MakePiece(White, Flat)})
 	}
 	b.ReportAllocs()
 	b.ResetTimer()

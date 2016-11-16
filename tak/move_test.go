@@ -177,7 +177,7 @@ func TestMoveMultiDrop(t *testing.T) {
 }
 
 func TestAllMovesEmptyBoard(t *testing.T) {
-	type coord struct{ x, y int }
+	type coord struct{ x, y int8 }
 	p := New(Config{Size: 6})
 	moves := p.AllMoves(nil)
 	lookup := make(map[coord]struct{}, 6*6)
@@ -197,7 +197,7 @@ func TestAllMovesEmptyBoard(t *testing.T) {
 	}
 	for i := 0; i < 6; i++ {
 		for j := 0; j < 6; j++ {
-			if _, ok := lookup[coord{i, j}]; !ok {
+			if _, ok := lookup[coord{int8(i), int8(j)}]; !ok {
 				t.Errorf("missing move %d,%d", i, j)
 			}
 		}
@@ -218,7 +218,7 @@ func (o orderMoves) Swap(i, j int) {
 
 func TestAllMovesBasicSlides(t *testing.T) {
 	cases := []struct {
-		x, y   int
+		x, y   int8
 		slides []MoveType
 	}{
 		{0, 0, []MoveType{SlideRight, SlideUp}},

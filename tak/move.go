@@ -18,7 +18,7 @@ const (
 const TypeMask MoveType = 0xf
 
 type Move struct {
-	X, Y   int
+	X, Y   int8
 	Type   MoveType
 	Slides []byte
 }
@@ -48,18 +48,18 @@ func (m *Move) IsSlide() bool {
 	return m.Type >= SlideLeft
 }
 
-func (m *Move) Dest() (int, int) {
+func (m *Move) Dest() (int8, int8) {
 	switch m.Type {
 	case PlaceFlat, PlaceStanding, PlaceCapstone:
 		return m.X, m.Y
 	case SlideLeft:
-		return m.X - len(m.Slides), m.Y
+		return m.X - int8(len(m.Slides)), m.Y
 	case SlideRight:
-		return m.X + len(m.Slides), m.Y
+		return m.X + int8(len(m.Slides)), m.Y
 	case SlideUp:
-		return m.X, m.Y + len(m.Slides)
+		return m.X, m.Y + int8(len(m.Slides))
 	case SlideDown:
-		return m.X, m.Y - len(m.Slides)
+		return m.X, m.Y - int8(len(m.Slides))
 	}
 	panic("bad type")
 }
@@ -97,7 +97,7 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	}
 	next.move++
 	var place Piece
-	dx, dy := 0, 0
+	var dx, dy int8
 	switch m.Type {
 	case Pass:
 		next.analyze()
@@ -125,7 +125,7 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 		}
 		place = MakePiece(place.Color().Flip(), place.Kind())
 	}
-	i := uint(m.X + m.Y*p.Size())
+	i := uint(m.X + m.Y*int8(p.Size()))
 	if place != 0 {
 		if (p.White|p.Black)&(1<<i) != 0 {
 			return nil, ErrOccupied
@@ -178,7 +178,7 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 		return nil, ErrIllegalSlide
 	}
 
-	top := p.Top(m.X, m.Y)
+	top := p.Top(int(m.X), int(m.Y))
 	stack := p.Stacks[i] << 1
 	if top.Color() == Black {
 		stack |= 1
@@ -207,14 +207,14 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	for _, c := range m.Slides {
 		x += dx
 		y += dy
-		if x < 0 || x >= next.cfg.Size ||
-			y < 0 || y >= next.cfg.Size {
+		if x < 0 || x >= int8(next.cfg.Size) ||
+			y < 0 || y >= int8(next.cfg.Size) {
 			return nil, ErrIllegalSlide
 		}
 		if int(c) < 1 || uint(c) > ct {
 			return nil, ErrIllegalSlide
 		}
-		i = uint(x + y*p.Size())
+		i = uint(x + y*int8(p.Size()))
 		switch {
 		case next.Caps&(1<<i) != 0:
 			return nil, ErrIllegalSlide
@@ -288,15 +288,16 @@ func (p *Position) AllMoves(moves []Move) []Move {
 	} else {
 		cap = p.blackCaps > 0
 	}
+
 	for x := 0; x < p.cfg.Size; x++ {
 		for y := 0; y < p.cfg.Size; y++ {
 			i := uint(y*p.cfg.Size + x)
 			if p.Height[i] == 0 {
-				moves = append(moves, Move{x, y, PlaceFlat, nil})
+				moves = append(moves, Move{int8(x), int8(y), PlaceFlat, nil})
 				if p.move >= 2 {
-					moves = append(moves, Move{x, y, PlaceStanding, nil})
+					moves = append(moves, Move{int8(x), int8(y), PlaceStanding, nil})
 					if cap {
-						moves = append(moves, Move{x, y, PlaceCapstone, nil})
+						moves = append(moves, Move{int8(x), int8(y), PlaceCapstone, nil})
 					}
 				}
 				continue
@@ -327,7 +328,7 @@ func (p *Position) AllMoves(moves []Move) []Move {
 				}
 				for _, s := range slides[h] {
 					if len(s) <= d.c {
-						moves = append(moves, Move{x, y, d.d, s})
+						moves = append(moves, Move{int8(x), int8(y), d.d, s})
 					}
 				}
 			}

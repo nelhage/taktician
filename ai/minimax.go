@@ -717,9 +717,9 @@ func (ai *MinimaxAI) zwSearch(
 	if !ai.cfg.NoReduceSlides && ply > 0 {
 		m := ai.stack[ply-1].m
 		if m.IsSlide() && len(m.Slides) == 1 {
-			i := m.X + m.Y*int(ai.c.Size)
+			i := m.X + m.Y*int8(ai.c.Size)
 			dx, dy := m.Dest()
-			j := dx + dy*int(ai.c.Size)
+			j := dx + dy*int8(ai.c.Size)
 			if p.Height[i] == 0 && p.Height[j] == m.Slides[0] {
 				ai.st.ReducedSlides++
 				depth -= 2
