@@ -53,6 +53,12 @@ func (f *Friendly) NewGame(g *bot.Game) {
 	f.client.Tell(g.Opponent,
 		fmt.Sprintf("%s@level %d: %s",
 			*user, f.level, docURL))
+	if g.Color == tak.Black {
+		f.client.Tell(g.Opponent,
+			"I'm an experiment bot testing alternate rules. "+
+				"To play me, please place my first stone "+
+				"in the center of the board.")
+	}
 }
 
 func (f *Friendly) GameOver() {
