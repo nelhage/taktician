@@ -1,0 +1,9 @@
+a1 f6 d4 d3
+a1 f1 e3 d4
+a1 f1 e3 e2
+a1 f1 e3 e4
+a1 f1 e3 Cd4
+a1 f1 f2
+a1 f1 d4
+a1 f1 d3 c3 d4
+a1 f1 e2
