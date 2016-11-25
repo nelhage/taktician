@@ -18,6 +18,7 @@ const (
 	MaxEval      int64 = 1 << 30
 	MinEval            = -MaxEval
 	WinThreshold       = 1 << 29
+	WinBase            = (WinThreshold + MaxEval) / 2
 
 	tableSize uint64 = (1 << 20)
 

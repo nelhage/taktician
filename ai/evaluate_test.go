@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -40,6 +41,55 @@ func TestEvaluateWinner(t *testing.T) {
 		eval := EvaluateWinner(&c, p)
 		if eval < tc.min || eval > tc.max {
 			t.Errorf("%d: eval=%d (not in [%d,%d])", i, eval, tc.min, tc.max)
+		}
+		termEval := evaluateTerminal(p, &defaultTerminal, p.WinDetails().Winner)
+		if termEval < tc.min || termEval > tc.max {
+			t.Errorf("%d: evalTerminal=%d (not in [%d,%d])", i, termEval, tc.min, tc.max)
+		}
+	}
+}
+
+func formatpvs(pvs [][]tak.Move) string {
+	var ptns []string
+	for _, pv := range pvs {
+		ptns = append(ptns, formatpv(pv))
+	}
+	return fmt.Sprintf("%v", ptns)
+}
+
+func TestEvaluateTerminal(t *testing.T) {
+	p, e := ptn.ParseTPS(`x,2,2,11121S,1,12S/2S,1,2S,1,2S,2/2,1,2,1212C,1,1/1,21,1,21C,2S,21/2,1,2,2,2,1/2,2,1,1,2,1 1 31`)
+	if e != nil {
+		panic(e)
+	}
+
+	ai := NewMinimax(MinimaxConfig{Size: p.Size(), Depth: 5})
+	pvs, _, _ := ai.AnalyzeAll(context.Background(), p)
+	if len(pvs) != 1 {
+		t.Fatalf("returned too many moves: %q", formatpvs(pvs))
+	}
+	f := ptn.FormatMove(&pvs[0][0])
+	if f != "4d6<112" {
+		t.Errorf("returned wrong move: %s", f)
+	}
+
+	ai = NewMinimax(MinimaxConfig{
+		Size:  p.Size(),
+		Depth: 5,
+		Evaluate: MakeEvaluator(p.Size(), &Weights{
+			Terminal: TerminalWeights{
+				Flats:    0,
+				Reserves: 1,
+			},
+		}),
+	})
+	pvs, _, _ = ai.AnalyzeAll(context.Background(), p)
+	if len(pvs) != 4 {
+		t.Fatal("did not find all slides")
+	}
+	for _, pv := range pvs {
+		if !pv[0].IsSlide() {
+			t.Fatal("placed a reserve!")
 		}
 	}
 }

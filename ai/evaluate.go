@@ -17,6 +17,13 @@ type FlatScores struct {
 	Hard, Soft int
 }
 
+type TerminalWeights struct {
+	Plies            int
+	Flats            int
+	Reserves         int
+	OpponentReserves int
+}
+
 type Weights struct {
 	TopFlat     int
 	EndgameFlat int
@@ -40,6 +47,15 @@ type Weights struct {
 
 	Center        int
 	CenterControl int
+
+	Terminal TerminalWeights
+}
+
+var defaultTerminal = TerminalWeights{
+	Flats:            500,
+	Plies:            100,
+	OpponentReserves: 10,
+	Reserves:         1,
 }
 
 var defaultWeights = Weights{
@@ -77,6 +93,8 @@ var defaultWeights = Weights{
 
 	Center:        40,
 	CenterControl: 10,
+
+	Terminal: defaultTerminal,
 }
 
 var defaultWeights6 = Weights{
@@ -115,6 +133,8 @@ var defaultWeights6 = Weights{
 
 	Center:        40,
 	CenterControl: 10,
+
+	Terminal: defaultTerminal,
 }
 
 var DefaultWeights = []Weights{
@@ -140,33 +160,50 @@ func MakeEvaluator(size int, w *Weights) EvaluationFunc {
 
 const moveScale = 100
 
-func evaluateTerminal(p *tak.Position, winner tak.Color) int64 {
-	var pieces int64
-	if winner == tak.White {
-		pieces = int64(p.WhiteStones())
-	} else {
-		pieces = int64(p.BlackStones())
-	}
-	switch winner {
-	case tak.NoColor:
+func evaluateTerminal(p *tak.Position, w *TerminalWeights, winner tak.Color) int64 {
+	if winner == tak.NoColor {
 		return 0
-	case p.ToMove():
-		return MaxEval - moveScale*int64(p.MoveNumber()) + pieces
-	default:
-		return MinEval + moveScale*int64(p.MoveNumber()) - pieces
 	}
+
+	var reserves, opponent int64
+	var flats int64
+	d := p.WinDetails()
+	if winner == tak.White {
+		reserves, opponent = int64(p.WhiteStones()), int64(p.BlackStones())
+		flats = int64(d.WhiteFlats - d.BlackFlats)
+	} else {
+		opponent, reserves = int64(p.WhiteStones()), int64(p.BlackStones())
+		flats = int64(d.BlackFlats - d.WhiteFlats)
+	}
+
+	v := WinBase + int64(w.Flats)*flats +
+		int64(w.Reserves)*reserves +
+		int64(w.OpponentReserves)*opponent +
+		int64(w.Plies*p.MoveNumber())
+
+	if winner == p.ToMove() {
+		return v
+	}
+	return -v
 }
 
 func EvaluateWinner(_ *bitboard.Constants, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
-		return evaluateTerminal(p, winner)
+		switch winner {
+		case tak.NoColor:
+			return 0
+		case p.ToMove():
+			return WinBase
+		default:
+			return -WinBase
+		}
 	}
 	return 0
 }
 
 func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	if over, winner := p.GameOver(); over {
-		return evaluateTerminal(p, winner)
+		return evaluateTerminal(p, &w.Terminal, winner)
 	}
 
 	var score int64
