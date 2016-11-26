@@ -32,7 +32,8 @@ type Weights struct {
 	Standing    int
 	Capstone    int
 
-	HardTopCap int
+	HardTopCap  int
+	CapMobility int
 
 	FlatCaptives     FlatScores
 	StandingCaptives FlatScores
@@ -69,7 +70,9 @@ var defaultWeights = Weights{
 	EndgameFlat: 800,
 	Standing:    200,
 	Capstone:    300,
+
 	HardTopCap:  100,
+	CapMobility: 10,
 
 	FlatCaptives: FlatScores{
 		Hard: 200,
@@ -111,7 +114,9 @@ var defaultWeights6 = Weights{
 	EndgameFlat: 800,
 	Standing:    200,
 	Capstone:    300,
+
 	HardTopCap:  100,
+	CapMobility: 10,
 
 	FlatCaptives: FlatScores{
 		Hard: 200,
@@ -266,6 +271,8 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 			if ((p.Black & bit) == 0) == ((s & 1) == 0) {
 				score += sign * int64(w.HardTopCap)
 			}
+			score += sign * int64(w.CapMobility) *
+				int64(bitboard.Popcount(mobility(c, p, bit, h)))
 		}
 
 		switch {
@@ -300,6 +307,38 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		return score
 	}
 	return -score
+}
+
+func mobility(c *bitboard.Constants, p *tak.Position, bit uint64, height uint8) uint64 {
+	m := bit
+
+	stop := ((p.Caps | p.Standing | ^c.Mask) &^ bit)
+
+	e := bit << 1
+	for i := uint8(0); i < height && (e&(stop|c.R)) == 0; i++ {
+		m |= e
+		e <<= 1
+	}
+
+	e = bit >> 1
+	for i := uint8(0); i < height && (e&(stop|c.L)) == 0; i++ {
+		m |= e
+		e >>= 1
+	}
+
+	e = bit << c.Size
+	for i := uint8(0); i < height && (e&stop) == 0; i++ {
+		m |= e
+		e <<= c.Size
+	}
+
+	e = bit >> c.Size
+	for i := uint8(0); i < height && (e&stop) == 0; i++ {
+		m |= e
+		e >>= c.Size
+	}
+
+	return m
 }
 
 func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) int {

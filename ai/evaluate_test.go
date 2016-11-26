@@ -185,6 +185,77 @@ func TestHardTopCap(t *testing.T) {
 	}
 }
 
+func TestMobility(t *testing.T) {
+	type inner struct {
+		x, y     int
+		h        uint8
+		mobility int
+	}
+	cases := []struct {
+		board string
+		inner []inner
+	}{
+		{
+			`
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+. . . . .`, []inner{
+				{2, 2, 1, 5},
+				{2, 2, 5, 9},
+				{0, 0, 2, 5},
+				{0, 1, 5, 9},
+			},
+		},
+		{
+			`
+WC . . . .
+.  . . . .
+.  . . . .
+.  . . . .
+.  . . . .`, []inner{
+				{0, 0, 5, 9},
+				{1, 1, 2, 7},
+			},
+		},
+		{
+			`
+. WS .  .  .
+BC . .  .  .
+.  . .  BS .
+.  . BC .  .
+.  . .  .  .`, []inner{
+				{0, 0, 5, 1},
+				{1, 1, 2, 5},
+				{2, 1, 2, 6},
+				{3, 3, 5, 3},
+			},
+		},
+	}
+
+	for i, tc := range cases {
+		tc := tc
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			p, e := board(tc.board, tak.White)
+			if e != nil {
+				t.Fatal(e)
+			}
+			c := bitboard.Precompute(uint(p.Size()))
+			for _, ic := range tc.inner {
+				bit := uint64(1) << uint(ic.x+p.Size()*ic.y)
+				sqs := mobility(&c, p, bit, ic.h)
+				m := bitboard.Popcount(sqs)
+				if m != ic.mobility {
+					t.Errorf("(%d,%d): got %d (%s) != %d",
+						ic.x, ic.y, m,
+						strconv.FormatUint(sqs, 2), ic.mobility)
+				}
+			}
+		})
+	}
+}
+
 func TestScoreThreats(t *testing.T) {
 	ws := Weights{
 		Potential: 1,
