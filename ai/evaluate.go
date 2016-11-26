@@ -25,10 +25,14 @@ type TerminalWeights struct {
 }
 
 type Weights struct {
+	Tempo int
+
 	TopFlat     int
 	EndgameFlat int
 	Standing    int
 	Capstone    int
+
+	HardTopCap int
 
 	FlatCaptives     FlatScores
 	StandingCaptives FlatScores
@@ -59,10 +63,13 @@ var defaultTerminal = TerminalWeights{
 }
 
 var defaultWeights = Weights{
+	Tempo: 50,
+
 	TopFlat:     400,
 	EndgameFlat: 800,
 	Standing:    200,
 	Capstone:    300,
+	HardTopCap:  100,
 
 	FlatCaptives: FlatScores{
 		Hard: 200,
@@ -98,10 +105,13 @@ var defaultWeights = Weights{
 }
 
 var defaultWeights6 = Weights{
+	Tempo: 50,
+
 	TopFlat:     400,
 	EndgameFlat: 800,
 	Standing:    200,
 	Capstone:    300,
+	HardTopCap:  100,
 
 	FlatCaptives: FlatScores{
 		Hard: 200,
@@ -219,9 +229,9 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	}
 	flat := w.TopFlat + ((endgameCutoff-left)*w.EndgameFlat)/endgameCutoff
 	if p.ToMove() == tak.White {
-		score += int64(flat/2) + 50
+		score += int64(flat/2 + w.Tempo)
 	} else {
-		score -= int64(flat/2) + 50
+		score -= int64(flat/2 + w.Tempo)
 	}
 
 	score += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * flat)
@@ -251,6 +261,11 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 			hf = bitboard.Popcount(s)
 			sf = int(h) - hf - 1
 			sign = -1
+		}
+		if p.Caps&bit != 0 {
+			if ((p.Black & bit) == 0) == ((s & 1) == 0) {
+				score += sign * int64(w.HardTopCap)
+			}
 		}
 
 		switch {

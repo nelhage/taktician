@@ -157,6 +157,34 @@ func board(tpl string, who tak.Color) (*tak.Position, error) {
 	return tak.FromSquares(tak.Config{Size: len(pieces)}, pieces, ply)
 }
 
+func TestHardTopCap(t *testing.T) {
+	cases := []struct {
+		tps string
+		v   int64
+	}{
+		{"x5/x5/x5/x4,2/21C,x3,1 2 3", 0},
+		{"x5/x5/x5/x4,2/11C,x3,2 2 3", -1},
+		{"x5/x5/x4,2/x4,2/11C,x3,2 1 4", 1},
+		{"x5/x5/x4,2/x4,2/21C,x3,1 1 4", 0},
+		{"x5/x5/x5/x5/11,x3,22C 1 4", -1},
+		{"x5/x5/1,x4/1,x4/1,1,x2,22C 2 4", 1},
+	}
+	ws := Weights{HardTopCap: 1}
+	for _, tc := range cases {
+		p, e := ptn.ParseTPS(tc.tps)
+		if e != nil {
+			t.Fatal("parse ", e)
+		}
+
+		c := bitboard.Precompute(uint(p.Size()))
+
+		eval := evaluate(&c, &ws, p)
+		if eval != tc.v {
+			t.Errorf("%q: got v=%d expect=%v", tc.tps, eval, tc.v)
+		}
+	}
+}
+
 func TestScoreThreats(t *testing.T) {
 	ws := Weights{
 		Potential: 1,
