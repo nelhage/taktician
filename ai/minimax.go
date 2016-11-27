@@ -72,10 +72,10 @@ type frame struct {
 
 type tableEntry struct {
 	hash  uint64
-	depth int
 	value int64
-	bound boundType
 	m     tak.Move
+	bound boundType
+	depth int8
 }
 
 type boundType byte
@@ -386,7 +386,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	base := 0
 	te := m.ttGet(p.Hash())
 	if te != nil && te.bound == exactBound {
-		base = te.depth
+		base = int(te.depth)
 		ms = append(ms[:0], te.m)
 	}
 
@@ -476,7 +476,7 @@ func (m *MinimaxAI) Evaluate(p *tak.Position) int64 {
 }
 
 func teSuffices(te *tableEntry, depth int, α, β int64) bool {
-	if te.depth >= depth {
+	if int(te.depth) >= depth {
 		switch {
 		case te.bound == exactBound:
 			return true
@@ -544,7 +544,7 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 	}
 	if mg.te != nil {
 		cut.Table = ptn.FormatMove(&mg.te.m)
-		cut.TableDepth = mg.te.depth
+		cut.TableDepth = int(mg.te.depth)
 	}
 	if mg.r.Type != 0 {
 		cut.Response = ptn.FormatMove(&mg.r)
@@ -651,9 +651,9 @@ func (ai *MinimaxAI) pvSearch(
 	}
 
 	hash := p.Hash()
-	if te = ai.ttPut(hash); te != nil && (te.hash != hash || te.depth <= depth) {
+	if te = ai.ttPut(hash); te != nil && (te.hash != hash || int(te.depth) <= depth) {
 		te.hash = hash
-		te.depth = depth
+		te.depth = int8(depth)
 		te.m = best[0]
 		te.value = α
 		if !improved {
@@ -800,7 +800,7 @@ func (ai *MinimaxAI) zwSearch(
 
 	if te = ai.ttPut(p.Hash()); te != nil {
 		te.hash = p.Hash()
-		te.depth = depth
+		te.depth = int8(depth)
 		te.m = best[0]
 		te.value = α
 		if didCut {
