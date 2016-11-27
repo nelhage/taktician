@@ -65,25 +65,6 @@ func TestEvaluateTerminal(t *testing.T) {
 
 	ai := NewMinimax(MinimaxConfig{Size: p.Size(), Depth: 5})
 	pvs, _, _ := ai.AnalyzeAll(context.Background(), p)
-	if len(pvs) != 1 {
-		t.Fatalf("returned too many moves: %q", formatpvs(pvs))
-	}
-	f := ptn.FormatMove(&pvs[0][0])
-	if f != "4d6<112" {
-		t.Errorf("returned wrong move: %s", f)
-	}
-
-	ai = NewMinimax(MinimaxConfig{
-		Size:  p.Size(),
-		Depth: 5,
-		Evaluate: MakeEvaluator(p.Size(), &Weights{
-			Terminal: TerminalWeights{
-				Flats:    0,
-				Reserves: 1,
-			},
-		}),
-	})
-	pvs, _, _ = ai.AnalyzeAll(context.Background(), p)
 	if len(pvs) != 4 {
 		t.Fatal("did not find all slides")
 	}
