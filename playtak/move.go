@@ -116,7 +116,7 @@ func FormatServer(m *tak.Move) string {
 	out.WriteString(formatSquare(m.X, m.Y))
 	out.WriteString(" ")
 	out.WriteString(formatSquare(ex, ey))
-	for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+	for it := m.Slides.Iterator(); it.Ok(); it = it.Next() {
 		fmt.Fprintf(&out, " %d", it.Elem())
 	}
 	return out.String()

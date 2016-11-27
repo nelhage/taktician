@@ -146,7 +146,7 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	}
 
 	ct := uint(0)
-	for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+	for it := m.Slides.Iterator(); it.Ok(); it = it.Next() {
 		c := it.Elem()
 		if c == 0 {
 			return nil, ErrIllegalSlide
@@ -189,7 +189,7 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	next.hash ^= next.hashAt(i)
 
 	x, y := m.X, m.Y
-	for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+	for it := m.Slides.Iterator(); it.Ok(); it = it.Next() {
 		c := uint(it.Elem())
 		x += dx
 		y += dy

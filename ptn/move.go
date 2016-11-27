@@ -108,7 +108,7 @@ func formatMove(m *tak.Move, long bool) string {
 	var out []byte
 	stack := 0
 	if !m.Slides.Empty() {
-		for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+		for it := m.Slides.Iterator(); it.Ok(); it = it.Next() {
 			stack += it.Elem()
 		}
 		if long || stack != 1 {
@@ -138,7 +138,7 @@ func formatMove(m *tak.Move, long bool) string {
 		out = append(out, '-')
 	}
 	if !m.Slides.Empty() && (long || m.Slides.Len() != 1) {
-		for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+		for it := m.Slides.Iterator(); it.Ok(); it = it.Next() {
 			out = append(out, byte('0'+it.Elem()))
 		}
 	}

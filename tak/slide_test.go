@@ -32,7 +32,7 @@ func TestMkSlides(t *testing.T) {
 
 		var out []int
 		if !s.Empty() {
-			for it, ok := s.Iterator(); ok; it, ok = it.Next() {
+			for it := s.Iterator(); it.Ok(); it = it.Next() {
 				out = append(out, it.Elem())
 			}
 		}

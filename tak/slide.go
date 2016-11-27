@@ -43,13 +43,16 @@ func (s Slides) Prepend(next int) Slides {
 
 type SlideIterator uint32
 
-func (s Slides) Iterator() (SlideIterator, bool) {
-	return SlideIterator(s), !s.Empty()
+func (s Slides) Iterator() SlideIterator {
+	return SlideIterator(s)
 }
 
-func (s SlideIterator) Next() (SlideIterator, bool) {
-	s = s >> 4
-	return s, s != 0
+func (s SlideIterator) Next() SlideIterator {
+	return s >> 4
+}
+
+func (s SlideIterator) Ok() bool {
+	return s != 0
 }
 
 func (s SlideIterator) Elem() int {
