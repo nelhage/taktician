@@ -27,10 +27,10 @@ func UniformRandomPolicy(ctx context.Context,
 
 func NewMinimaxPolicy(cfg *MCTSConfig, depth int) PolicyFunc {
 	mm := ai.NewMinimax(ai.MinimaxConfig{
-		Size:    cfg.Size,
-		NoTable: true,
-		Depth:   depth,
-		Seed:    cfg.Seed,
+		Size:     cfg.Size,
+		TableMem: -1,
+		Depth:    depth,
+		Seed:     cfg.Seed,
 	})
 	return func(ctx context.Context,
 		m *MonteCarloAI,

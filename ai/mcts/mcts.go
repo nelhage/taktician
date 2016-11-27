@@ -315,7 +315,7 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 	mc.mm = ai.NewMinimax(ai.MinimaxConfig{
 		Size:     cfg.Size,
 		Evaluate: ai.EvaluateWinner,
-		NoTable:  true,
+		TableMem: -1,
 		Depth:    1,
 		Seed:     mc.cfg.Seed,
 	})

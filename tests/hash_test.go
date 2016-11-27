@@ -88,7 +88,7 @@ func testCollisions(t *testing.T, p *tak.Position) {
 		Size:     5,
 		Depth:    *depth,
 		Evaluate: wrapHash(tbl, ai.MakeEvaluator(5, nil)),
-		NoTable:  true,
+		TableMem: -1,
 	})
 	for i := 0; i < 4; i++ {
 		m := ai.GetMove(context.Background(), p)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -22,7 +23,7 @@ const (
 	WinThreshold       = 1 << 29
 	WinBase            = (WinThreshold + MaxEval) / 2
 
-	tableSize uint64 = (1 << 20)
+	defaultTableMem = 100 * (1 << 20)
 
 	maxDepth   = 15
 	allocMoves = 500
@@ -147,11 +148,14 @@ type MinimaxConfig struct {
 	Debug int
 	Seed  int64
 
+	// How much memory to allocate to the transposition
+	// table. Negative means don't use a table.
+	TableMem int64
+
 	RandomizeWindow int64
 	RandomizeScale  int64
 
 	NoSort         bool
-	NoTable        bool
 	NoNullMove     bool
 	NoExtendForces bool
 
@@ -194,9 +198,14 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	}
 	m.history = make(map[uint64]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
 	m.response = make(map[uint64]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)
-	if !cfg.NoTable {
-		m.table = make([]tableEntry, tableSize)
+	if m.cfg.TableMem >= 0 {
+		mem := m.cfg.TableMem
+		if mem == 0 {
+			mem = defaultTableMem
+		}
+		m.table = make([]tableEntry, mem/int64(reflect.TypeOf(tableEntry{}).Size()))
 	}
+
 	for i := range m.stack {
 		m.stack[i].p = tak.Alloc(m.cfg.Size)
 	}
@@ -216,11 +225,11 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 const hashMul = 0x61C8864680B583EB
 
 func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
-	if m.cfg.NoTable {
+	if m.table == nil {
 		return nil
 	}
-	i1 := h % tableSize
-	i2 := (h * hashMul) % tableSize
+	i1 := h % uint64(len(m.table))
+	i2 := (h * hashMul) % uint64(len(m.table))
 	te := &m.table[i1]
 	if te.hash == h {
 		return te
@@ -233,14 +242,14 @@ func (m *MinimaxAI) ttGet(h uint64) *tableEntry {
 }
 
 func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
-	if m.cfg.NoTable {
+	if m.table == nil {
 		return nil
 	}
 	if atomic.LoadInt32(m.cancel) != 0 {
 		return nil
 	}
-	i1 := h % tableSize
-	i2 := (h * hashMul) % tableSize
+	i1 := h % uint64(len(m.table))
+	i2 := (h * hashMul) % uint64(len(m.table))
 	if m.table[i1].hash != 0 {
 		m.table[i2] = m.table[i1]
 	}

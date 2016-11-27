@@ -42,7 +42,7 @@ var (
 	explain      = flag.Bool("explain", false, "explain scoring")
 	depth        = flag.Int("depth", 0, "minimax depth")
 	sort         = flag.Bool("sort", true, "sort moves via history heuristic")
-	table        = flag.Bool("table", true, "use the transposition table")
+	tableMem     = flag.Int64("table-mem", 0, "set table size")
 	nullMove     = flag.Bool("null-move", true, "use null-move pruning")
 	extendForces = flag.Bool("extend-forces", true, "extend forced moves")
 	reduceSlides = flag.Bool("reduce-slides", true, "reduce trivial slides")
@@ -153,7 +153,7 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		Debug: *debug,
 
 		NoSort:         !*sort,
-		NoTable:        !*table,
+		TableMem:       *tableMem,
 		NoNullMove:     !*nullMove,
 		NoExtendForces: !*extendForces,
 		NoReduceSlides: !*reduceSlides,

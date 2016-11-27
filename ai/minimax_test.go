@@ -88,7 +88,7 @@ func TestRepeatedCancel(t *testing.T) {
 		st Stats
 	}
 	ctx := context.Background()
-	ai := NewMinimax(MinimaxConfig{Size: 5, Depth: 6, NoNullMove: true, NoTable: true})
+	ai := NewMinimax(MinimaxConfig{Size: 5, Depth: 6, NoNullMove: true, TableMem: -1})
 	p := tak.New(tak.Config{Size: 5})
 	for i := 0; i < 5; i++ {
 		done := make(chan result)

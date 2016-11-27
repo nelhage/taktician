@@ -212,7 +212,7 @@ func (f *Friendly) Config() ai.MinimaxConfig {
 		Debug: *debug,
 
 		NoSort:   !*sort,
-		NoTable:  !*table,
+		TableMem: *tableMem,
 		MultiCut: *multicut,
 	}
 	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.Size, f.level)

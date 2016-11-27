@@ -34,7 +34,7 @@ var (
 	multicut        = flag.Bool("multi-cut", false, "use multi-cut")
 	limit           = flag.Duration("limit", time.Minute, "time limit per move")
 	sort            = flag.Bool("sort", true, "sort moves via history heuristic")
-	table           = flag.Bool("table", true, "use the transposition table")
+	tableMem        = flag.Int64("table-mem", 0, "set table size")
 	useOpponentTime = flag.Bool("use-opponent-time", true, "think on opponent's time")
 
 	debugClient = flag.Bool("debug-client", false, "log debug output for playtak connection")
