@@ -198,14 +198,14 @@ func evaluateTerminal(p *tak.Position, w *TerminalWeights) int64 {
 		opponent, reserves = int64(p.WhiteStones()), int64(p.BlackStones())
 		flats = int64(d.BlackFlats - d.WhiteFlats)
 	}
+	if int(flats) > p.Size() || d.Reason == tak.RoadWin {
+		flats = int64(p.Size())
+	}
 
 	v := WinBase
 
-	if d.Reason == tak.FlatsWin {
-		v += int64(w.Flats) * flats
-	}
-
 	v += int64(w.Reserves)*reserves +
+		int64(w.Flats)*flats +
 		int64(w.OpponentReserves)*opponent +
 		int64(w.Plies*p.MoveNumber())
 
