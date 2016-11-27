@@ -1,9 +1,6 @@
 package tak
 
-import (
-	"errors"
-	"sort"
-)
+import "errors"
 
 type MoveType byte
 
@@ -248,12 +245,6 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 
 var slides [][]Slides
 
-type byLen []Slides
-
-func (b byLen) Len() int           { return len(b) }
-func (b byLen) Less(i, j int) bool { return b[i].Len() < b[j].Len() }
-func (b byLen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
-
 func init() {
 	slides = make([][]Slides, 10)
 	for s := 1; s <= 8; s++ {
@@ -269,7 +260,6 @@ func calculateSlides(stack int) []Slides {
 			out = append(out, sub.Prepend(int(i)))
 		}
 	}
-	sort.Sort(byLen(out))
 	return out
 }
 
@@ -319,11 +309,11 @@ func (p *Position) AllMoves(moves []Move) []Move {
 				if h > uint8(p.cfg.Size) {
 					h = uint8(p.cfg.Size)
 				}
+				mask := ^Slides((1 << (4 * uint(d.c))) - 1)
 				for _, s := range slides[h] {
-					if s.Len() > d.c {
-						break
+					if s&mask == 0 {
+						moves = append(moves, Move{X: int8(x), Y: int8(y), Type: d.d, Slides: s})
 					}
-					moves = append(moves, Move{X: int8(x), Y: int8(y), Type: d.d, Slides: s})
 				}
 			}
 		}
