@@ -48,7 +48,7 @@ func (mg *moveGenerator) sortMoves() {
 		vs,
 	}
 	for i, m := range s.ms {
-		s.vs[i] = mg.ai.history[m.Hash()]
+		s.vs[i] = mg.ai.history[m]
 	}
 	sort.Sort(s)
 }
@@ -84,7 +84,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 				continue
 			}
 			var ok bool
-			if mg.r, ok = mg.ai.response[mg.ai.stack[mg.ply-1].m.Hash()]; ok {
+			if mg.r, ok = mg.ai.response[mg.ai.stack[mg.ply-1].m]; ok {
 				m = mg.r
 				break
 			}

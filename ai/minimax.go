@@ -41,8 +41,8 @@ type MinimaxAI struct {
 	st Stats
 	c  bitboard.Constants
 
-	history  map[uint64]int
-	response map[uint64]tak.Move
+	history  map[tak.Move]int
+	response map[tak.Move]tak.Move
 
 	evaluate EvaluationFunc
 
@@ -196,8 +196,8 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	if m.evaluate == nil {
 		m.evaluate = MakeEvaluator(cfg.Size, nil)
 	}
-	m.history = make(map[uint64]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
-	m.response = make(map[uint64]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)
+	m.history = make(map[tak.Move]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
+	m.response = make(map[tak.Move]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)
 	if m.cfg.TableMem >= 0 {
 		mem := m.cfg.TableMem
 		if mem == 0 {
@@ -513,9 +513,9 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 	default:
 		ai.st.CutSearch += uint64(move + 1)
 	}
-	ai.history[m.Hash()] += (1 << uint(depth))
+	ai.history[*m] += (1 << uint(depth))
 	if ply > 0 {
-		ai.response[ai.stack[ply-1].m.Hash()] = *m
+		ai.response[ai.stack[ply-1].m] = *m
 	}
 	if ai.cuts == nil {
 		return
@@ -538,7 +538,7 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 	}{
 		TPS:     ptn.FormatTPS(p),
 		Move:    ptn.FormatMove(m),
-		History: ai.history[m.Hash()] - (1 << uint(depth)),
+		History: ai.history[*m] - (1 << uint(depth)),
 
 		IterationDepth: ai.depth,
 		Depth:          depth,

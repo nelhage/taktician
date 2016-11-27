@@ -19,7 +19,7 @@ func TestMoveGenerator(t *testing.T) {
 
 	ai := NewMinimax(MinimaxConfig{Size: 5})
 	ai.rand = rand.New(rand.NewSource(7))
-	ai.history[cm.Hash()] = 100
+	ai.history[cm] = 100
 
 	mg := &ai.stack[1].mg
 	*mg = moveGenerator{

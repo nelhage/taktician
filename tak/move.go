@@ -62,17 +62,6 @@ func (m *Move) Dest() (int8, int8) {
 	panic("bad type")
 }
 
-func (m *Move) Hash() uint64 {
-	h := uint64(m.Slides)
-	h <<= 4
-	h |= uint64(m.Type)
-	h <<= 4
-	h |= uint64(m.X)
-	h <<= 4
-	h |= uint64(m.Y)
-	return h
-}
-
 var (
 	ErrOccupied       = errors.New("position is occupied")
 	ErrIllegalSlide   = errors.New("illegal slide")
