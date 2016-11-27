@@ -62,7 +62,7 @@ type Weights struct {
 
 var defaultTerminal = TerminalWeights{
 	Flats:            500,
-	Plies:            100,
+	Plies:            -100,
 	OpponentReserves: 10,
 	Reserves:         1,
 }
@@ -183,15 +183,15 @@ func MakeEvaluator(size int, w *Weights) EvaluationFunc {
 
 const moveScale = 100
 
-func evaluateTerminal(p *tak.Position, w *TerminalWeights, winner tak.Color) int64 {
-	if winner == tak.NoColor {
+func evaluateTerminal(p *tak.Position, w *TerminalWeights) int64 {
+	d := p.WinDetails()
+	if d.Winner == tak.NoColor {
 		return 0
 	}
 
 	var reserves, opponent int64
 	var flats int64
-	d := p.WinDetails()
-	if winner == tak.White {
+	if d.Winner == tak.White {
 		reserves, opponent = int64(p.WhiteStones()), int64(p.BlackStones())
 		flats = int64(d.WhiteFlats - d.BlackFlats)
 	} else {
@@ -199,12 +199,17 @@ func evaluateTerminal(p *tak.Position, w *TerminalWeights, winner tak.Color) int
 		flats = int64(d.BlackFlats - d.WhiteFlats)
 	}
 
-	v := WinBase + int64(w.Flats)*flats +
-		int64(w.Reserves)*reserves +
+	v := WinBase
+
+	if d.Reason == tak.FlatsWin {
+		v += int64(w.Flats) * flats
+	}
+
+	v += int64(w.Reserves)*reserves +
 		int64(w.OpponentReserves)*opponent +
 		int64(w.Plies*p.MoveNumber())
 
-	if winner == p.ToMove() {
+	if d.Winner == p.ToMove() {
 		return v
 	}
 	return -v
@@ -225,8 +230,8 @@ func EvaluateWinner(_ *bitboard.Constants, p *tak.Position) int64 {
 }
 
 func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
-	if over, winner := p.GameOver(); over {
-		return evaluateTerminal(p, &w.Terminal, winner)
+	if over, _ := p.GameOver(); over {
+		return evaluateTerminal(p, &w.Terminal)
 	}
 
 	var score int64
