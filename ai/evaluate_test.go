@@ -42,7 +42,7 @@ func TestEvaluateWinner(t *testing.T) {
 		if eval < tc.min || eval > tc.max {
 			t.Errorf("%d: eval=%d (not in [%d,%d])", i, eval, tc.min, tc.max)
 		}
-		termEval := evaluateTerminal(p, &defaultTerminal, p.WinDetails().Winner)
+		termEval := evaluateTerminal(p, &defaultTerminal)
 		if termEval < tc.min || termEval > tc.max {
 			t.Errorf("%d: evalTerminal=%d (not in [%d,%d])", i, termEval, tc.min, tc.max)
 		}
