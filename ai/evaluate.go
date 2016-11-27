@@ -53,6 +53,10 @@ type Weights struct {
 	Center        int
 	CenterControl int
 
+	ThrowMine   int
+	ThrowTheirs int
+	ThrowEmpty  int
+
 	Terminal TerminalWeights
 }
 
@@ -150,6 +154,10 @@ var defaultWeights6 = Weights{
 	CenterControl: 10,
 
 	Terminal: defaultTerminal,
+
+	ThrowMine:   10,
+	ThrowTheirs: 50,
+	ThrowEmpty:  40,
 }
 
 var DefaultWeights = []Weights{
@@ -272,7 +280,22 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 				score += sign * int64(w.HardTopCap)
 			}
 			score += sign * int64(w.CapMobility) *
-				int64(bitboard.Popcount(mobility(c, p, bit, h)))
+				int64(bitboard.Popcount(mobility(c, p, bit, int(h))))
+		}
+		if hf > 0 {
+			throw := mobility(c, p, bit, hf)
+			wt := bitboard.Popcount(throw & p.White)
+			bt := bitboard.Popcount(throw & p.Black)
+			et := bitboard.Popcount(throw &^ (p.White | p.Black))
+			if sign == 1 {
+				score += int64(w.ThrowMine*wt +
+					w.ThrowTheirs*bt +
+					w.ThrowEmpty*et)
+			} else {
+				score += int64(w.ThrowMine*bt +
+					w.ThrowTheirs*wt +
+					w.ThrowEmpty*et)
+			}
 		}
 
 		switch {
@@ -309,31 +332,31 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	return -score
 }
 
-func mobility(c *bitboard.Constants, p *tak.Position, bit uint64, height uint8) uint64 {
+func mobility(c *bitboard.Constants, p *tak.Position, bit uint64, height int) uint64 {
 	m := bit
 
 	stop := ((p.Caps | p.Standing | ^c.Mask) &^ bit)
 
 	e := bit << 1
-	for i := uint8(0); i < height && (e&(stop|c.R)) == 0; i++ {
+	for i := 0; i < height && (e&(stop|c.R)) == 0; i++ {
 		m |= e
 		e <<= 1
 	}
 
 	e = bit >> 1
-	for i := uint8(0); i < height && (e&(stop|c.L)) == 0; i++ {
+	for i := 0; i < height && (e&(stop|c.L)) == 0; i++ {
 		m |= e
 		e >>= 1
 	}
 
 	e = bit << c.Size
-	for i := uint8(0); i < height && (e&stop) == 0; i++ {
+	for i := 0; i < height && (e&stop) == 0; i++ {
 		m |= e
 		e <<= c.Size
 	}
 
 	e = bit >> c.Size
-	for i := uint8(0); i < height && (e&stop) == 0; i++ {
+	for i := 0; i < height && (e&stop) == 0; i++ {
 		m |= e
 		e >>= c.Size
 	}

@@ -188,7 +188,7 @@ func TestHardTopCap(t *testing.T) {
 func TestMobility(t *testing.T) {
 	type inner struct {
 		x, y     int
-		h        uint8
+		h        int
 		mobility int
 	}
 	cases := []struct {
