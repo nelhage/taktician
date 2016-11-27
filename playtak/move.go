@@ -78,13 +78,15 @@ func ParseServer(server string) (tak.Move, error) {
 			return tak.Move{}, fmt.Errorf("bad slide: %s", server)
 		}
 
-		for i, drop := range words[3:] {
+		var slides []int
+		for _, drop := range words[3:] {
 			n, e := strconv.Atoi(drop)
 			if e != nil {
 				return tak.Move{}, fmt.Errorf("bad drop: %s", server)
 			}
-			m.Slides[i] = byte(n)
+			slides = append(slides, int(n))
 		}
+		m.Slides = tak.MkSlides(slides...)
 		return m, nil
 	default:
 		return tak.Move{}, fmt.Errorf("bad command: %s", server)
@@ -101,24 +103,21 @@ func FormatServer(m *tak.Move) string {
 	case tak.PlaceStanding:
 		return fmt.Sprintf("P %s W", formatSquare(m.X, m.Y))
 	case tak.SlideRight:
-		ex = m.X + int8(m.SlideLen())
+		ex = m.X + int8(m.Slides.Len())
 	case tak.SlideLeft:
-		ex = m.X - int8(m.SlideLen())
+		ex = m.X - int8(m.Slides.Len())
 	case tak.SlideDown:
-		ey = m.Y - int8(m.SlideLen())
+		ey = m.Y - int8(m.Slides.Len())
 	case tak.SlideUp:
-		ey = m.Y + int8(m.SlideLen())
+		ey = m.Y + int8(m.Slides.Len())
 	}
 	var out bytes.Buffer
 	out.WriteString("M ")
 	out.WriteString(formatSquare(m.X, m.Y))
 	out.WriteString(" ")
 	out.WriteString(formatSquare(ex, ey))
-	for _, s := range m.Slides {
-		if s == 0 {
-			break
-		}
-		fmt.Fprintf(&out, " %d", s)
+	for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+		fmt.Fprintf(&out, " %d", it.Elem())
 	}
 	return out.String()
 }

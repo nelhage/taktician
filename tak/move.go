@@ -1,6 +1,9 @@
 package tak
 
-import "errors"
+import (
+	"errors"
+	"sort"
+)
 
 type MoveType byte
 
@@ -20,7 +23,7 @@ const TypeMask MoveType = 0xf
 type Move struct {
 	X, Y   int8
 	Type   MoveType
-	Slides [8]byte
+	Slides Slides
 }
 
 func (m *Move) Equal(rhs *Move) bool {
@@ -33,21 +36,10 @@ func (m *Move) Equal(rhs *Move) bool {
 	if !m.IsSlide() {
 		return true
 	}
-	for i, s := range m.Slides {
-		if rhs.Slides[i] != s {
-			return false
-		}
+	if m.Slides != rhs.Slides {
+		return false
 	}
 	return true
-}
-
-func (m *Move) SlideLen() int {
-	for i := len(m.Slides); i > 0; i-- {
-		if m.Slides[i-1] != 0 {
-			return i
-		}
-	}
-	return 0
 }
 
 func (m *Move) IsSlide() bool {
@@ -59,27 +51,24 @@ func (m *Move) Dest() (int8, int8) {
 	case PlaceFlat, PlaceStanding, PlaceCapstone:
 		return m.X, m.Y
 	case SlideLeft:
-		return m.X - int8(m.SlideLen()), m.Y
+		return m.X - int8(m.Slides.Len()), m.Y
 	case SlideRight:
-		return m.X + int8(m.SlideLen()), m.Y
+		return m.X + int8(m.Slides.Len()), m.Y
 	case SlideUp:
-		return m.X, m.Y + int8(m.SlideLen())
+		return m.X, m.Y + int8(m.Slides.Len())
 	case SlideDown:
-		return m.X, m.Y - int8(m.SlideLen())
+		return m.X, m.Y - int8(m.Slides.Len())
 	}
 	panic("bad type")
 }
 
 func (m *Move) Hash() uint64 {
-	var h uint64
-	for _, s := range m.Slides {
-		h = (h << 3) | uint64(s)
-	}
-	h <<= 3
+	h := uint64(m.Slides)
+	h <<= 4
 	h |= uint64(m.Type)
-	h <<= 3
+	h <<= 4
 	h |= uint64(m.X)
-	h <<= 3
+	h <<= 4
 	h |= uint64(m.Y)
 	return h
 }
@@ -171,16 +160,12 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	}
 
 	ct := uint(0)
-	z := false
-	for _, c := range m.Slides {
-		if z {
-			if c != 0 {
-				return nil, ErrIllegalSlide
-			}
-		} else {
-			ct += uint(c)
-			z = c == 0
+	for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+		c := it.Elem()
+		if c == 0 {
+			return nil, ErrIllegalSlide
 		}
+		ct += uint(c)
 	}
 	if ct > uint(p.cfg.Size) || ct < 1 || ct > uint(p.Height[i]) {
 		return nil, ErrIllegalSlide
@@ -218,10 +203,8 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	next.hash ^= next.hashAt(i)
 
 	x, y := m.X, m.Y
-	for _, c := range m.Slides {
-		if c == 0 {
-			break
-		}
+	for it, ok := m.Slides.Iterator(); ok; it, ok = it.Next() {
+		c := uint(it.Elem())
 		x += dx
 		y += dy
 		if x < 0 || x >= int8(next.cfg.Size) ||
@@ -250,7 +233,7 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 		}
 		drop := (stack >> (ct - uint(c-1))) & ((1 << (c - 1)) - 1)
 		next.Stacks[i] = next.Stacks[i]<<(c-1) | drop
-		next.Height[i] += c
+		next.Height[i] += uint8(c)
 		next.hash ^= next.hashAt(i)
 		if stack&(1<<(ct-uint(c))) != 0 {
 			next.Black |= (1 << i)
@@ -274,26 +257,30 @@ func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) 
 	return next, nil
 }
 
-var slides [][][]byte
+var slides [][]Slides
+
+type byLen []Slides
+
+func (b byLen) Len() int           { return len(b) }
+func (b byLen) Less(i, j int) bool { return b[i].Len() < b[j].Len() }
+func (b byLen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 
 func init() {
-	slides = make([][][]byte, 10)
+	slides = make([][]Slides, 10)
 	for s := 1; s <= 8; s++ {
 		slides[s] = calculateSlides(s)
 	}
 }
 
-func calculateSlides(stack int) [][]byte {
-	var out [][]byte
+func calculateSlides(stack int) []Slides {
+	var out []Slides
 	for i := byte(1); i <= byte(stack); i++ {
-		out = append(out, []byte{i})
+		out = append(out, MkSlides(int(i)))
 		for _, sub := range slides[stack-int(i)] {
-			t := make([]byte, len(sub)+1)
-			t[0] = i
-			copy(t[1:], sub)
-			out = append(out, t)
+			out = append(out, sub.Prepend(int(i)))
 		}
 	}
+	sort.Sort(byLen(out))
 	return out
 }
 
@@ -344,11 +331,10 @@ func (p *Position) AllMoves(moves []Move) []Move {
 					h = uint8(p.cfg.Size)
 				}
 				for _, s := range slides[h] {
-					if len(s) <= d.c {
-						var s8 [8]byte
-						copy(s8[:len(s)], s)
-						moves = append(moves, Move{X: int8(x), Y: int8(y), Type: d.d, Slides: s8})
+					if s.Len() > d.c {
+						break
 					}
+					moves = append(moves, Move{X: int8(x), Y: int8(y), Type: d.d, Slides: s})
 				}
 			}
 		}
