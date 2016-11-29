@@ -49,6 +49,7 @@ var (
 	multiCut     = flag.Bool("multi-cut", false, "use multi-cut pruning")
 	precise      = flag.Bool("precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
 	weights      = flag.String("weights", "", "JSON-encoded evaluation weights")
+	logCuts      = flag.String("log-cuts", "", "log all cuts")
 
 	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
 )
@@ -157,6 +158,8 @@ func makeAI(p *tak.Position) *ai.MinimaxAI {
 		NoExtendForces: !*extendForces,
 		NoReduceSlides: !*reduceSlides,
 		MultiCut:       *multiCut,
+
+		CutLog: *logCuts,
 
 		Evaluate: ai.MakeEvaluator(p.Size(), &w),
 	}

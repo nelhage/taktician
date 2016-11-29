@@ -160,6 +160,8 @@ type MinimaxConfig struct {
 	MultiCut bool
 
 	Evaluate EvaluationFunc
+
+	CutLog string
 }
 
 // MakePrecise modifies a MinimaxConfig to produce a MinimaxAI that
@@ -198,14 +200,16 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	for i := range m.stack {
 		m.stack[i].p = tak.Alloc(m.cfg.Size)
 	}
-	f, e := os.OpenFile("cuts.log",
-		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
-		0644)
-	if e != nil {
-		panic(e)
+	if cfg.CutLog != "" {
+		f, e := os.OpenFile(cfg.CutLog,
+			os.O_WRONLY|os.O_APPEND|os.O_CREATE,
+			0644)
+		if e != nil {
+			panic(e)
+		}
+		m.cuts = json.NewEncoder(f)
+		m.cuts.SetEscapeHTML(false)
 	}
-	m.cuts = json.NewEncoder(f)
-	m.cuts.SetEscapeHTML(false)
 	return m
 }
 
@@ -490,11 +494,7 @@ func teSuffices(te *tableEntry, depth int, α, β int64) bool {
 	return false
 }
 
-func (ai *MinimaxAI) recordCut(
-	p *tak.Position,
-	te *tableEntry,
-	pv []tak.Move,
-	m *tak.Move, move, depth, ply int) {
+func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply int) {
 	ai.st.CutNodes++
 	switch move {
 	case 1:
@@ -508,33 +508,41 @@ func (ai *MinimaxAI) recordCut(
 	if ply > 0 {
 		ai.response[ai.stack[ply-1].m.Hash()] = *m
 	}
-	if depth < 2 {
+	if ai.cuts == nil {
 		return
 	}
+
 	cut := struct {
-		TPS        string
-		Move       string
-		Prev       string
-		PV         string
+		TPS  string
+		Move string
+		Prev string
+
+		PV         string `json:",omitempty"`
 		Table      string `json:",omitempty"`
 		TableDepth int    `json:",omitempty"`
-		Depth      int
-		Searched   int
+		Response   string `json:",omitempty"`
+
+		Depth    int
+		Searched int
 	}{
 		TPS:      ptn.FormatTPS(p),
 		Move:     ptn.FormatMove(m),
 		Depth:    depth,
 		Searched: move,
 	}
+	mg := &ai.stack[ply].mg
 	if ply > 0 {
 		cut.Prev = ptn.FormatMove(&ai.stack[ply-1].m)
 	}
-	if len(pv) > 0 {
-		cut.PV = ptn.FormatMove(&pv[0])
+	if len(mg.pv) > 0 {
+		cut.PV = ptn.FormatMove(&mg.pv[0])
 	}
-	if te != nil {
-		cut.Table = ptn.FormatMove(&te.m)
-		cut.TableDepth = te.depth
+	if mg.te != nil {
+		cut.Table = ptn.FormatMove(&mg.te.m)
+		cut.TableDepth = mg.te.depth
+	}
+	if mg.r.Type != 0 {
+		cut.Response = ptn.FormatMove(&mg.r)
 	}
 	ai.cuts.Encode(&cut)
 }
@@ -628,7 +636,7 @@ func (ai *MinimaxAI) pvSearch(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.recordCut(p, te, pv, &m, i, depth, ply)
+				ai.recordCut(p, &m, i, depth, ply)
 				break
 			}
 		}
@@ -774,7 +782,7 @@ func (ai *MinimaxAI) zwSearch(
 			best = append(best, ms...)
 		}
 		if v > α {
-			ai.recordCut(p, te, pv, &m, i, depth, ply)
+			ai.recordCut(p, &m, i, depth, ply)
 			best = append(best[:0], m)
 			best = append(best, ms...)
 			didCut = true
