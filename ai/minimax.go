@@ -202,7 +202,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	}
 	if cfg.CutLog != "" {
 		f, e := os.OpenFile(cfg.CutLog,
-			os.O_WRONLY|os.O_APPEND|os.O_CREATE,
+			os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
 			0644)
 		if e != nil {
 			panic(e)
@@ -521,14 +521,19 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 		Table      string `json:",omitempty"`
 		TableDepth int    `json:",omitempty"`
 		Response   string `json:",omitempty"`
+		History    int
 
-		Depth    int
-		Searched int
+		IterationDepth int
+		Depth          int
+		Searched       int
 	}{
-		TPS:      ptn.FormatTPS(p),
-		Move:     ptn.FormatMove(m),
-		Depth:    depth,
-		Searched: move,
+		TPS:     ptn.FormatTPS(p),
+		Move:    ptn.FormatMove(m),
+		History: ai.history[m.Hash()] - (1 << uint(depth)),
+
+		IterationDepth: ai.depth,
+		Depth:          depth,
+		Searched:       move,
 	}
 	mg := &ai.stack[ply].mg
 	if ply > 0 {
