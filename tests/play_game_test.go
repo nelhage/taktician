@@ -37,9 +37,9 @@ func playPTN(t *testing.T, p *ptn.PTN) {
 	g := tak.New(tak.Config{Size: size})
 	for _, op := range p.Ops {
 		if m, ok := op.(*ptn.Move); ok {
-			next, e := g.Move(&m.Move)
+			next, e := g.Move(m.Move)
 			if e != nil {
-				fmt.Printf("illegal move: %s\n", ptn.FormatMove(&m.Move))
+				fmt.Printf("illegal move: %s\n", ptn.FormatMove(m.Move))
 				fmt.Printf("move=%d\n", g.MoveNumber())
 				cli.RenderBoard(nil, os.Stdout, g)
 				t.Fatal("illegal move")

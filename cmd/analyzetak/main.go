@@ -108,10 +108,10 @@ func main() {
 			m := it.PeekMove()
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
-				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m))
+				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(m))
 				analyzeWith(w, p)
 			case p.ToMove() == tak.Black && color != tak.White:
-				fmt.Printf("%d. ... %s\n", p.MoveNumber()/2+1, ptn.FormatMove(&m))
+				fmt.Printf("%d. ... %s\n", p.MoveNumber()/2+1, ptn.FormatMove(m))
 				analyzeWith(b, p)
 			}
 		}
@@ -128,7 +128,7 @@ func applyVariation(p *tak.Position, variant string) (*tak.Position, error) {
 		if e != nil {
 			return nil, e
 		}
-		p, e = p.Move(&m)
+		p, e = p.Move(m)
 		if e != nil {
 			return nil, fmt.Errorf("bad move `%s': %v", moveStr, e)
 		}

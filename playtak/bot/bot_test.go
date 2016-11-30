@@ -9,10 +9,10 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-func parseMoves(spec [][2]string) [][2]*tak.Move {
-	var out [][2]*tak.Move
+func parseMoves(spec [][2]string) [][2]tak.Move {
+	var out [][2]tak.Move
 	for _, r := range spec {
-		var o [2]*tak.Move
+		var o [2]tak.Move
 		for i, n := range r {
 			if n == "" {
 				continue
@@ -21,7 +21,7 @@ func parseMoves(spec [][2]string) [][2]*tak.Move {
 			if e != nil {
 				panic("bad ptn")
 			}
-			o[i] = &m
+			o[i] = m
 		}
 		out = append(out, o)
 	}
@@ -30,13 +30,13 @@ func parseMoves(spec [][2]string) [][2]*tak.Move {
 
 func appendMove(transcript []Expectation,
 	id string, tm int,
-	move [2]*tak.Move) []Expectation {
+	move [2]tak.Move) []Expectation {
 	transcript = append(transcript, Expectation{
 		recv: []string{
 			fmt.Sprintf("Game#%s %s", id, playtak.FormatServer(move[0])),
 		},
 	})
-	if move[1] == nil {
+	if move[1].Type == 0 {
 		return transcript
 	}
 	transcript = append(transcript, Expectation{
@@ -62,7 +62,7 @@ func setupGame(spec [][2]string) (*TestBotStatic, []Expectation) {
 	moves := parseMoves(spec)
 	bot := &TestBotStatic{}
 	for _, r := range moves {
-		bot.moves = append(bot.moves, *r[0])
+		bot.moves = append(bot.moves, r[0])
 	}
 
 	var transcript []Expectation

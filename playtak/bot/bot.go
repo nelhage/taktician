@@ -156,19 +156,19 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				return true
 			}
 		case move := <-moves:
-			next, err := g.p.Move(&move)
+			next, err := g.p.Move(move)
 			if err != nil {
 				log.Printf("ai returned bad move: %s: %s",
-					ptn.FormatMove(&move), err)
+					ptn.FormatMove(move), err)
 				return false
 			}
-			c.SendCommand(g.GameStr, playtak.FormatServer(&move))
+			c.SendCommand(g.GameStr, playtak.FormatServer(move))
 			log.Printf("my-move game-id=%s ply=%d ptn=%d.%s move=%q",
 				g.ID,
 				g.p.MoveNumber(),
 				g.p.MoveNumber()/2+1,
 				strings.ToUpper(g.p.ToMove().String()[:1]),
-				ptn.FormatMove(&move))
+				ptn.FormatMove(move))
 			g.p = next
 			g.Positions = append(g.Positions, g.p)
 			g.moves = append(g.moves, move)
@@ -206,7 +206,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 			if err != nil {
 				panic(err)
 			}
-			next, err := g.p.Move(&move)
+			next, err := g.p.Move(move)
 			if err != nil {
 				panic(err)
 			}
@@ -215,7 +215,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				g.p.MoveNumber(),
 				g.p.MoveNumber()/2+1,
 				strings.ToUpper(g.p.ToMove().String()[:1]),
-				ptn.FormatMove(&move))
+				ptn.FormatMove(move))
 			g.p = next
 			g.Positions = append(g.Positions, g.p)
 			g.moves = append(g.moves, move)

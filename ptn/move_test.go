@@ -72,11 +72,11 @@ func TestParseMove(t *testing.T) {
 		if !reflect.DeepEqual(get, tc.out) {
 			t.Errorf("ParseMove(%s)=%#v not %#v", tc.in, get, tc.out)
 		}
-		rt := FormatMove(&tc.out)
+		rt := FormatMove(tc.out)
 		if rt != tc.str {
 			t.Errorf("FormatMove(%s)=%s not %s", tc.in, rt, tc.str)
 		}
-		long := FormatMoveLong(&tc.out)
+		long := FormatMoveLong(tc.out)
 		if long != tc.long {
 			t.Errorf("FormatMoveLong(%s)=%s not %s", tc.in, long, tc.long)
 		}

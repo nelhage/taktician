@@ -278,7 +278,7 @@ func (p *PTN) Render() string {
 		case *MoveNumber:
 			fmt.Fprintf(&out, "\n%d.", o.Number)
 		case *Move:
-			fmt.Fprintf(&out, " %s%s", FormatMove(&o.Move), o.Modifiers)
+			fmt.Fprintf(&out, " %s%s", FormatMove(o.Move), o.Modifiers)
 		case *Comment:
 			fmt.Fprintf(&out, " {%s}", o.Comment)
 		case *Result:

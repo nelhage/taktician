@@ -93,7 +93,7 @@ func ParseServer(server string) (tak.Move, error) {
 	}
 }
 
-func FormatServer(m *tak.Move) string {
+func FormatServer(m tak.Move) string {
 	ex, ey := m.X, m.Y
 	switch m.Type {
 	case tak.PlaceFlat:

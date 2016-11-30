@@ -154,7 +154,7 @@ func BenchmarkHasRoadWindy(b *testing.B) {
 func moves(ms []Move) *Position {
 	p := New(Config{Size: 5})
 	for _, m := range ms {
-		n, e := p.Move(&m)
+		n, e := p.Move(m)
 		if e != nil {
 			panic("move")
 		}

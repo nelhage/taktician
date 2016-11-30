@@ -18,8 +18,8 @@ var seed = flag.Int64("seed", 4, "random seed")
 func BenchmarkMinimax(b *testing.B) {
 	var cfg = tak.Config{Size: *size}
 	p := tak.New(cfg)
-	p, _ = p.Move(&tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
-	p, _ = p.Move(&tak.Move{X: int8(*size - 1), Y: int8(*size - 1), Type: tak.PlaceFlat})
+	p, _ = p.Move(tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat})
+	p, _ = p.Move(tak.Move{X: int8(*size - 1), Y: int8(*size - 1), Type: tak.PlaceFlat})
 	ai := NewMinimax(MinimaxConfig{
 		Size:  *size,
 		Depth: *depth,
@@ -36,7 +36,7 @@ func BenchmarkMinimax(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var e error
 		m := ai.GetMove(context.Background(), p)
-		next, e = p.MovePreallocated(&m, next)
+		next, e = p.MovePreallocated(m, next)
 		if e != nil {
 			b.Fatal("bad move", e)
 		}
@@ -57,9 +57,9 @@ func TestRegression(t *testing.T) {
 	}
 	ai := NewMinimax(MinimaxConfig{Size: game.Size(), Depth: 3})
 	m := ai.GetMove(context.Background(), game)
-	_, e := game.Move(&m)
+	_, e := game.Move(m)
 	if e != nil {
-		t.Fatalf("ai returned illegal move: %s: %s", ptn.FormatMove(&m), e)
+		t.Fatalf("ai returned illegal move: %s: %s", ptn.FormatMove(m), e)
 	}
 }
 

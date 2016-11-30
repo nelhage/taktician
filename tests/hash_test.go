@@ -92,7 +92,7 @@ func testCollisions(t *testing.T, p *tak.Position) {
 	})
 	for i := 0; i < 4; i++ {
 		m := ai.GetMove(context.Background(), p)
-		p, _ = p.Move(&m)
+		p, _ = p.Move(m)
 		if ok, _ := p.GameOver(); ok {
 			break
 		}

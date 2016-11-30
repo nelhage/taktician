@@ -144,7 +144,7 @@ func insertTree(t *tree, ms []tak.Move, winner tak.Color) {
 		return
 	}
 	var child *tree
-	m := ptn.FormatMove(&ms[0])
+	m := ptn.FormatMove(ms[0])
 	for _, ch := range t.Children {
 		if ch.Move == m {
 			child = ch

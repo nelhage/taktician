@@ -23,7 +23,7 @@ type Move struct {
 	Slides Slides
 }
 
-func (m *Move) Equal(rhs *Move) bool {
+func (m Move) Equal(rhs Move) bool {
 	if m.X != rhs.X || m.Y != rhs.Y {
 		return false
 	}
@@ -39,11 +39,11 @@ func (m *Move) Equal(rhs *Move) bool {
 	return true
 }
 
-func (m *Move) IsSlide() bool {
+func (m Move) IsSlide() bool {
 	return m.Type >= SlideLeft
 }
 
-func (m *Move) Dest() (int8, int8) {
+func (m Move) Dest() (int8, int8) {
 	switch m.Type {
 	case PlaceFlat, PlaceStanding, PlaceCapstone:
 		return m.X, m.Y
@@ -66,11 +66,11 @@ var (
 	ErrIllegalOpening = errors.New("illegal opening move")
 )
 
-func (p *Position) Move(m *Move) (*Position, error) {
+func (p *Position) Move(m Move) (*Position, error) {
 	return p.MovePreallocated(m, nil)
 }
 
-func (p *Position) MovePreallocated(m *Move, next *Position) (*Position, error) {
+func (p *Position) MovePreallocated(m Move, next *Position) (*Position, error) {
 	if next == nil {
 		next = alloc(p)
 	} else {

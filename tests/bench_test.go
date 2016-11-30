@@ -21,7 +21,7 @@ func BenchmarkMoveEmpty(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for {
-			_, e := p.MovePreallocated(&ms[i%len(ms)], n)
+			_, e := p.MovePreallocated(ms[i%len(ms)], n)
 			if e == nil {
 				break
 			}
@@ -41,7 +41,7 @@ func BenchmarkMoveComplex(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		j := i
 		for {
-			_, e := p.MovePreallocated(&ms[j%len(ms)], n)
+			_, e := p.MovePreallocated(ms[j%len(ms)], n)
 			if e == nil {
 				break
 			}

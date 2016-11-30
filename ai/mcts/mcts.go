@@ -95,7 +95,7 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 			var s []string
 			t := node
 			for t.parent != nil {
-				s = append(s, ptn.FormatMove(&t.move))
+				s = append(s, ptn.FormatMove(t.move))
 				t = t.parent
 			}
 			log.Printf("evaluate: [%s] = %d",
@@ -113,7 +113,7 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	for _, c := range tree.children {
 		if ai.cfg.Debug > 2 {
 			log.Printf("[mcts][%s]: n=%d v=%d(%0.3f)",
-				ptn.FormatMove(&c.move), c.simulations, c.value,
+				ptn.FormatMove(c.move), c.simulations, c.value,
 				float64(c.value)/float64(c.simulations))
 		}
 		if c.simulations > best.simulations {
@@ -155,7 +155,7 @@ func (mc *MonteCarloAI) printpv(t *tree) {
 	}
 	var ptns []string
 	for _, m := range ms {
-		ptns = append(ptns, ptn.FormatMove(&m))
+		ptns = append(ptns, ptn.FormatMove(m))
 	}
 	log.Printf("pv=[%s] n=%d v=%d",
 		strings.Join(ptns, " "),
@@ -173,7 +173,7 @@ func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
 	moves := t.position.AllMoves(nil)
 	t.children = make([]*tree, 0, len(moves))
 	for _, m := range moves {
-		child, e := t.position.Move(&m)
+		child, e := t.position.Move(m)
 		if e != nil {
 			continue
 		}

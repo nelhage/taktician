@@ -16,7 +16,7 @@ func UniformRandomPolicy(ctx context.Context,
 		r := m.r.Int31n(int32(len(moves)))
 		m := moves[r]
 		var e error
-		if next, e = p.MovePreallocated(&m, alloc); e == nil {
+		if next, e = p.MovePreallocated(m, alloc); e == nil {
 			break
 		}
 		moves[0], moves[r] = moves[r], moves[0]
@@ -36,7 +36,7 @@ func NewMinimaxPolicy(cfg *MCTSConfig, depth int) PolicyFunc {
 		m *MonteCarloAI,
 		p *tak.Position, next *tak.Position) *tak.Position {
 		move := mm.GetMove(ctx, p)
-		next, _ = p.MovePreallocated(&move, next)
+		next, _ = p.MovePreallocated(move, next)
 		return next
 	}
 }
@@ -50,7 +50,7 @@ func EvalWeightedPolicy(ctx context.Context,
 	var sum int64
 	base := mc.eval(&mc.c, p) - 500
 	for _, m := range moves {
-		child, e := p.MovePreallocated(&m, alloc)
+		child, e := p.MovePreallocated(m, alloc)
 		if e != nil {
 			continue
 		}
@@ -67,6 +67,6 @@ func EvalWeightedPolicy(ctx context.Context,
 			best = m
 		}
 	}
-	next, _ := p.MovePreallocated(&best, alloc)
+	next, _ := p.MovePreallocated(best, alloc)
 	return next
 }

@@ -188,9 +188,9 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 				cancel()
 			}
 			var e error
-			p, e = p.Move(&m)
+			p, e = p.Move(m)
 			if e != nil {
-				panic(fmt.Sprintf("illegal move: %s", ptn.FormatMove(&m)))
+				panic(fmt.Sprintf("illegal move: %s", ptn.FormatMove(m)))
 			}
 			ms = append(ms, m)
 			if ok, _ := p.GameOver(); ok {

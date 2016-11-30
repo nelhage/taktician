@@ -100,7 +100,7 @@ func TestCanonical(t *testing.T) {
 			out, _ := Canonical(tc.size, ms)
 			bits = nil
 			for _, o := range out {
-				bits = append(bits, ptn.FormatMove(&o))
+				bits = append(bits, ptn.FormatMove(o))
 			}
 			got := strings.Join(bits, " ")
 			if got != tc.out {

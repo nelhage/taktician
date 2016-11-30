@@ -72,7 +72,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 			mg.i++
 			if len(mg.pv) > 0 {
 				m = mg.pv[0]
-				if mg.te != nil && m.Equal(&mg.te.m) {
+				if mg.te != nil && m.Equal(mg.te.m) {
 					continue
 				}
 				break
@@ -115,17 +115,17 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 				return tak.Move{}, nil
 			}
 			m = mg.ms[j]
-			if mg.te != nil && mg.te.m.Equal(&m) {
+			if mg.te != nil && mg.te.m.Equal(m) {
 				continue
 			}
-			if len(mg.pv) != 0 && mg.pv[0].Equal(&m) {
+			if len(mg.pv) != 0 && mg.pv[0].Equal(m) {
 				continue
 			}
-			if mg.r.Equal(&m) {
+			if mg.r.Equal(m) {
 				continue
 			}
 		}
-		child, e := mg.p.MovePreallocated(&m, mg.ai.stack[mg.ply].p)
+		child, e := mg.p.MovePreallocated(m, mg.ai.stack[mg.ply].p)
 		if e == nil {
 			return m, child
 		}

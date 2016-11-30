@@ -36,8 +36,8 @@ func TestMoveGenerator(t *testing.T) {
 	allS := make(map[string]struct{})
 	all := p.AllMoves(nil)
 	for _, a := range all {
-		if _, e := p.Move(&a); e == nil {
-			allS[ptn.FormatMove(&a)] = struct{}{}
+		if _, e := p.Move(a); e == nil {
+			allS[ptn.FormatMove(a)] = struct{}{}
 		}
 	}
 
@@ -49,20 +49,20 @@ func TestMoveGenerator(t *testing.T) {
 			break
 		}
 		generated = append(generated, m)
-		genS[ptn.FormatMove(&m)] = struct{}{}
+		genS[ptn.FormatMove(m)] = struct{}{}
 	}
 
-	if g := generated[0]; !g.Equal(&tem) {
+	if g := generated[0]; !g.Equal(tem) {
 		t.Errorf("move[0]=%s != %s",
-			ptn.FormatMove(&g), ptn.FormatMove(&tem))
+			ptn.FormatMove(g), ptn.FormatMove(tem))
 	}
-	if g := generated[1]; !g.Equal(&pvm) {
+	if g := generated[1]; !g.Equal(pvm) {
 		t.Errorf("move[1]=%s != %s",
-			ptn.FormatMove(&g), ptn.FormatMove(&pvm))
+			ptn.FormatMove(g), ptn.FormatMove(pvm))
 	}
-	if g := generated[2]; !g.Equal(&cm) {
+	if g := generated[2]; !g.Equal(cm) {
 		t.Errorf("move[2]=%s != %s",
-			ptn.FormatMove(&g), ptn.FormatMove(&cm))
+			ptn.FormatMove(g), ptn.FormatMove(cm))
 	}
 
 	for g := range genS {

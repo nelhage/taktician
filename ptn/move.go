@@ -96,15 +96,15 @@ func ParseMove(move string) (tak.Move, error) {
 	return m, nil
 }
 
-func FormatMove(m *tak.Move) string {
+func FormatMove(m tak.Move) string {
 	return formatMove(m, false)
 }
 
-func FormatMoveLong(m *tak.Move) string {
+func FormatMoveLong(m tak.Move) string {
 	return formatMove(m, true)
 }
 
-func formatMove(m *tak.Move, long bool) string {
+func formatMove(m tak.Move, long bool) string {
 	var out []byte
 	stack := 0
 	if !m.Slides.Empty() {

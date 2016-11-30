@@ -13,7 +13,7 @@ func TestMove(t *testing.T) {
 	p.blackStones = 5
 
 	t.Log("Place a flat stone")
-	n, e := p.Move(&Move{3, 3, PlaceFlat, 0})
+	n, e := p.Move(Move{3, 3, PlaceFlat, 0})
 	if e != nil {
 		t.Fatalf("place: %v", e)
 	}
@@ -31,7 +31,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Place a standing stone")
-	n, e = n.Move(&Move{3, 4, PlaceStanding, 0})
+	n, e = n.Move(Move{3, 4, PlaceStanding, 0})
 	if e != nil {
 		t.Fatalf("move 2: %v", e)
 	}
@@ -42,7 +42,7 @@ func TestMove(t *testing.T) {
 	t.Log("Slide onto a standing")
 	orig := Move{3, 3, SlideUp, MkSlides(1)}
 	move := orig
-	_, e = n.Move(&move)
+	_, e = n.Move(move)
 	if e != ErrIllegalSlide {
 		t.Fatalf("slide onto wall allowed: %v", e)
 	}
@@ -51,7 +51,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Slide onto an empty square")
-	nn, e := n.Move(&Move{3, 3, SlideDown, MkSlides(1)})
+	nn, e := n.Move(Move{3, 3, SlideDown, MkSlides(1)})
 	if e != nil {
 		t.Fatalf("slide up: %v", e)
 	}
@@ -69,7 +69,7 @@ func TestMove(t *testing.T) {
 	}
 
 	t.Log("Place a capstone")
-	n, e = nn.Move(&Move{3, 3, PlaceCapstone, MkSlides()})
+	n, e = nn.Move(Move{3, 3, PlaceCapstone, MkSlides()})
 	if e != nil {
 		t.Fatalf("place cap: %v", e)
 	}
@@ -83,23 +83,23 @@ func TestMove(t *testing.T) {
 		t.Fatalf("black caps: %d", n.blackCaps)
 	}
 
-	n, e = n.Move(&Move{2, 3, PlaceFlat, MkSlides()})
+	n, e = n.Move(Move{2, 3, PlaceFlat, MkSlides()})
 	if e != nil {
 		t.Fatalf("move %v", e)
 	}
 
 	t.Log("Place too many capstones")
-	_, e = n.Move(&Move{0, 0, PlaceCapstone, MkSlides()})
+	_, e = n.Move(Move{0, 0, PlaceCapstone, MkSlides()})
 	if e != ErrNoCapstone {
 		t.Fatalf("place capstone: %v", e)
 	}
 	t.Log("Slide onto a capstone")
-	_, e = n.Move(&Move{3, 4, SlideDown, MkSlides(1)})
+	_, e = n.Move(Move{3, 4, SlideDown, MkSlides(1)})
 	if e != ErrIllegalSlide {
 		t.Fatalf("slide onto a capstone")
 	}
 	t.Log("Slide a capstone to flatten a wall")
-	n, e = n.Move(&Move{3, 3, SlideUp, MkSlides(1)})
+	n, e = n.Move(Move{3, 3, SlideUp, MkSlides(1)})
 	if e != nil {
 		t.Fatalf("cap onto wall: %v", e)
 	}
@@ -119,7 +119,7 @@ func TestMoveSlideStacks(t *testing.T) {
 		MakePiece(Black, Flat),
 	})
 
-	next, e := p.Move(&Move{
+	next, e := p.Move(Move{
 		X: 3, Y: 3,
 		Type:   SlideLeft,
 		Slides: MkSlides(1, 1, 1)})
@@ -153,7 +153,7 @@ func TestMoveMultiDrop(t *testing.T) {
 		MakePiece(Black, Flat),
 	})
 
-	next, e := p.Move(&Move{
+	next, e := p.Move(Move{
 		X: 1, Y: 3,
 		Type:   SlideRight,
 		Slides: MkSlides(2, 1, 2)})
@@ -252,10 +252,10 @@ func TestAllMovesBasicSlides(t *testing.T) {
 }
 
 func TestEqual(t *testing.T) {
-	a := &Move{
+	a := Move{
 		X: 3, Y: 4, Type: SlideDown, Slides: MkSlides(3),
 	}
-	b := &Move{
+	b := Move{
 		X: 3, Y: 4, Type: SlideDown, Slides: MkSlides(2),
 	}
 	if !a.Equal(a) {

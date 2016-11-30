@@ -44,7 +44,7 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	for _, pv := range pvs {
 		fmt.Printf(" pv=")
 		for _, m := range pv {
-			fmt.Printf("%s ", ptn.FormatMove(&m))
+			fmt.Printf("%s ", ptn.FormatMove(m))
 		}
 		fmt.Printf("\n")
 	}
@@ -55,7 +55,7 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	if *all {
 		fmt.Printf(" all moves:")
 		for _, m := range p.AllMoves(nil) {
-			fmt.Printf(" %s", ptn.FormatMove(&m))
+			fmt.Printf(" %s", ptn.FormatMove(m))
 		}
 		fmt.Printf("\n")
 	}
@@ -66,9 +66,9 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	}
 
 	for _, m := range pvs[0] {
-		n, e := p.Move(&m)
+		n, e := p.Move(m)
 		if e != nil {
-			log.Printf("illegal move in pv: %s: %v", ptn.FormatMove(&m), e)
+			log.Printf("illegal move in pv: %s: %v", ptn.FormatMove(m), e)
 			if val < ai.WinThreshold && val > -ai.WinThreshold {
 				log.Fatal("illegal move in non-terminal pv!")
 			}
@@ -96,5 +96,5 @@ func (m *monteCarloAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	}
 	pv := m.ai.GetMove(ctx, p)
 	fmt.Printf("AI analysis:\n")
-	fmt.Printf("  PV=%s\n", ptn.FormatMove(&pv))
+	fmt.Printf("  PV=%s\n", ptn.FormatMove(pv))
 }

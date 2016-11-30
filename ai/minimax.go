@@ -268,7 +268,7 @@ func formatpv(ms []tak.Move) string {
 		if i != 0 {
 			out.WriteString(" ")
 		}
-		out.WriteString(ptn.FormatMove(&m))
+		out.WriteString(ptn.FormatMove(m))
 	}
 	out.WriteString("]")
 	return out.String()
@@ -310,7 +310,7 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 		i += pts
 		if ai.cfg.Debug > 2 {
 			log.Printf("rand m=%s v=%d cv=%d pts=%d i=%d",
-				ptn.FormatMove(&m), v, cv, pts, i)
+				ptn.FormatMove(m), v, cv, pts, i)
 		}
 		if ai.rand.Int63n(i) <= pts {
 			rv = m
@@ -345,12 +345,12 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 		cv = -cv
 		if ai.cfg.Debug > 2 {
 			log.Printf("[all-search] m=%s v=%d pv=%s",
-				ptn.FormatMove(&m), cv, formatpv(ms))
+				ptn.FormatMove(m), cv, formatpv(ms))
 		}
 		if cv != v {
 			continue
 		}
-		if m.Equal(&pv[0]) {
+		if m.Equal(pv[0]) {
 			continue
 		}
 		outpv := []tak.Move{m}
@@ -503,7 +503,7 @@ func teSuffices(te *tableEntry, depth int, α, β int64) bool {
 	return false
 }
 
-func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply int) {
+func (ai *MinimaxAI) recordCut(p *tak.Position, m tak.Move, move, depth, ply int) {
 	ai.st.CutNodes++
 	switch move {
 	case 1:
@@ -513,9 +513,9 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 	default:
 		ai.st.CutSearch += uint64(move + 1)
 	}
-	ai.history[*m] += (1 << uint(depth))
+	ai.history[m] += (1 << uint(depth))
 	if ply > 0 {
-		ai.response[ai.stack[ply-1].m] = *m
+		ai.response[ai.stack[ply-1].m] = m
 	}
 	if ai.cuts == nil {
 		return
@@ -538,7 +538,7 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 	}{
 		TPS:     ptn.FormatTPS(p),
 		Move:    ptn.FormatMove(m),
-		History: ai.history[*m] - (1 << uint(depth)),
+		History: ai.history[m] - (1 << uint(depth)),
 
 		IterationDepth: ai.depth,
 		Depth:          depth,
@@ -546,17 +546,17 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m *tak.Move, move, depth, ply in
 	}
 	mg := &ai.stack[ply].mg
 	if ply > 0 {
-		cut.Prev = ptn.FormatMove(&ai.stack[ply-1].m)
+		cut.Prev = ptn.FormatMove(ai.stack[ply-1].m)
 	}
 	if len(mg.pv) > 0 {
-		cut.PV = ptn.FormatMove(&mg.pv[0])
+		cut.PV = ptn.FormatMove(mg.pv[0])
 	}
 	if mg.te != nil {
-		cut.Table = ptn.FormatMove(&mg.te.m)
+		cut.Table = ptn.FormatMove(mg.te.m)
 		cut.TableDepth = int(mg.te.depth)
 	}
 	if mg.r.Type != 0 {
-		cut.Response = ptn.FormatMove(&mg.r)
+		cut.Response = ptn.FormatMove(mg.r)
 	}
 	ai.cuts.Encode(&cut)
 }
@@ -584,7 +584,7 @@ func (ai *MinimaxAI) pvSearch(
 	if te != nil {
 		ai.st.TTHits++
 		if teSuffices(te, depth, α, β) {
-			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
+			_, e := p.MovePreallocated(te.m, ai.stack[ply].p)
 			if e == nil {
 				ai.st.TTShortcut++
 				ai.stack[ply].pv[0] = te.m
@@ -621,7 +621,7 @@ func (ai *MinimaxAI) pvSearch(
 		var v int64
 		if ai.cfg.Debug > 4+ply {
 			log.Printf("%*s>search ply=%d d=%d m=%s w=(%d,%d)",
-				ply, "", ply, depth, ptn.FormatMove(&m), α, β)
+				ply, "", ply, depth, ptn.FormatMove(m), α, β)
 		}
 		ai.stack[ply].m = m
 		if i > 1 {
@@ -637,7 +637,7 @@ func (ai *MinimaxAI) pvSearch(
 		if ai.cfg.Debug > 4+ply {
 			log.Printf("%*s search ply=%d d=%d m=%s w=(%d,%d) v=%d pv=%s",
 				ply, "", ply, depth,
-				ptn.FormatMove(&m), α, β, v, formatpv(ms))
+				ptn.FormatMove(m), α, β, v, formatpv(ms))
 		}
 
 		if len(best) == 0 {
@@ -650,7 +650,7 @@ func (ai *MinimaxAI) pvSearch(
 			best = append(best, ms...)
 			α = v
 			if α >= β {
-				ai.recordCut(p, &m, i, depth, ply)
+				ai.recordCut(p, m, i, depth, ply)
 				break
 			}
 		}
@@ -699,7 +699,7 @@ func (ai *MinimaxAI) zwSearch(
 	if te != nil {
 		ai.st.TTHits++
 		if teSuffices(te, depth, α, α+1) {
-			_, e := p.MovePreallocated(&te.m, ai.stack[ply].p)
+			_, e := p.MovePreallocated(te.m, ai.stack[ply].p)
 			if e == nil {
 				ai.st.TTShortcut++
 				ai.stack[ply].pv[0] = te.m
@@ -711,7 +711,7 @@ func (ai *MinimaxAI) zwSearch(
 
 	if ai.nullMoveOK(ply, depth, p) {
 		ai.stack[ply].m = tak.Move{Type: tak.Pass}
-		child, e := p.MovePreallocated(&ai.stack[ply].m, ai.stack[ply].p)
+		child, e := p.MovePreallocated(ai.stack[ply].m, ai.stack[ply].p)
 		if e == nil {
 			ai.st.NullSearch++
 			_, v := ai.zwSearch(child, ply+1, depth-3, nil, -α-1, true)
@@ -781,14 +781,14 @@ func (ai *MinimaxAI) zwSearch(
 		ai.stack[ply].m = m
 		if ai.cfg.Debug > 4+ply {
 			log.Printf("%*s>search ply=%d d=%d m=%s w=(%d,%d)",
-				ply, "", ply, depth, ptn.FormatMove(&m), α, α+1)
+				ply, "", ply, depth, ptn.FormatMove(m), α, α+1)
 		}
 		ms, v = ai.zwSearch(child, ply+1, depth-1, best[1:], -α-1, !cut)
 		v = -v
 		if ai.cfg.Debug > 4+ply {
 			log.Printf("%*s<search ply=%d d=%d m=%s w=(%d,%d) v=%d pv=%s",
 				ply, "", ply, depth,
-				ptn.FormatMove(&m), α, α+1, v, formatpv(ms))
+				ptn.FormatMove(m), α, α+1, v, formatpv(ms))
 		}
 
 		if len(best) == 0 {
@@ -796,7 +796,7 @@ func (ai *MinimaxAI) zwSearch(
 			best = append(best, ms...)
 		}
 		if v > α {
-			ai.recordCut(p, &m, i, depth, ply)
+			ai.recordCut(p, m, i, depth, ply)
 			best = append(best[:0], m)
 			best = append(best, ms...)
 			didCut = true

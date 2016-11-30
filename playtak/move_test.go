@@ -68,7 +68,7 @@ func TestParseServer(t *testing.T) {
 		if !reflect.DeepEqual(m, tc.out) {
 			t.Errorf("parse(%s) = %#v not %#v", tc.in, m, tc.out)
 		}
-		back := FormatServer(&m)
+		back := FormatServer(m)
 		if back != tc.in {
 			t.Errorf("round-trip(%s) = %s", tc.in, back)
 		}

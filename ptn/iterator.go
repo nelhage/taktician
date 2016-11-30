@@ -30,7 +30,7 @@ func (i *Iterator) Err() error {
 }
 
 func (i *Iterator) apply() bool {
-	next, e := i.position.Move(&i.move)
+	next, e := i.position.Move(i.move)
 	if e != nil {
 		i.err = e
 		return false

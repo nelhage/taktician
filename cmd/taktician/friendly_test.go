@@ -50,7 +50,7 @@ func TestFPAResign(t *testing.T) {
 
 	p := tak.New(tak.Config{Size: 5})
 	m, _ := ptn.ParseMove("a1")
-	p, _ = p.Move(&m)
+	p, _ = p.Move(m)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	friendly.GetMove(ctx, p, time.Minute, time.Minute)
@@ -68,7 +68,7 @@ func TestFPAResign(t *testing.T) {
 
 	p = tak.New(tak.Config{Size: 5})
 	m, _ = ptn.ParseMove("c3")
-	p, _ = p.Move(&m)
+	p, _ = p.Move(m)
 
 	ctx, cancel = context.WithTimeout(context.Background(), 50*time.Millisecond)
 	friendly.GetMove(ctx, p, time.Minute, time.Minute)
@@ -114,7 +114,7 @@ func TestFPAOK(t *testing.T) {
 			if e != nil {
 				t.Fatal("bad move", tc.move)
 			}
-			p, e = p.Move(&m)
+			p, e = p.Move(m)
 			if e != nil {
 				t.Fatal("bad move", tc.move)
 			}

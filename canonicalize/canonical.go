@@ -64,7 +64,7 @@ func symmetries(size int) []symmetry {
 	}
 }
 
-func rotateMove(s symmetry, m *tak.Move) tak.Move {
+func rotateMove(s symmetry, m tak.Move) tak.Move {
 	var out tak.Move
 	out.X, out.Y = s(m.X, m.Y)
 	if !m.IsSlide() {
@@ -89,7 +89,7 @@ func rotateMove(s symmetry, m *tak.Move) tak.Move {
 	return out
 }
 
-func preferMove(l, r *tak.Move) bool {
+func preferMove(l, r tak.Move) bool {
 	if l.Y != r.Y {
 		return l.Y < r.Y
 	}
@@ -122,7 +122,7 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 	for ply, m := range ms {
 		var e error
 		h := boards[0].p.Hash()
-		m := rotateMove(tfn, &m)
+		m := rotateMove(tfn, m)
 		best := m
 		var rot symmetry
 		for i, st := range boards {
@@ -130,8 +130,8 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 				continue
 			}
 			if st.p.Hash() == h {
-				rm := rotateMove(st.s, &m)
-				if preferMove(&rm, &best) {
+				rm := rotateMove(st.s, m)
+				if preferMove(rm, best) {
 					best = rm
 					rot = st.s
 				}
@@ -144,11 +144,11 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 			m = best
 		}
 		for i, st := range boards {
-			rm := rotateMove(st.s, &m)
-			st.p, e = st.p.Move(&rm)
+			rm := rotateMove(st.s, m)
+			st.p, e = st.p.Move(rm)
 			if e != nil {
 				return nil, fmt.Errorf("canonical: move %d: rot %d: %s: %v",
-					ply, i, ptn.FormatMove(&rm), e)
+					ply, i, ptn.FormatMove(rm), e)
 			}
 			st.moves = append(st.moves, rm)
 		}

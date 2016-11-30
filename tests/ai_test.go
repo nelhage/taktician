@@ -182,27 +182,27 @@ func runTest(t *testing.T, tc *TestCase) {
 		for _, pv := range pvs {
 			var ms []string
 			for _, m := range pv {
-				ms = append(ms, ptn.FormatMove(&m))
+				ms = append(ms, ptn.FormatMove(m))
 			}
 			t.Logf("  pv=[%s]", strings.Join(ms, " "))
-			_, e = p.Move(&pv[0])
+			_, e = p.Move(pv[0])
 			if e != nil {
-				t.Errorf("!! %s: illegal move: `%s'", tc.name, ptn.FormatMove(&pv[0]))
+				t.Errorf("!! %s: illegal move: `%s'", tc.name, ptn.FormatMove(pv[0]))
 			}
 			for _, m := range spec.badMoves {
-				if pv[0].Equal(&m) {
-					t.Errorf("!! %s: bad move: `%s'", tc.name, ptn.FormatMove(&pv[0]))
+				if pv[0].Equal(m) {
+					t.Errorf("!! %s: bad move: `%s'", tc.name, ptn.FormatMove(pv[0]))
 				}
 			}
 			found := false
 			for _, m := range spec.goodMoves {
-				if pv[0].Equal(&m) {
+				if pv[0].Equal(m) {
 					found = true
 					break
 				}
 			}
 			if len(spec.goodMoves) != 0 && !found {
-				t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(&pv[0]))
+				t.Errorf("!! %s is not an allowed good move", ptn.FormatMove(pv[0]))
 			}
 		}
 		if spec.maxEval != 0 && st.Evaluated > spec.maxEval {

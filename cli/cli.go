@@ -91,14 +91,14 @@ func (c *CLI) Play() *tak.Position {
 		} else {
 			m = c.Black.GetMove(c.p)
 		}
-		p, e := c.p.Move(&m)
+		p, e := c.p.Move(m)
 		if e != nil {
 			fmt.Fprintln(c.Out, "illegal move:", e)
 		} else {
 			if c.p.ToMove() == tak.White {
-				fmt.Fprintf(c.Out, "%d. %s", c.p.MoveNumber()/2+1, ptn.FormatMove(&m))
+				fmt.Fprintf(c.Out, "%d. %s", c.p.MoveNumber()/2+1, ptn.FormatMove(m))
 			} else {
-				fmt.Fprintf(c.Out, "%d. ... %s", c.p.MoveNumber()/2+1, ptn.FormatMove(&m))
+				fmt.Fprintf(c.Out, "%d. ... %s", c.p.MoveNumber()/2+1, ptn.FormatMove(m))
 			}
 			c.p = p
 			c.moves = append(c.moves, m)
