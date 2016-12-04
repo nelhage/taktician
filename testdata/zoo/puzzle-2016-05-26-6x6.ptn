@@ -1,0 +1,31 @@
+[Site "PlayTak.com"]
+[Player1 "Turing"]
+[Player2 "TakticianBot"]
+[Result "R-0"]
+[Size "6"]
+[Depth "7"]
+[Move "0"]
+[GoodMove "3c3<12"]
+[GoodMove "3c3<"]
+[GoodMove "2c3<"]
+
+1. a6 f1
+2. d2 d4
+3. b3 d6
+4. a3 c6
+5. Sb6 b2
+6. c3 e6
+7. e2 d3
+8. c2 1b2+1
+9. b2 d1
+10. c4 f6
+11. f2 1d1+1
+12. d1 2d2<2
+13. d2 1d3-1
+14. Cd3 Cb5
+15. 1b6>1 3c2<3
+16. Sc2 c5
+17. Sd5 2b3>2
+18. b3 a5
+19. 1c4-1 4b2+4
+{White can force a win here, the best solution I know of costs three pieces and takes five moves (9 ply) to complete a road, but I wouldn't be surprised if there's a better solution.}

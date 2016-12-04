@@ -1,0 +1,38 @@
+[Site "PlayTak.com"]
+[Event "Online Play"]
+[Date "2016.09.14"]
+[Time "23:46:59"]
+[Player1 "Abyss"]
+[Player2 "SultanPepper"]
+[Result "0-1"]
+[Size "6"]
+
+1. a6 a1
+2. c2 b2
+3. c3 c4
+4. Cd4 b3
+5. c5 Cd3
+6. 1d4<1 a3
+7. b4 1d3<1
+8. d3 d4
+9. e4 e3
+10. a4 1d4-1
+11. f3 e2
+12. f2 f1
+13. 1f3<1 d2
+14. 1f2<1 e1
+15. Sd1 f2
+16. 1d1+1 Sd4
+17. c6 f3
+18. 2d2+2 c1
+19. d1 d2
+20. 4d3-13 2c3-2
+21. 4d1>13 3c2>3
+22. e5 4d2>4
+23. 4f1+4 c2
+24. 2e3>2 f1
+25. 1b4-1 1e2>1
+26. 2e1>2 5f2<5
+27. Sa2 e3
+28. b4 e1
+29. d5 {Black to force a road}
