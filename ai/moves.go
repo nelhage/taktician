@@ -99,12 +99,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 				mg.ms = mg.p.AllMoves(ms[:0])
 				mg.f.moves.slice = ms[:]
 			}
-			if mg.ply == 0 {
-				for i := len(mg.ms) - 1; i > 0; i-- {
-					j := mg.ai.rand.Int31n(int32(i))
-					mg.ms[j], mg.ms[i] = mg.ms[i], mg.ms[j]
-				}
-			} else if mg.depth > 1 && !mg.ai.cfg.NoSort {
+			if mg.depth > 1 && !mg.ai.cfg.NoSort {
 				mg.sortMoves()
 			}
 			fallthrough
