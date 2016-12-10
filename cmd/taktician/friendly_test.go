@@ -9,8 +9,8 @@ import (
 
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/playtak/bot"
-	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/taktest"
 )
 
 type mockClient struct {
@@ -49,7 +49,7 @@ func TestFPAResign(t *testing.T) {
 	mock.cmds = nil
 
 	p := tak.New(tak.Config{Size: 5})
-	m, _ := ptn.ParseMove("a1")
+	m := taktest.Move("a1")
 	p, _ = p.Move(m)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
@@ -67,7 +67,7 @@ func TestFPAResign(t *testing.T) {
 	mock.cmds = nil
 
 	p = tak.New(tak.Config{Size: 5})
-	m, _ = ptn.ParseMove("c3")
+	m = taktest.Move("c3")
 	p, _ = p.Move(m)
 
 	ctx, cancel = context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -109,15 +109,7 @@ func TestFPAOK(t *testing.T) {
 				},
 			}
 
-			p := tak.New(tak.Config{Size: tc.size})
-			m, e := ptn.ParseMove(tc.move)
-			if e != nil {
-				t.Fatal("bad move", tc.move)
-			}
-			p, e = p.Move(m)
-			if e != nil {
-				t.Fatal("bad move", tc.move)
-			}
+			p := taktest.Position(tc.size, tc.move)
 
 			ok := friendly.fpaWhiteOK(p)
 			if ok != tc.ok {

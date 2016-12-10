@@ -6,13 +6,14 @@ import (
 
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/taktest"
 )
 
 func TestMoveGenerator(t *testing.T) {
 	p, _ := ptn.ParseTPS("1,1,x3/x,1,x,2,x/x,2,1C,x2/x,2,1,x2/2,2,1,x2 2 6")
-	pvm, _ := ptn.ParseMove("Cc4")
-	tem, _ := ptn.ParseMove("c4")
-	cm, _ := ptn.ParseMove("b1>")
+	pvm := taktest.Move("Cc4")
+	tem := taktest.Move("c4")
+	cm := taktest.Move("b1>")
 	te := tableEntry{
 		m: tem,
 	}

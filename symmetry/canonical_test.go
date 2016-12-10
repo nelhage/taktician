@@ -1,11 +1,10 @@
 package symmetry
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/taktest"
 )
 
 func TestCanonical(t *testing.T) {
@@ -88,21 +87,9 @@ func TestCanonical(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.in, func(t *testing.T) {
-			bits := strings.Split(tc.in, " ")
-			var ms []tak.Move
-			for _, b := range bits {
-				m, e := ptn.ParseMove(b)
-				if e != nil {
-					t.Fatalf("Parse %s: %v", b, e)
-				}
-				ms = append(ms, m)
-			}
+			ms := taktest.Moves(tc.in)
 			out, _ := Canonical(tc.size, ms)
-			bits = nil
-			for _, o := range out {
-				bits = append(bits, ptn.FormatMove(o))
-			}
-			got := strings.Join(bits, " ")
+			got := taktest.FormatMoves(out)
 			if got != tc.out {
 				t.Fatalf("Canonical(%q) = %q != %q",
 					tc.in, got, tc.out,
@@ -122,7 +109,7 @@ func TestRotations(t *testing.T) {
 		t.Fatal("bad symmetries ", len(ss))
 	}
 
-	p, _ = p.Move(tak.Move{Type: tak.PlaceFlat, X: 0, Y: 0})
+	p, _ = p.Move(taktest.Move("a1"))
 	ss, e = Symmetries(p)
 	if e != nil {
 		t.Fatal(e)
