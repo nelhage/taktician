@@ -7,9 +7,9 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type symmetry func(int8, int8) (int8, int8)
+type Symmetry func(int8, int8) (int8, int8)
 
-func compose(ss ...symmetry) symmetry {
+func compose(ss ...Symmetry) Symmetry {
 	return func(x, y int8) (int8, int8) {
 		for i := range ss {
 			s := ss[len(ss)-i-1]
@@ -19,7 +19,7 @@ func compose(ss ...symmetry) symmetry {
 	}
 }
 
-func symmetries(size int) []symmetry {
+func symmetries(size int) []Symmetry {
 	flip := func(i int8) int8 {
 		return int8(size) - 1 - i
 	}
@@ -52,7 +52,7 @@ func symmetries(size int) []symmetry {
 		return flip(y), x
 	}
 
-	return []symmetry{
+	return []Symmetry{
 		identity,
 		flipX,
 		flipY,
@@ -64,7 +64,7 @@ func symmetries(size int) []symmetry {
 	}
 }
 
-func rotateMove(s symmetry, m tak.Move) tak.Move {
+func TransformMove(s Symmetry, m tak.Move) tak.Move {
 	var out tak.Move
 	out.X, out.Y = s(m.X, m.Y)
 	if !m.IsSlide() {
@@ -101,8 +101,53 @@ func preferMove(l, r tak.Move) bool {
 
 type state struct {
 	p     *tak.Position
-	s     symmetry
+	s     Symmetry
 	moves []tak.Move
+}
+
+type PositionAndSymmetry struct {
+	P *tak.Position
+	S Symmetry
+}
+
+func Symmetries(p *tak.Position) ([]PositionAndSymmetry, error) {
+	syms := symmetries(p.Size())
+	boards := make([][][]tak.Square, len(syms))
+	for i := range boards {
+		boards[i] = make([][]tak.Square, p.Size())
+		for j := range boards[i] {
+			boards[i][j] = make([]tak.Square, p.Size())
+		}
+	}
+
+	for x := 0; x < p.Size(); x++ {
+		for y := 0; y < p.Size(); y++ {
+			for i, sym := range syms {
+				rx, ry := sym(int8(x), int8(y))
+				boards[i][rx][ry] = p.At(x, y)
+			}
+		}
+	}
+
+	ps := make([]PositionAndSymmetry, len(boards))
+	for i, b := range boards {
+		var e error
+		ps[i].P, e = tak.FromSquares(p.Config(), b, p.MoveNumber())
+		ps[i].S = syms[i]
+		if e != nil {
+			return nil, e
+		}
+	}
+	seen := make(map[uint64]struct{})
+	var out []PositionAndSymmetry
+	for _, p := range ps {
+		if _, ok := seen[p.P.Hash()]; ok {
+			continue
+		}
+		out = append(out, p)
+		seen[p.P.Hash()] = struct{}{}
+	}
+	return out, nil
 }
 
 func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
@@ -116,21 +161,21 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 		}
 	}
 
-	var rots []symmetry
+	var rots []Symmetry
 	tfn := syms[0]
 
 	for ply, m := range ms {
 		var e error
 		h := boards[0].p.Hash()
-		m := rotateMove(tfn, m)
+		m := TransformMove(tfn, m)
 		best := m
-		var rot symmetry
+		var rot Symmetry
 		for i, st := range boards {
 			if i == 0 {
 				continue
 			}
 			if st.p.Hash() == h {
-				rm := rotateMove(st.s, m)
+				rm := TransformMove(st.s, m)
 				if preferMove(rm, best) {
 					best = rm
 					rot = st.s
@@ -139,12 +184,12 @@ func Canonical(size int, ms []tak.Move) ([]tak.Move, error) {
 		}
 
 		if rot != nil {
-			rots = append([]symmetry{rot}, rots...)
+			rots = append([]Symmetry{rot}, rots...)
 			tfn = compose(rots...)
 			m = best
 		}
 		for i, st := range boards {
-			rm := rotateMove(st.s, m)
+			rm := TransformMove(st.s, m)
 			st.p, e = st.p.Move(rm)
 			if e != nil {
 				return nil, fmt.Errorf("canonical: move %d: rot %d: %s: %v",

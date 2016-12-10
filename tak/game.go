@@ -127,6 +127,10 @@ func (p *Position) Size() int {
 	return p.cfg.Size
 }
 
+func (p *Position) Config() Config {
+	return *p.cfg
+}
+
 func (p *Position) At(x, y int) Square {
 	i := uint(x + y*p.Size())
 	if (p.White|p.Black)&(1<<i) == 0 {

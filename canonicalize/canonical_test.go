@@ -111,3 +111,23 @@ func TestCanonical(t *testing.T) {
 		})
 	}
 }
+
+func TestRotations(t *testing.T) {
+	p := tak.New(tak.Config{Size: 6})
+	ss, e := Symmetries(p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(ss) != 1 {
+		t.Fatal("bad symmetries ", len(ss))
+	}
+
+	p, _ = p.Move(tak.Move{Type: tak.PlaceFlat, X: 0, Y: 0})
+	ss, e = Symmetries(p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(ss) != 4 {
+		t.Error("bad symmetries n=", len(ss))
+	}
+}
