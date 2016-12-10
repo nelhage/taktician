@@ -322,6 +322,9 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 
 func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.Move, int64, Stats) {
 	pv, v, st := ai.Analyze(ctx, p)
+	if len(pv) == 0 {
+		return nil, v, st
+	}
 	mg := &ai.stack[0].mg
 	*mg = moveGenerator{
 		ai:    ai,

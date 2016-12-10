@@ -52,13 +52,6 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	if *tps {
 		fmt.Printf("[TPS \"%s\"]\n", ptn.FormatTPS(p))
 	}
-	if *all {
-		fmt.Printf(" all moves:")
-		for _, m := range p.AllMoves(nil) {
-			fmt.Printf(" %s", ptn.FormatMove(m))
-		}
-		fmt.Printf("\n")
-	}
 	fmt.Println()
 
 	if len(pvs) == 0 || *quiet {

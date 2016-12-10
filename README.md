@@ -43,7 +43,8 @@ suggested move. You can also analzye e.g. white's 10th move using:
 analyzetak -white -move 10 FILE.ptn
 ```
 
-Or use `-final` to evaluate the final position on the board.
+With no `-move` argument, `analyzetak` will analyze the final position
+of the PTN file.
 
 By default, `analyzetak` will search for up to 1m before returning a
 final assessment. Use `-limit 2m` to give it more time, or `-depth 5`

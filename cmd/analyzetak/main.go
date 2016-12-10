@@ -20,7 +20,6 @@ import (
 
 var (
 	/* Global options / output options */
-	all        = flag.Bool("all", false, "show all possible moves")
 	tps        = flag.Bool("tps", false, "render position in tps")
 	quiet      = flag.Bool("quiet", false, "don't print board diagrams")
 	monteCarlo = flag.Bool("mcts", false, "Use the MCTS evaluator")
@@ -28,7 +27,7 @@ var (
 
 	/* Options to select which position(s) to analyze */
 	move      = flag.Int("move", 0, "PTN move number to analyze")
-	final     = flag.Bool("final", false, "analyze final position only")
+	all       = flag.Bool("all", false, "show all possible moves")
 	black     = flag.Bool("black", false, "only analyze black's move")
 	white     = flag.Bool("white", false, "only analyze white's move")
 	variation = flag.String("variation", "", "apply the listed moves after the given position")
@@ -82,7 +81,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	if *move != 0 || *final {
+	if !*all {
 		p, e := parsed.PositionAtMove(*move, color)
 		if e != nil {
 			log.Fatal("find move:", e)
