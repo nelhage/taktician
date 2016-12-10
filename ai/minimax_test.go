@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"

@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"log"
 	"strings"
 	"sync"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/nelhage/taktician/tak"
-	"golang.org/x/net/context"
 )
 
 type Expectation struct {

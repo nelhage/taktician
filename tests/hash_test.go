@@ -1,10 +1,9 @@
 package tests
 
 import (
+	"context"
 	"flag"
 	"testing"
-
-	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/bitboard"

@@ -1,9 +1,11 @@
 package ai
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/symmetry"
@@ -97,4 +99,25 @@ func (ob *OpeningBook) GetMove(p *tak.Position, r *rand.Rand) (tak.Move, bool) {
 		}
 	}
 	return out, true
+}
+
+type OpeningPlayer struct {
+	inner TakPlayer
+	book  *OpeningBook
+	r     *rand.Rand
+}
+
+func (op *OpeningPlayer) GetMove(ctx context.Context, p *tak.Position) tak.Move {
+	if m, ok := op.book.GetMove(p, op.r); ok {
+		return m
+	}
+	return op.inner.GetMove(ctx, p)
+}
+
+func WithOpeningBook(ai TakPlayer, ob *OpeningBook) TakPlayer {
+	return &OpeningPlayer{
+		inner: ai,
+		book:  ob,
+		r:     rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"

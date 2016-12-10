@@ -3,7 +3,7 @@ package ai
 import (
 	"math/rand"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nelhage/taktician/tak"
 )

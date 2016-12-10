@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
@@ -28,7 +28,7 @@ const (
 
 type Friendly struct {
 	client *playtak.Commands
-	ai     *ai.MinimaxAI
+	ai     ai.TakPlayer
 	check  *ai.MinimaxAI
 	g      *bot.Game
 
@@ -43,7 +43,7 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		f.level = defaultLevel
 	}
 	f.g = g
-	f.ai = ai.NewMinimax(f.Config())
+	f.ai = wrapWithBook(g.Size, ai.NewMinimax(f.Config()))
 	f.check = ai.NewMinimax(ai.MinimaxConfig{
 		Depth:    3,
 		Size:     g.Size,
@@ -159,7 +159,7 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 		if f.g == nil || who != f.g.Opponent {
 			return fmt.Sprintf("OK! I'll play at level %d for future games.", l)
 		} else if f.g != nil {
-			f.ai = ai.NewMinimax(f.Config())
+			f.ai = wrapWithBook(f.g.Size, ai.NewMinimax(f.Config()))
 			return fmt.Sprintf("OK! I'll play at level %d, starting right now.", l)
 		}
 	case "size":

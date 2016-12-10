@@ -1,7 +1,7 @@
 package mcts
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/tak"

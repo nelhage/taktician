@@ -37,6 +37,8 @@ var (
 	tableMem        = flag.Int64("table-mem", 0, "set table size")
 	useOpponentTime = flag.Bool("use-opponent-time", true, "think on opponent's time")
 
+	book = flag.Bool("book", true, "use built-in opening book")
+
 	debugClient = flag.Bool("debug-client", false, "log debug output for playtak connection")
 )
 

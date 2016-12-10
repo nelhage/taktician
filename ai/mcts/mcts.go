@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/bitboard"
@@ -81,7 +81,6 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	if !limited || deadline.Sub(start) > ai.cfg.Limit {
 		deadline = time.Now().Add(ai.cfg.Limit)
 	}
-	ctx = WithRand(ctx, ai.r)
 
 	next := start.Add(10 * time.Second)
 	for time.Now().Before(deadline) {

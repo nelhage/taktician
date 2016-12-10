@@ -1,14 +1,13 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/ptn"

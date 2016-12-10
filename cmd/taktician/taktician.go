@@ -1,12 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/playtak"
@@ -17,20 +16,22 @@ import (
 type Taktician struct {
 	g      *bot.Game
 	client *playtak.Commands
-	ai     *ai.MinimaxAI
+	ai     ai.TakPlayer
 }
 
 func (t *Taktician) NewGame(g *bot.Game) {
 	t.g = g
-	t.ai = ai.NewMinimax(ai.MinimaxConfig{
-		Size:  g.Size,
-		Depth: *depth,
-		Debug: *debug,
+	t.ai = wrapWithBook(
+		g.Size,
+		ai.NewMinimax(ai.MinimaxConfig{
+			Size:  g.Size,
+			Depth: *depth,
+			Debug: *debug,
 
-		NoSort:   !*sort,
-		TableMem: *tableMem,
-		MultiCut: *multicut,
-	})
+			NoSort:   !*sort,
+			TableMem: *tableMem,
+			MultiCut: *multicut,
+		}))
 }
 
 func (t *Taktician) GetMove(

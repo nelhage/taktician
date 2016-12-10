@@ -1,14 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"reflect"
 	"sync"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
