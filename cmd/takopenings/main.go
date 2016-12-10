@@ -10,9 +10,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/nelhage/taktician/canonicalize"
 	"github.com/nelhage/taktician/logs"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -84,7 +84,7 @@ WHERE r1.name = g.player1
 				}
 			}
 		}
-		ms, e = canonicalize.Canonical(p.Size(), ms)
+		ms, e = symmetry.Canonical(p.Size(), ms)
 		if e != nil {
 			log.Printf("%s: %v", ptnPath, e)
 			continue

@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/nelhage/taktician/canonicalize"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -41,7 +41,7 @@ func BuildOpeningBook(size int, lines []string) (*OpeningBook, error) {
 					lno, b, e)
 			}
 
-			rs, e := canonicalize.Symmetries(p)
+			rs, e := symmetry.Symmetries(p)
 			if e != nil {
 				return nil, fmt.Errorf("compute symmetries: %v", e)
 			}
@@ -53,7 +53,7 @@ func BuildOpeningBook(size int, lines []string) (*OpeningBook, error) {
 					}
 					ob.book[sym.P.Hash()] = pos
 				}
-				sm := canonicalize.TransformMove(sym.S, m)
+				sm := symmetry.TransformMove(sym.S, m)
 				var ch *child
 				for i := range pos.moves {
 					if pos.moves[i].move.Equal(sm) {

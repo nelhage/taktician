@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/nelhage/taktician/canonicalize"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -35,7 +35,7 @@ func main() {
 		}
 	}
 
-	out, e := canonicalize.Canonical(5, ms)
+	out, e := symmetry.Canonical(5, ms)
 	if e != nil {
 		log.Fatalf("canonicalize: %v", e)
 	}

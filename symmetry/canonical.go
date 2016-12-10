@@ -1,4 +1,4 @@
-package canonicalize
+package symmetry
 
 import (
 	"fmt"
