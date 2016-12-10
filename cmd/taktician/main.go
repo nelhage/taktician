@@ -30,7 +30,7 @@ var (
 	fpa      = flag.Bool("fpa", false, "play as FPABot")
 
 	debug           = flag.Int("debug", 1, "debug level")
-	depth           = flag.Int("depth", 5, "minimax depth")
+	depth           = flag.Int("depth", 0, "minimax depth")
 	multicut        = flag.Bool("multi-cut", false, "use multi-cut")
 	limit           = flag.Duration("limit", time.Minute, "time limit per move")
 	sort            = flag.Bool("sort", true, "sort moves via history heuristic")
