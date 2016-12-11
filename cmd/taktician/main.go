@@ -51,7 +51,9 @@ func main() {
 	}
 
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	if *observe == "" {
+		signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	}
 
 	backoff := 1 * time.Second
 	var b bot.Bot
