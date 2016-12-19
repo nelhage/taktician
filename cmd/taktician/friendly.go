@@ -168,7 +168,7 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 			log.Printf("bad size size=%q", arg)
 			return ""
 		}
-		if sz >= 4 && sz <= 8 {
+		if sz >= 3 && sz <= 8 {
 			*size = sz
 			f.client.SendCommand("Seek",
 				strconv.Itoa(*size),
