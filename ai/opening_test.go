@@ -40,5 +40,23 @@ func TestOpeningBook(t *testing.T) {
 	if len(pos.moves) != 2 {
 		t.Fatal("wrong children n=", len(pos.moves))
 	}
+}
 
+func TestCollisions(t *testing.T) {
+	ob, err := BuildOpeningBook(6, []string{`a1 f6 d4 d3 c4`})
+	if err != nil {
+		t.Fatal("build ", err)
+	}
+	p := taktest.Position(6, "a1 f6 d4 d3")
+	pos := ob.book[p.Hash()]
+	if pos == nil {
+		t.Fatal("did not store")
+	}
+	for _, c := range pos.moves {
+		_, e := p.Move(c.move)
+		if e != nil {
+			t.Logf("children=%#v", pos.moves)
+			t.Errorf("illegal move=%s w=%d", ptn.FormatMove(c.move), c.weight)
+		}
+	}
 }

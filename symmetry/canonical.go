@@ -124,7 +124,7 @@ func Symmetries(p *tak.Position) ([]PositionAndSymmetry, error) {
 		for y := 0; y < p.Size(); y++ {
 			for i, sym := range syms {
 				rx, ry := sym(int8(x), int8(y))
-				boards[i][rx][ry] = p.At(x, y)
+				boards[i][ry][rx] = p.At(x, y)
 			}
 		}
 	}

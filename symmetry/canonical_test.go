@@ -1,8 +1,11 @@
 package symmetry
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/nelhage/taktician/cli"
+	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 	"github.com/nelhage/taktician/taktest"
 )
@@ -116,5 +119,23 @@ func TestRotations(t *testing.T) {
 	}
 	if len(ss) != 4 {
 		t.Error("bad symmetries n=", len(ss))
+	}
+
+	p = taktest.Position(6, "a1 f6 d4 d3")
+	m := taktest.Move("c4")
+	ss, e = Symmetries(p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for i, sym := range ss {
+		sm := TransformMove(sym.S, m)
+		if _, e := sym.P.Move(sm); e != nil {
+			var buf bytes.Buffer
+			cli.RenderBoard(nil, &buf, sym.P)
+			t.Logf("[%d] bad move %s\n%s",
+				i,
+				ptn.FormatMove(sm),
+				buf.String())
+		}
 	}
 }
