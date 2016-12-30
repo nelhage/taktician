@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/symmetry"
@@ -35,7 +36,11 @@ func main() {
 		}
 	}
 
-	out, e := symmetry.Canonical(5, ms)
+	sz, e := strconv.ParseUint(g.FindTag("Size"), 10, 32)
+	if e != nil {
+		log.Fatalf("bad size: %v", e)
+	}
+	out, e := symmetry.Canonical(int(sz), ms)
 	if e != nil {
 		log.Fatalf("canonicalize: %v", e)
 	}
