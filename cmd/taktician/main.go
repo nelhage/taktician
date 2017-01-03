@@ -124,6 +124,7 @@ func main() {
 						}
 					case strings.HasPrefix(line, "Observe"):
 						bot.ObserveGame(client, b, line)
+						break recvLoop
 					}
 				case <-sigs:
 					return
