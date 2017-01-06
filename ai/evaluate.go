@@ -593,6 +593,11 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 	fmt.Fprintf(tw, "potential\t%d\t%d\n", wp, bp)
 	fmt.Fprintf(tw, "threat\t%d\t%d\n", wt, bt)
 
+	wc, bc := computeControl(&m.c, p)
+	fmt.Fprintf(tw, "control\t%d\t%d\n",
+		bitboard.Popcount(wc),
+		bitboard.Popcount(bc))
+
 	var allg uint64
 	for i, g := range analysis.WhiteGroups {
 		w, h := bitboard.Dimensions(&m.c, g)
