@@ -22,22 +22,19 @@ type minimaxAnalysis struct {
 }
 
 func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	if !*quiet {
+		cli.RenderBoard(nil, os.Stdout, p)
+		if *explain {
+			ai.ExplainScore(m.ai, os.Stdout, p)
+		}
+	}
 	if *eval {
 		val := m.ai.Evaluate(p)
 		if p.ToMove() == tak.Black {
 			val = -val
 		}
 		fmt.Printf(" Val=%d\n", val)
-		if *explain {
-			ai.ExplainScore(m.ai, os.Stdout, p)
-		}
 		return
-	}
-	if !*quiet {
-		cli.RenderBoard(nil, os.Stdout, p)
-		if *explain {
-			ai.ExplainScore(m.ai, os.Stdout, p)
-		}
 	}
 	pvs, val, _ := m.ai.AnalyzeAll(ctx, p)
 	fmt.Printf("AI analysis:\n")
