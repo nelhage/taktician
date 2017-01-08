@@ -48,6 +48,7 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		Depth:    3,
 		Size:     g.Size,
 		Debug:    0,
+		TableMem: -1,
 		Evaluate: ai.EvaluateWinner,
 	})
 	f.client.Tell(g.Opponent,
