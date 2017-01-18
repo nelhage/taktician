@@ -46,6 +46,10 @@ type Bot interface {
 	HandleTell(who, msg string)
 }
 
+type Configger interface {
+	Config(size int) tak.Config
+}
+
 type Client interface {
 	Recv() <-chan string
 	SendCommand(...string)
@@ -85,12 +89,19 @@ func parseObserveStart(line string) *Game {
 	return &g
 }
 
+func config(b Bot, g *Game) tak.Config {
+	if cfg, ok := b.(Configger); ok {
+		return cfg.Config(g.Size)
+	}
+	return tak.Config{Size: g.Size}
+}
+
 func PlayGame(c Client, b Bot, line string) {
 	ctx := context.Background()
 	g := parseGameStart(line)
 
 	g.GameStr = fmt.Sprintf("Game#%s", g.ID)
-	g.p = tak.New(tak.Config{Size: g.Size})
+	g.p = tak.New(config(b, g))
 	g.Positions = append(g.Positions, g.p)
 	g.bot = b
 	b.NewGame(g)

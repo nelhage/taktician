@@ -43,7 +43,7 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		f.level = defaultLevel
 	}
 	f.g = g
-	f.ai = wrapWithBook(g.Size, ai.NewMinimax(f.Config()))
+	f.ai = wrapWithBook(g.Size, ai.NewMinimax(f.AIConfig()))
 	f.check = ai.NewMinimax(ai.MinimaxConfig{
 		Depth:    3,
 		Size:     g.Size,
@@ -112,6 +112,14 @@ func (f *Friendly) GetMove(
 	return m
 }
 
+func (f *Friendly) Config(size int) tak.Config {
+	cfg := tak.Config{Size: size}
+	if f.fpa {
+		cfg.BlackWinsTies = true
+	}
+	return cfg
+}
+
 func (f *Friendly) fpaWhiteOK(p *tak.Position) bool {
 	m := p.Size() / 2
 	if p.Top(m, m).Color() == tak.Black {
@@ -160,7 +168,7 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 		if f.g == nil || who != f.g.Opponent {
 			return fmt.Sprintf("OK! I'll play at level %d for future games.", l)
 		} else if f.g != nil {
-			f.ai = wrapWithBook(f.g.Size, ai.NewMinimax(f.Config()))
+			f.ai = wrapWithBook(f.g.Size, ai.NewMinimax(f.AIConfig()))
 			return fmt.Sprintf("OK! I'll play at level %d, starting right now.", l)
 		}
 	case "size":
@@ -207,7 +215,7 @@ func (f *Friendly) HandleChat(room string, who string, msg string) {
 	}
 }
 
-func (f *Friendly) Config() ai.MinimaxConfig {
+func (f *Friendly) AIConfig() ai.MinimaxConfig {
 	cfg := ai.MinimaxConfig{
 		Size:  f.g.Size,
 		Debug: *debug,
