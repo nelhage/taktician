@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +37,8 @@ type Friendly struct {
 
 	level    int
 	levelSet time.Time
+
+	log *os.File
 }
 
 func (f *Friendly) NewGame(g *bot.Game) {
@@ -63,6 +66,33 @@ func (f *Friendly) NewGame(g *bot.Game) {
 }
 
 func (f *Friendly) GameOver() {
+	if *logFile != "" {
+		l, e := os.OpenFile(*logFile,
+			os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		if e != nil {
+			log.Printf("log: open(%s): %v", *logFile, e)
+		} else {
+			defer l.Close()
+			var winner tak.Color
+			var moves int
+			if len(f.g.Positions) > 0 {
+				p := f.g.Positions[len(f.g.Positions)-1]
+				_, winner = p.GameOver()
+				moves = p.MoveNumber()
+			}
+			fmt.Fprintf(l,
+				"game=%s time=%s mycolor=%s opponent=%s level=%d result=%s winner=%s moves=%d\n",
+				f.g.ID,
+				time.Now().Format(time.RFC3339),
+				f.g.Color,
+				f.g.Opponent,
+				f.level,
+				f.g.Result,
+				winner,
+				moves,
+			)
+		}
+	}
 	f.g = nil
 }
 

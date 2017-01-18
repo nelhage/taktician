@@ -21,6 +21,7 @@ type Game struct {
 	Color    tak.Color
 	Size     int
 	Time     time.Duration
+	Result   string
 
 	times struct {
 		mine, theirs time.Duration
@@ -235,8 +236,9 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				g.ID, g.Opponent, g.p.MoveNumber())
 			return true
 		case "Over":
+			g.Result = bits[2]
 			log.Printf("game-over game-id=%s opponent=%s ply=%d result=%q",
-				g.ID, g.Opponent, g.p.MoveNumber(), bits[2])
+				g.ID, g.Opponent, g.p.MoveNumber(), g.Result)
 			return true
 		case "Time":
 			w, _ := strconv.Atoi(bits[2])

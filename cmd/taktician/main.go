@@ -28,6 +28,7 @@ var (
 
 	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
 	fpa      = flag.Bool("fpa", false, "play as FPABot")
+	logFile  = flag.String("log-file", "", "Log friendly/FPA games")
 
 	debug           = flag.Int("debug", 1, "debug level")
 	depth           = flag.Int("depth", 0, "minimax depth")
