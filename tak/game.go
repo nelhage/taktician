@@ -11,6 +11,8 @@ type Config struct {
 	Pieces    int
 	Capstones int
 
+	BlackWinsTies bool
+
 	c bitboard.Constants
 }
 
@@ -305,6 +307,9 @@ func (p *Position) flatsWinner() Color {
 		return White
 	}
 	if cb > cw {
+		return Black
+	}
+	if p.cfg.BlackWinsTies {
 		return Black
 	}
 	return NoColor

@@ -242,3 +242,65 @@ func TestHash(t *testing.T) {
 		t.Fatalf("hash fail when swapping flat/standing")
 	}
 }
+
+func TestBlackWinsTies(t *testing.T) {
+	sqs := [][]Square{
+		[]Square{
+			Square{MakePiece(White, Flat)},
+			Square{MakePiece(Black, Flat)},
+			Square{MakePiece(White, Flat)},
+			Square{MakePiece(Black, Flat)},
+		},
+		[]Square{
+			Square{MakePiece(Black, Flat)},
+			Square{MakePiece(White, Flat)},
+			Square{MakePiece(Black, Flat)},
+			Square{MakePiece(White, Flat)},
+		},
+		[]Square{
+			Square{MakePiece(White, Flat)},
+			Square{MakePiece(Black, Flat)},
+			Square{MakePiece(White, Flat)},
+			Square{MakePiece(Black, Flat)},
+		},
+		[]Square{
+			Square{MakePiece(Black, Flat)},
+			Square{MakePiece(White, Flat)},
+			Square{MakePiece(Black, Flat)},
+			Square{MakePiece(White, Flat)},
+		},
+	}
+	p, e := FromSquares(
+		Config{Size: 4, BlackWinsTies: true},
+		sqs, 16)
+	if e != nil {
+		panic(e)
+	}
+	d := p.WinDetails()
+	if !d.Over {
+		t.Fatal("not over")
+	}
+	if d.Reason != FlatsWin {
+		t.Fatal("not flats")
+	}
+	if d.Winner != Black {
+		t.Fatal("black did not win")
+	}
+
+	p, e = FromSquares(
+		Config{Size: 4, BlackWinsTies: false},
+		sqs, 16)
+	if e != nil {
+		panic(e)
+	}
+	d = p.WinDetails()
+	if !d.Over {
+		t.Fatal("not over")
+	}
+	if d.Reason != FlatsWin {
+		t.Fatal("not flats")
+	}
+	if d.Winner != NoColor {
+		t.Fatal("not a draw")
+	}
+}
