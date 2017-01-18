@@ -465,10 +465,10 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 	wp, wt, bp, bt := countThreats(c, p)
 
 	if wp+wt > 0 && p.ToMove() == tak.White {
-		return 1 << 20
+		return ForcedWin
 	}
 	if bp+bt > 0 && p.ToMove() == tak.Black {
-		return -(1 << 20)
+		return -ForcedWin
 	}
 
 	return int64((wp-bp)*ws.Potential) + int64((wt-bt)*ws.Threat)

@@ -18,10 +18,13 @@ import (
 )
 
 const (
-	MaxEval      int64 = 1 << 30
-	MinEval            = -MaxEval
-	WinThreshold       = 1 << 29
-	WinBase            = (WinThreshold + MaxEval) / 2
+	MaxEval int64 = 1 << 30
+	MinEval       = -MaxEval
+
+	WinThreshold = 1 << 29
+	WinBase      = (WinThreshold + MaxEval) / 2
+
+	ForcedWin = 1 << 20
 
 	defaultTableMem = 100 * (1 << 20)
 

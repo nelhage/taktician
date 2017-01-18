@@ -277,7 +277,7 @@ W . . . B`, tak.Black, 1},
 W . . B .
 W . . . B
 W . . . B
-W . . . B`, tak.White, 1 << 20},
+W . . . B`, tak.White, ForcedWin},
 		{`
 BS W . . .
 W  . . B .
@@ -319,7 +319,7 @@ W W . . B
 . W . . B
 . W . . B
 . . . . .
-. . . . B`, tak.Black, -(1 << 20)},
+. . . . B`, tak.Black, -ForcedWin},
 		{`
 . . B  . .
 . . B  . .
