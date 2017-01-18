@@ -14,6 +14,7 @@ import (
 
 	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -27,6 +28,8 @@ const (
 	ForcedWin = 1 << 20
 
 	defaultTableMem = 100 * (1 << 20)
+
+	maxDedup = 4
 
 	maxDepth   = 15
 	allocMoves = 500
@@ -168,7 +171,8 @@ type MinimaxConfig struct {
 
 	Evaluate EvaluationFunc
 
-	CutLog string
+	DedupSymmetry bool
+	CutLog        string
 }
 
 // MakePrecise modifies a MinimaxConfig to produce a MinimaxAI that
@@ -586,6 +590,12 @@ func (ai *MinimaxAI) pvSearch(
 		ai.st.Scout++
 	}
 
+	dedup := ai.cfg.DedupSymmetry && p.MoveNumber() < maxDedup
+	var dedupCache map[uint64]struct{}
+	if dedup {
+		dedupCache = make(map[uint64]struct{})
+	}
+
 	te := ai.ttGet(p.Hash())
 	if te != nil {
 		ai.st.TTHits++
@@ -622,6 +632,16 @@ func (ai *MinimaxAI) pvSearch(
 	improved := false
 	var i int
 	for m, child := mg.Next(); child != nil; m, child = mg.Next() {
+		if dedup {
+			_, seen := dedupCache[child.Hash()]
+			if seen {
+				continue
+			}
+			syms, _ := symmetry.Symmetries(child)
+			for _, ps := range syms {
+				dedupCache[ps.P.Hash()] = struct{}{}
+			}
+		}
 		i++
 		var ms []tak.Move
 		var v int64
