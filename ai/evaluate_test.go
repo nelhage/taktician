@@ -444,3 +444,23 @@ W . . . B`, 99},
 		}
 	}
 }
+
+func TestCenterControl(t *testing.T) {
+	ws := Weights{
+		EmptyControl:  1,
+		CenterControl: 100,
+	}
+	c := bitboard.Precompute(5)
+	p, _ := board(`
+. . . . .
+. W . . .
+. . . . .
+. . . . .
+. . . . .
+`, tak.White)
+
+	sc := scoreControl(&c, &ws, p)
+	if sc != 204 {
+		t.Errorf("CenterControl %d != 204", sc)
+	}
+}
