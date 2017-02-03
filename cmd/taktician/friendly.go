@@ -58,8 +58,10 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		fmt.Sprintf("%s@level %d: %s",
 			*user, f.level, docURL))
 	if f.fpa != nil {
-		if m := f.fpa.Greeting(g.Color); m != "" {
-			f.client.Tell(g.Opponent, m)
+		if gs := f.fpa.Greeting(g.Color); gs != nil {
+			for _, m := range gs {
+				f.client.Tell(g.Opponent, m)
+			}
 		}
 	}
 }
@@ -99,9 +101,6 @@ func (f *Friendly) GetMove(
 	ctx context.Context,
 	p *tak.Position,
 	mine, theirs time.Duration) tak.Move {
-	if p.ToMove() != f.g.Color {
-		return tak.Move{}
-	}
 	if f.fpa != nil {
 		if p.MoveNumber() > 0 {
 			prevP := f.g.Positions[len(f.g.Positions)-2]
@@ -113,6 +112,13 @@ func (f *Friendly) GetMove(
 				return tak.Move{}
 			}
 		}
+	}
+
+	if p.ToMove() != f.g.Color {
+		return tak.Move{}
+	}
+
+	if f.fpa != nil {
 		m, ok := f.fpa.GetMove(p)
 		if ok {
 			return m

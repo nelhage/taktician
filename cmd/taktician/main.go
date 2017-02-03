@@ -27,7 +27,7 @@ var (
 	takbot    = flag.String("takbot", "", "challenge TakBot AI")
 
 	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
-	fpa      = flag.Bool("fpa", false, "play as FPABot")
+	fpa      = flag.String("fpa", "", "select an alternate FPA rule set")
 	logFile  = flag.String("log-file", "", "Log friendly/FPA games")
 
 	debug           = flag.Int("debug", 1, "debug level")
@@ -49,6 +49,18 @@ func main() {
 	flag.Parse()
 	if *accept != "" || *takbot != "" || *observe != "" {
 		*once = true
+	}
+	var fpaRuleset FPARule
+	if *fpa != "" {
+		*friendly = true
+		switch *fpa {
+		case "true", "center":
+			fpaRuleset = &CenterBlack{}
+		case "doublestack":
+			fpaRuleset = &DoubleStack{}
+		default:
+			log.Fatalf("Unknown FPA ruleset: %s", *fpa)
+		}
 	}
 
 	sigs := make(chan os.Signal, 1)
@@ -76,12 +88,11 @@ func main() {
 			log.Fatal("login: ", err)
 		}
 		log.Printf("login OK")
-		if *friendly || *fpa {
-			fb := &Friendly{client: client}
-			if *fpa {
-				fb.fpa = &CenterBlack{}
+		if *friendly {
+			b = &Friendly{
+				client: client,
+				fpa:    fpaRuleset,
 			}
-			b = fb
 		} else {
 			b = &Taktician{client: client}
 		}
