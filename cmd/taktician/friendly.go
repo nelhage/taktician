@@ -33,7 +33,7 @@ type Friendly struct {
 	check  *ai.MinimaxAI
 	g      *bot.Game
 
-	fpa bool
+	fpa FPARule
 
 	level    int
 	levelSet time.Time
@@ -57,11 +57,10 @@ func (f *Friendly) NewGame(g *bot.Game) {
 	f.client.Tell(g.Opponent,
 		fmt.Sprintf("%s@level %d: %s",
 			*user, f.level, docURL))
-	if f.fpa && g.Color == tak.Black {
-		f.client.Tell(g.Opponent,
-			"I'm an experiment bot testing alternate rules. "+
-				"To play me, please place my first stone "+
-				"in the center of the board.")
+	if f.fpa != nil {
+		if m := f.fpa.Greeting(g.Color); m != "" {
+			f.client.Tell(g.Opponent, m)
+		}
 	}
 }
 
@@ -103,26 +102,20 @@ func (f *Friendly) GetMove(
 	if p.ToMove() != f.g.Color {
 		return tak.Move{}
 	}
-	if f.fpa {
-		switch p.MoveNumber() {
-		case 0:
-			// I am white; first move
-			return tak.Move{
-				X: int8(p.Size() / 2), Y: int8(p.Size() / 2),
-				Type: tak.PlaceFlat,
-			}
-		case 1:
-			// I am black; respond to the opponent's first
-			// move
-			if !f.fpaWhiteOK(p) {
+	if f.fpa != nil {
+		if p.MoveNumber() > 0 {
+			prevP := f.g.Positions[len(f.g.Positions)-2]
+			prevM := f.g.Moves[len(f.g.Moves)-1]
+			if err := f.fpa.LegalMove(prevP, prevM); err != nil {
 				f.client.SendCommand(f.g.GameStr, "Resign")
-				f.client.Tell(f.g.Opponent,
-					"I'm testing rules to balance white's advantage. "+
-						"To play me as white, you must place Black's first "+
-						"piece in the center of the board.")
+				f.client.Tell(f.g.Opponent, err.Error())
 				<-ctx.Done()
 				return tak.Move{}
 			}
+		}
+		m, ok := f.fpa.GetMove(p)
+		if ok {
+			return m
 		}
 	}
 	var deadline <-chan time.Time
@@ -144,24 +137,10 @@ func (f *Friendly) GetMove(
 
 func (f *Friendly) Config(size int) tak.Config {
 	cfg := tak.Config{Size: size}
-	if f.fpa {
+	if f.fpa != nil {
 		cfg.BlackWinsTies = true
 	}
 	return cfg
-}
-
-func (f *Friendly) fpaWhiteOK(p *tak.Position) bool {
-	m := p.Size() / 2
-	if p.Top(m, m).Color() == tak.Black {
-		return true
-	}
-	if p.Size()%2 == 1 {
-		return false
-	}
-
-	return p.Top(m-1, m).Color() == tak.Black ||
-		p.Top(m, m-1).Color() == tak.Black ||
-		p.Top(m-1, m-1).Color() == tak.Black
 }
 
 func (f *Friendly) waitUndo(p *tak.Position) bool {

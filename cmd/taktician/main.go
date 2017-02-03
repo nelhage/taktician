@@ -77,7 +77,11 @@ func main() {
 		}
 		log.Printf("login OK")
 		if *friendly || *fpa {
-			b = &Friendly{client: client, fpa: *fpa}
+			fb := &Friendly{client: client}
+			if *fpa {
+				fb.fpa = &CenterBlack{}
+			}
+			b = fb
 		} else {
 			b = &Taktician{client: client}
 		}

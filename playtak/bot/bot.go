@@ -33,7 +33,7 @@ type Game struct {
 	moveLock sync.Mutex
 
 	Positions []*tak.Position
-	moves     []tak.Move
+	Moves     []tak.Move
 }
 
 type Bot interface {
@@ -182,7 +182,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				ptn.FormatMove(move))
 			g.p = next
 			g.Positions = append(g.Positions, g.p)
-			g.moves = append(g.moves, move)
+			g.Moves = append(g.Moves, move)
 			return false
 		case <-timeout:
 			return false
@@ -229,7 +229,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 				ptn.FormatMove(move))
 			g.p = next
 			g.Positions = append(g.Positions, g.p)
-			g.moves = append(g.moves, move)
+			g.Moves = append(g.Moves, move)
 			timeout = time.After(500 * time.Millisecond)
 		case "Abandoned.":
 			log.Printf("game-over game-id=%s opponent=%s ply=%d result=abandoned",
@@ -262,7 +262,7 @@ func handleMove(ctx context.Context, g *Game, c Client) bool {
 		case "Undo":
 			log.Printf("undo game-id=%s ply=%d", g.ID, g.p.MoveNumber())
 			g.Positions = g.Positions[:len(g.Positions)-1]
-			g.moves = g.moves[:len(g.moves)-1]
+			g.Moves = g.Moves[:len(g.Moves)-1]
 			g.p = g.Positions[len(g.Positions)-1]
 			return false
 		}

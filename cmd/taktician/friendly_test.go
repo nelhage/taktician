@@ -36,45 +36,57 @@ func TestFPAResign(t *testing.T) {
 	mock := &mockClient{}
 	friendly := &Friendly{
 		client: &playtak.Commands{mock},
-		fpa:    true,
+		fpa:    &CenterBlack{},
 	}
-	friendly.NewGame(&bot.Game{
+	game := &bot.Game{
 		ID:       "123",
 		GameStr:  "Game#123",
 		Opponent: "nelhage",
 		Color:    tak.Black,
 		Size:     5,
-	})
-
-	mock.cmds = nil
-
-	p := tak.New(tak.Config{Size: 5})
-	m := taktest.Move("a1")
-	p, _ = p.Move(m)
+	}
+	game.Positions = []*tak.Position{
+		taktest.Position(5, ""),
+		taktest.Position(5, "a1"),
+	}
+	game.Moves = []tak.Move{
+		taktest.Move("a1"),
+	}
+	friendly.NewGame(game)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	friendly.GetMove(ctx, p, time.Minute, time.Minute)
+	friendly.GetMove(ctx, game.Positions[1], time.Minute, time.Minute)
 	cancel()
 
-	if len(mock.cmds) != 2 {
+	if len(mock.cmds) != 4 {
 		t.Fatalf("got commands: %#v", mock.cmds)
 		return
 	}
-	if mock.cmds[0] != "Game#123 Resign" {
+	if mock.cmds[2] != "Game#123 Resign" {
 		t.Fatalf("Expected resign, got %q", mock.cmds[0])
 	}
 
 	mock.cmds = nil
 
-	p = tak.New(tak.Config{Size: 5})
-	m = taktest.Move("c3")
-	p, _ = p.Move(m)
+	game.Positions = []*tak.Position{
+		taktest.Position(5, ""),
+		taktest.Position(5, "c3"),
+	}
+	game.Moves = []tak.Move{
+		taktest.Move("c3"),
+	}
+	friendly.NewGame(game)
 
 	ctx, cancel = context.WithTimeout(context.Background(), 50*time.Millisecond)
-	friendly.GetMove(ctx, p, time.Minute, time.Minute)
+	friendly.GetMove(ctx, game.Positions[1], time.Minute, time.Minute)
 	cancel()
-	if len(mock.cmds) != 0 {
+	if len(mock.cmds) != 2 {
 		t.Errorf("sent commands: %#v", mock.cmds)
+	}
+	for _, cmd := range mock.cmds {
+		if !strings.HasPrefix(cmd, "Tell nelhage") {
+			t.Errorf("sent commands: %#v", mock.cmds)
+		}
 	}
 }
 
@@ -95,25 +107,23 @@ func TestFPAOK(t *testing.T) {
 		{6, "c4", true},
 		{6, "d3", true},
 		{6, "d4", true},
+
+		{6, "e3", false},
+		{6, "b3", false},
+		{6, "c2", false},
+		{6, "c5", false},
 	}
 
 	for _, tc := range cases {
 		tc := tc
 		t.Run(fmt.Sprintf("%d:%s", tc.size, tc.move), func(t *testing.T) {
-			friendly := &Friendly{
-				fpa: true,
-				g: &bot.Game{
-					ID:       "123",
-					GameStr:  "Game#123",
-					Opponent: "nelhage",
-				},
-			}
+			rule := &CenterBlack{}
+			p := tak.New(tak.Config{Size: tc.size})
+			m := taktest.Move(tc.move)
 
-			p := taktest.Position(tc.size, tc.move)
-
-			ok := friendly.fpaWhiteOK(p)
-			if ok != tc.ok {
-				t.Fatalf("got %v want %v", ok, tc.ok)
+			err := rule.LegalMove(p, m)
+			if (err == nil) != tc.ok {
+				t.Fatalf("got %v want %v", err, tc.ok)
 			}
 		})
 	}
