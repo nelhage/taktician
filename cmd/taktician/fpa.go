@@ -10,6 +10,7 @@ type FPARule interface {
 	Greeting(tak.Color) []string
 	LegalMove(p *tak.Position, m tak.Move) error
 	GetMove(p *tak.Position) (tak.Move, bool)
+	SurveyURL() string
 }
 
 type CenterBlack struct{}
@@ -44,6 +45,10 @@ func (c *CenterBlack) GetMove(p *tak.Position) (tak.Move, bool) {
 		X: int8(p.Size() / 2), Y: int8(p.Size() / 2),
 		Type: tak.PlaceFlat,
 	}, true
+}
+
+func (c *CenterBlack) SurveyURL() string {
+	return "https://goo.gl/forms/k9SPmrxj11GZf7ak1"
 }
 
 func (c *CenterBlack) isCentered(p *tak.Position, m tak.Move) bool {
@@ -229,4 +234,8 @@ func (d *DoubleStack) GetMove(p *tak.Position) (tak.Move, bool) {
 	default:
 		return tak.Move{}, false
 	}
+}
+
+func (d *DoubleStack) SurveyURL() string {
+	return "https://goo.gl/forms/31clzCPiDAi9r59x1"
 }

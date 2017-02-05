@@ -67,6 +67,13 @@ func (f *Friendly) NewGame(g *bot.Game) {
 }
 
 func (f *Friendly) GameOver() {
+	if f.fpa != nil && f.g.Result != "" && f.g.Result != "0-1" && f.g.Result != "1-0" {
+		url := f.fpa.SurveyURL()
+		if url != "" {
+			f.client.Tell(f.g.Opponent,
+				fmt.Sprintf("Thanks for playing! Please share your feedback about this rule variation: %s", url))
+		}
+	}
 	if *logFile != "" {
 		l, e := os.OpenFile(*logFile,
 			os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
