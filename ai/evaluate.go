@@ -9,10 +9,6 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-const (
-	endgameCutoff = 7
-)
-
 type FlatScores struct {
 	Hard, Soft int
 }
@@ -27,10 +23,9 @@ type TerminalWeights struct {
 type Weights struct {
 	Tempo int
 
-	TopFlat     int
-	EndgameFlat int
-	Standing    int
-	Capstone    int
+	TopFlat  int
+	Standing int
+	Capstone int
 
 	HardTopCap  int
 	CapMobility int
@@ -70,10 +65,9 @@ var defaultTerminal = TerminalWeights{
 var defaultWeights = Weights{
 	Tempo: 50,
 
-	TopFlat:     400,
-	EndgameFlat: 800,
-	Standing:    200,
-	Capstone:    300,
+	TopFlat:  400,
+	Standing: 200,
+	Capstone: 300,
 
 	HardTopCap:  100,
 	CapMobility: 10,
@@ -114,10 +108,9 @@ var defaultWeights = Weights{
 var defaultWeights6 = Weights{
 	Tempo: 50,
 
-	TopFlat:     400,
-	EndgameFlat: 800,
-	Standing:    200,
-	Capstone:    300,
+	TopFlat:  400,
+	Standing: 200,
+	Capstone: 300,
 
 	HardTopCap:  100,
 	CapMobility: 10,
@@ -238,22 +231,14 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 
 	analysis := p.Analysis()
 
-	left := p.WhiteStones()
-	if p.BlackStones() < left {
-		left = p.BlackStones()
-	}
-	if left > endgameCutoff {
-		left = endgameCutoff
-	}
-	flat := w.TopFlat + ((endgameCutoff-left)*w.EndgameFlat)/endgameCutoff
 	if p.ToMove() == tak.White {
-		score += int64(flat/2 + w.Tempo)
+		score += int64(w.TopFlat/2 + w.Tempo)
 	} else {
-		score -= int64(flat/2 + w.Tempo)
+		score -= int64(w.TopFlat/2 + w.Tempo)
 	}
 
-	score += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * flat)
-	score -= int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing)) * flat)
+	score += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * w.TopFlat)
+	score -= int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing)) * w.TopFlat)
 	score += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
 	score -= int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
 	score += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
