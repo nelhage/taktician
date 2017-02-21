@@ -8,7 +8,7 @@ addons:
 
 install:
   - go get -t ./...
-  - virtualenv venv
+  - virtualenv --python=python3 venv
   - venv/bin/pip install -r python/requirements.txt
   - venv/bin/pip install -e python
 
