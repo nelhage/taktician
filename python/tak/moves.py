@@ -12,7 +12,7 @@ class MoveType(enum.Enum):
   SLIDE_DOWN     = 7
 
   def is_slide(self):
-    return self.value > MoveType.SLIDE_LEFT.value
+    return self.value >= MoveType.SLIDE_LEFT.value
 
   def direction(self):
     assert(self.is_slide())

@@ -85,6 +85,10 @@ class Position(object):
       return pieces.Color.WHITE
     return pieces.Color.BLACK
 
+  def in_bounds(self, x, y):
+    return (x >= 0 and x < self.size and
+            y >= 0 and y < self.size)
+
   def __getitem__(self, pos):
     x,y = pos
     return self.board[y * self.size + x]
@@ -149,7 +153,7 @@ class Position(object):
       raise IllegalMove("can't move opponent's stack")
 
     newboard = list(self.board)
-    deltas['board'] = newboard
+    delta['board'] = newboard
 
     x, y = m.x, m.y
     dx, dy = m.type.direction()
@@ -159,8 +163,18 @@ class Position(object):
     for drop in m.slides:
       x += dx
       y += dy
+      if not self.in_bounds(x,y):
+        raise IllegalMove("slide out of bounds")
       i = x + y * self.size
-      newboard[i] = carry[-drop:] + self.board[i]
+      orig = self.board[i]
+      if len(orig) > 0 and orig[0].kind == pieces.Kind.CAPSTONE:
+        raise IllegalMove("slide onto a capstone")
+      if len(orig) > 0 and orig[0].kind == pieces.Kind.STANDING:
+        if carry[0].kind != pieces.Kind.CAPSTONE or len(carry) != 1:
+          raise IllegalMove("slide onto a standing stone")
+        orig = [pieces.Piece(orig[0].color, pieces.Kind.FLAT)] + orig[1:]
+
+      newboard[i] = carry[-drop:] + orig
       carry = carry[:-drop]
 
 

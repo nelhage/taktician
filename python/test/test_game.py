@@ -101,3 +101,90 @@ class TestPlace(object):
 
     with pytest.raises(tak.IllegalMove):
       g.move(tak.Move(0, 0, tak.MoveType.PLACE_STANDING))
+
+class TestSlide(object):
+  def test_basic_slide(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [[W], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [B],
+      ], 2)
+
+    g1 = g.move(tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1]))
+    assert g1[0,0] == []
+    assert g1[1,0] == [W]
+
+  def test_slide_multiple(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [[W, B, W, B], [W], [B], [B], [W],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [B],
+      ], 2)
+
+    g1 = g.move(tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT,
+                         [1, 1, 1, 1]))
+    assert g1[0,0] == []
+    assert g1[1,0] == [B, W]
+    assert g1[2,0] == [W, B]
+    assert g1[3,0] == [B, B]
+    assert g1[4,0] == [W, W]
+
+  def test_initial_slide(self):
+    g = tak.Position.from_config(tak.Config(size = 5))
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1]))
+    g = g.move(tak.Move(0, 0))
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1]))
+
+  def test_illegal_slide(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [[W, B, W, B, W, W, W], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [W], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [B],
+      ], 2)
+
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(1, 1, tak.MoveType.SLIDE_RIGHT, [1]))
+
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(0, 0, tak.MoveType.SLIDE_UP, [6]))
+
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(0, 0, tak.MoveType.SLIDE_UP, []))
+
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(0, 0, tak.MoveType.SLIDE_LEFT, [1]))
+
+    with pytest.raises(tak.IllegalMove):
+      g.move(tak.Move(4, 4, tak.MoveType.SLIDE_LEFT, [1]))
+
+  def test_smash(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [[WC, W], [BS, W], [ ], [ ], [ ],
+       [ ],     [W],     [ ], [ ], [ ],
+       [W],     [ ],     [ ], [ ], [ ],
+       [ ],     [ ],     [ ], [ ], [ ],
+       [ ],     [ ],     [ ], [ ], [B],
+      ], 2)
+
+    for m in [
+        tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [2]),
+        tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1, 1]),
+        tak.Move(1, 1, tak.MoveType.SLIDE_DOWN, [1])]:
+      with pytest.raises(tak.IllegalMove) as exc:
+        g.move(m)
+      assert 'standing stone' in str(exc.value)
+
+    g1 = g.move(tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1]))
+    assert g1[1, 0] == [WC, B, W]
