@@ -1,7 +1,14 @@
 language: go
 
-install: go get -t ./...
-script: go test -v ./...
+install:
+  - go get -t ./...
+  - virtualenv venv
+  - venv/bin/pip install -f python/requirements.txt
+  - venv/bin/pip install -e python
+
+script:
+  - go test -v ./...
+  - venv/bin/py.test python/test
 
 go:
   - 1.7.1
