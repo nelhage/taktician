@@ -207,3 +207,102 @@ class TestSlide(object):
       with pytest.raises(tak.IllegalMove) as exc:
         g.move(m)
       assert 'capstone' in str(exc.value)
+
+class TestGameOver(object):
+  def test_has_road(self):
+    cases = [
+      ([[ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+      ], None),
+      ([[W], [W], [W], [W], [W],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+      ], tak.Color.WHITE),
+      ([[ ], [B], [ ], [ ], [ ],
+        [ ], [B], [ ], [ ], [ ],
+        [ ], [B], [ ], [ ], [ ],
+        [ ], [B], [ ], [ ], [ ],
+        [ ], [B], [ ], [ ], [ ],
+      ], tak.Color.BLACK),
+      ([[ ], [B], [ ], [ ], [ ],
+        [ ], [B], [B], [ ], [ ],
+        [ ], [ ], [B], [ ], [ ],
+        [ ], [ ], [B], [B], [ ],
+        [ ], [ ], [ ], [B], [ ],
+      ], tak.Color.BLACK),
+      ([[ ], [B], [W], [ ], [ ],
+        [ ], [B], [W], [ ], [ ],
+        [ ], [B], [W], [ ], [ ],
+        [ ], [B], [W], [ ], [ ],
+        [ ], [B], [W], [ ], [ ],
+      ], tak.Color.BLACK),
+      ([[ ], [B ], [ ], [ ], [ ],
+        [ ], [B ], [ ], [ ], [ ],
+        [ ], [BS], [ ], [ ], [ ],
+        [ ], [B ], [ ], [ ], [ ],
+        [ ], [B ], [ ], [ ], [ ],
+      ], None),
+      ([[ ], [B],  [ ], [ ], [ ],
+        [ ], [B],  [ ], [ ], [ ],
+        [ ], [B],  [ ], [ ], [ ],
+        [ ], [BC], [ ], [ ], [ ],
+        [ ], [B],  [ ], [ ], [ ],
+      ], tak.Color.BLACK),
+    ]
+    for i, tc in enumerate(cases):
+      sq, color = tc
+      g = tak.Position.from_squares(
+        tak.Config(size=5), sq, 4)
+      has = g.has_road()
+      assert has == color, "{0}: got road={1} expect {2}".format(i, has, color)
+
+  def test_game_over_road(self):
+    cases = [
+      ([[ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+      ], (None, None)),
+      ([[W], [W], [W], [W], [W],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+        [ ], [ ], [ ], [ ], [ ],
+      ], (tak.Color.WHITE, tak.WinReason.ROAD)),
+      ([[W]*21, [  ], [ ], [ ], [ ],
+        [ ],    [WC], [ ], [ ], [ ],
+        [ ],    [  ], [ ], [ ], [ ],
+        [ ],    [  ], [ ], [ ], [ ],
+        [ ],    [  ], [ ], [B], [B],
+      ], (tak.Color.BLACK, tak.WinReason.FLATS)),
+      ([[W]*21, [ ], [ ], [ ], [ ],
+        [ ],    [ ], [ ], [ ], [ ],
+        [ ],    [ ], [ ], [ ], [ ],
+        [ ],    [ ], [ ], [ ], [ ],
+        [ ],    [ ], [ ], [B], [B],
+      ], (None, None)),
+      ([[W], [B], [W], [B], [W],
+        [B], [W], [B], [W], [B],
+        [W], [B], [W], [B], [W],
+        [B], [W], [B], [W], [B],
+        [W], [B], [W], [B], [W],
+      ], (tak.Color.WHITE, tak.WinReason.FLATS)),
+      ([[W], [B], [W ], [B], [W],
+        [B], [W], [B ], [W], [B],
+        [W], [B], [WS], [B], [W],
+        [B], [W], [B ], [W], [B],
+        [W], [B], [W ], [B], [W],
+      ], (None, tak.WinReason.FLATS)),
+    ]
+    for i, tc in enumerate(cases):
+      sq, want = tc
+      g = tak.Position.from_squares(
+        tak.Config(size=5), sq, 4)
+      has = g.winner()
+      assert has == want, "{0}: got winner={1} expect {2}".format(i, has, want)

@@ -1,4 +1,5 @@
 import attr
+import enum
 
 from . import moves
 from . import pieces
@@ -31,15 +32,16 @@ class StoneCounts(object):
   stones = attr.ib()
   caps   = attr.ib()
 
+class WinReason(enum.Enum):
+  ROAD = 1
+  FLATS = 1
+
 @attr.s(frozen=True, slots=True)
 class Position(object):
-  size = attr.ib()
-
-  stones      = attr.ib()
-
-  ply = attr.ib()
-
-  board    = attr.ib()
+  size   = attr.ib()
+  stones = attr.ib()
+  ply    = attr.ib()
+  board  = attr.ib()
 
   @classmethod
   def from_config(cls, config):
@@ -88,6 +90,76 @@ class Position(object):
   def in_bounds(self, x, y):
     return (x >= 0 and x < self.size and
             y >= 0 and y < self.size)
+
+  def winner(self):
+    color = self.has_road()
+    if color is not None:
+      return (color, WinReason.ROAD)
+    if all(self.board) or any((s.stones+s.caps) == 0 for s in self.stones):
+      return (self.flats_winner(), WinReason.FLATS)
+    return (None, None)
+
+  def is_road(self, x, y):
+    sq = self[x,y]
+    return len(sq) > 0 and sq[0].is_road()
+
+  def _walk(self, seeds, color, horiz):
+    seen = set()
+    q = list(seeds)
+    while q:
+      j = q.pop()
+      if j in seen:
+        continue
+      seen.add(j)
+      x, y = j
+      if not self.in_bounds(x,y):
+        continue
+
+      if not self.is_road(x, y) or self[x,y][0].color != color:
+        continue
+
+      if horiz and x == self.size - 1:
+        return True
+      if (not horiz) and y == self.size - 1:
+        return True
+
+      q.append((x+1, y))
+      q.append((x-1, y))
+      q.append((x, y+1))
+      q.append((x, y-1))
+
+    return False
+
+  def has_road(self):
+    left = [(0, i) for i in range(self.size)]
+    top = [(i, 0) for i in range(self.size)]
+
+    w = (self._walk(left, pieces.Color.WHITE, True) or
+         self._walk(top, pieces.Color.WHITE, False))
+    b = (self._walk(left, pieces.Color.BLACK, True) or
+         self._walk(top, pieces.Color.BLACK, False))
+    if w and b:
+      return self.to_move().flip()
+    if w:
+      return pieces.Color.WHITE
+    if b:
+      return pieces.Color.BLACK
+    return None
+
+  def flats_winner(self):
+    w, b = 0, 0
+    for sq in self.board:
+      if len(sq) == 0 or sq[0].kind != pieces.Kind.FLAT:
+        continue
+      if sq[0].color == pieces.Color.WHITE:
+        w += 1
+      else:
+        b += 1
+    if w > b:
+      return pieces.Color.WHITE
+    if w < b:
+      return pieces.Color.BLACK
+    return None
 
   def __getitem__(self, pos):
     x,y = pos
@@ -181,4 +253,4 @@ class Position(object):
 class IllegalMove(Exception):
   pass
 
-__all__ = ['Config', 'StoneCounts', 'Position', 'IllegalMove']
+__all__ = ['Config', 'StoneCounts', 'Position', 'IllegalMove', 'WinReason']
