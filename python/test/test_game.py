@@ -41,7 +41,7 @@ class TestFromStones(object):
     assert g.stones[tak.Color.BLACK.value].caps   == 0
     assert g.ply == 5
 
-class TestMove(object):
+class TestPlace(object):
   def test_place_flat(self):
     g = tak.Position.from_config(tak.Config(size=5))
     g1 = g.move(tak.Move(
@@ -71,6 +71,28 @@ class TestMove(object):
     ))
 
     assert g3[2,2] == [tak.Piece(tak.Color.WHITE, tak.Kind.FLAT)]
+
+  def test_place_special(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [[W], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [ ],
+       [ ], [ ], [ ], [ ], [B],
+      ], 2)
+
+    g1 = g.move(tak.Move(2, 2, tak.MoveType.PLACE_CAPSTONE))
+    assert g1[2,2] == [WC]
+    assert g1.stones[tak.Color.WHITE.value].caps == 0
+
+    g2 = g1.move(tak.Move(1, 2, tak.MoveType.PLACE_STANDING))
+    assert g2[1,2] == [BS]
+
+    with pytest.raises(tak.IllegalMove):
+      g2.move(tak.Move(2, 3, tak.MoveType.PLACE_CAPSTONE))
+    with pytest.raises(tak.IllegalMove):
+      g2.move(tak.Move(2, 2, tak.MoveType.PLACE_FLAT))
 
   def test_initial_special(self):
     g = tak.Position.from_config(tak.Config(size=5))
