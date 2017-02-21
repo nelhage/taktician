@@ -1,7 +1,24 @@
 language: go
+dist: trusty
+sudo: false
 
-install: go get -t ./...
-script: go test -v ./...
+addons:
+  apt:
+    sources:
+      - deadsnakes
+    packages:
+      - python3.5
+      - python-virtualenv
+
+install:
+  - virtualenv --python=python3.5 venv
+  - venv/bin/pip install -r python/requirements.txt
+  - venv/bin/pip install -e python
+  - go get -t ./...
+
+script:
+  - venv/bin/py.test python/test
+  - go test -v ./...
 
 go:
   - 1.7.1
