@@ -5,10 +5,10 @@ def test_new():
   g = tak.Position.from_config(tak.Config(size=5))
   assert g.size == 5
   assert g.ply == 0
-  assert g.whiteStones == 21
-  assert g.blackStones == 21
-  assert g.whiteCaps == 1
-  assert g.blackCaps == 1
+  assert g.stones[0].stones == 21
+  assert g.stones[1].stones == 21
+  assert g.stones[0].caps == 1
+  assert g.stones[1].caps == 1
 
   assert g.to_move() == tak.Color.WHITE
 
@@ -23,6 +23,8 @@ class TestMove(object):
     assert g[0,0] == []
     assert g1[0,0] == [tak.Piece(tak.Color.BLACK, tak.Kind.FLAT)]
     assert g1.ply == 1
+    assert g1.stones[1].caps == 1
+    assert g1.stones[1].stones == 20
 
     g2 = g1.move(tak.Move(
       x = 4,
@@ -31,6 +33,8 @@ class TestMove(object):
 
     assert g2[0,0] == [tak.Piece(tak.Color.BLACK, tak.Kind.FLAT)]
     assert g2[4,4] == [tak.Piece(tak.Color.WHITE, tak.Kind.FLAT)]
+    assert g2.stones[0].stones == 20
+    assert g2.stones[1].stones == 20
 
     g3 = g2.move(tak.Move(
       x = 2,

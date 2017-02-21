@@ -15,13 +15,15 @@ class Config(object):
   DEFAULT_CAPS   = [0, 0, 0, 0, 0, 1, 1, 1, 2]
 
 @attr.s(frozen=True, slots=True)
+class StoneCounts(object):
+  stones = attr.ib()
+  caps   = attr.ib()
+
+@attr.s(frozen=True, slots=True)
 class Position(object):
   size = attr.ib()
 
-  whiteStones = attr.ib()
-  whiteCaps   = attr.ib()
-  blackStones = attr.ib()
-  blackCaps   = attr.ib()
+  stones      = attr.ib()
 
   ply = attr.ib()
 
@@ -37,17 +39,40 @@ class Position(object):
     if caps is None:
       caps = Config.DEFAULT_CAPS[size]
 
+    stones = StoneCounts(stones=pieces, caps=caps)
+
     return cls(
       size = size,
-
-      whiteStones = pieces,
-      whiteCaps   = caps,
-      blackStones = pieces,
-      blackCaps   = caps,
-
       ply = 0,
-
+      stones = (stones, stones),
       board = [[] for _ in range(size*size)]
+    )
+
+  @classmethod
+  def from_squares(cls, cfg, squares, ply):
+    pieces = config.pieces
+    if pieces is None:
+      pieces = Config.DEFAULT_PIECES[size]
+    caps = config.capstones
+    if caps is None:
+      caps = Config.DEFAULT_CAPS[size]
+    counts = ([0,0], [0,0])
+    for sq in squares:
+      for p in sq:
+        if p.type == pieces.PieceType.CAPSTONE:
+          stones[p.color.value][1] += 1
+        else:
+          stones[p.color.value][1] += 0
+    stones = (StoneCount(pieces - counts[0][0],
+                         caps - counts[0][1]),
+              StoneCount(pieces - counts[1][0],
+                         caps - counts[1][1]))
+    return cls(
+      size = cfg.size,
+      ply = ply,
+
+      stones = stones,
+      board = squares,
     )
 
   def to_move(self):
@@ -80,18 +105,23 @@ class Position(object):
     if self.ply < 2:
       color = color.flip()
 
+    slot = 'stones'
     kind = pieces.Kind.FLAT
     if m.type == moves.MoveType.PLACE_CAPSTONE:
-      slot = color.name.lower() + "Caps"
+      slot = 'caps'
       kind = pieces.Kind.CAPSTONE
-    else:
-      slot = color.name.lower() + "Stones"
-      if m.type == moves.MoveType.PLACE_STANDING:
-        kind = pieces.Kind.STANDING
+    elif m.type == moves.MoveType.PLACE_STANDING:
+      kind = pieces.Kind.STANDING
 
-    if getattr(self, slot) <= 0:
+    cs = self.stones[color.value]
+    if getattr(cs, slot) <= 0:
       raise IllegalMove("not enough stones")
-    delta[slot] = getattr(self, slot) - 1
+    newstones = attr.assoc(cs, **{slot: getattr(cs, slot) - 1})
+
+    if color == pieces.Color.WHITE:
+      delta['stones'] = (newstones, self.stones[1])
+    else:
+      delta['stones'] = (self.stones[0], newstones)
 
     newboard = list(self.board)
     newboard[m.x + m.y*self.size] = [pieces.Piece(color=color, kind=kind)]
@@ -132,4 +162,4 @@ class Position(object):
 class IllegalMove(Exception):
   pass
 
-__all__ = ['Config', 'Position', 'IllegalMove']
+__all__ = ['Config', 'StoneCounts', 'Position', 'IllegalMove']
