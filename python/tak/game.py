@@ -56,19 +56,22 @@ class Position(object):
 
   @classmethod
   def from_squares(cls, cfg, squares, ply):
+    if len(squares) != cfg.size * cfg.size:
+      raise ValueError("Wrong board size")
+
     counts = ([0,0], [0,0])
 
     for sq in squares:
       for p in sq:
-        if p.type == pieces.PieceType.CAPSTONE:
-          stones[p.color.value][1] += 1
+        if p.kind == pieces.Kind.CAPSTONE:
+          counts[p.color.value][1] += 1
         else:
-          stones[p.color.value][1] += 0
+          counts[p.color.value][0] += 1
 
-    stones = (StoneCount(config.flat_count - counts[0][0],
-                         config.capstone_count - counts[0][1]),
-              StoneCount(config.flat_count - counts[1][0],
-                         config.capstone_count - counts[1][1]))
+    stones = (StoneCounts(cfg.flat_count - counts[0][0],
+                          cfg.capstone_count - counts[0][1]),
+              StoneCounts(cfg.flat_count - counts[1][0],
+                          cfg.capstone_count - counts[1][1]))
     return cls(
       size = cfg.size,
       ply = ply,

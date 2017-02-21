@@ -1,6 +1,14 @@
 import tak
 import pytest
 
+W  = tak.Piece(tak.Color.WHITE, tak.Kind.FLAT)
+WC = tak.Piece(tak.Color.WHITE, tak.Kind.CAPSTONE)
+WS = tak.Piece(tak.Color.WHITE, tak.Kind.STANDING)
+
+B  = tak.Piece(tak.Color.BLACK, tak.Kind.FLAT)
+BC = tak.Piece(tak.Color.BLACK, tak.Kind.CAPSTONE)
+BS = tak.Piece(tak.Color.BLACK, tak.Kind.STANDING)
+
 def test_new():
   g = tak.Position.from_config(tak.Config(size=5))
   assert g.size == 5
@@ -11,6 +19,27 @@ def test_new():
   assert g.stones[1].caps == 1
 
   assert g.to_move() == tak.Color.WHITE
+
+class TestFromStones(object):
+  def test_from_stones(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [ [W], [W], [B ], [W ], [W],
+        [ ], [ ], [BC], [  ], [ ],
+        [ ], [ ], [  ], [  ], [ ],
+        [ ], [ ], [  ], [  ], [ ],
+        [B], [B], [B ], [WS], [ ],
+      ],
+      5
+    )
+    assert g[0,0] == [W]
+    assert g[2,1] == [BC]
+
+    assert g.stones[tak.Color.WHITE.value].stones == 16
+    assert g.stones[tak.Color.WHITE.value].caps   == 1
+    assert g.stones[tak.Color.BLACK.value].stones == 17
+    assert g.stones[tak.Color.BLACK.value].caps   == 0
+    assert g.ply == 5
 
 class TestMove(object):
   def test_place_flat(self):
