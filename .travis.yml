@@ -9,7 +9,7 @@ addons:
 install:
   - go get -t ./...
   - virtualenv venv
-  - venv/bin/pip install -f python/requirements.txt
+  - venv/bin/pip install -r python/requirements.txt
   - venv/bin/pip install -e python
 
 script:
