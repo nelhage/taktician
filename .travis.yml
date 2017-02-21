@@ -5,12 +5,12 @@ addons:
     sources:
       - deadsnakes
     packages:
-      - python3.6
+      - python3.4
       - python-virtualenv
 
 install:
   - go get -t ./...
-  - virtualenv --python=python3.6 venv
+  - virtualenv --python=python3.4 venv
   - venv/bin/pip install -r python/requirements.txt
   - venv/bin/pip install -e python
 
