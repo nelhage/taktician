@@ -1,5 +1,11 @@
 language: go
 
+addons:
+  apt:
+    packages:
+      - python3
+      - python-virtualenv
+
 install:
   - go get -t ./...
   - virtualenv venv
