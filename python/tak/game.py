@@ -101,6 +101,33 @@ class Position(object):
     if self.ply < 2:
       raise IllegalMove("Illegal opening")
 
+    stack = self[m.x, m.y]
+    ndrop = sum(m.slides)
+
+    if ndrop > self.size or len(stack) < ndrop:
+      raise IllegalMove("picking up too many pieces")
+
+    if ndrop < 1:
+      raise IllegalMove("must pick up at least one stone")
+
+    if stack[0].color != self.to_move():
+      raise IllegalMove("can't move opponent's stack")
+
+    newboard = list(self.board)
+    deltas['board'] = newboard
+
+    x, y = m.x, m.y
+    dx, dy = m.type.direction()
+    carry = stack[:ndrop]
+
+    newboard[x + y *self.size] = stack[ndrop:]
+    for drop in m.slides:
+      x += dx
+      y += dy
+      i = x + y * self.size
+      newboard[i] = carry[-drop:] + self.board[i]
+      carry = carry[:-drop]
+
 
 class IllegalMove(Exception):
   pass
