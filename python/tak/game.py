@@ -1,6 +1,7 @@
 import attr
 
 from . import moves
+from . import pieces
 
 @attr.s(frozen=True, slots=True)
 class Config(object):
@@ -49,24 +50,52 @@ class Position(object):
       board = [[] for _ in range(size*size)]
     )
 
+  def to_move(self):
+    if self.ply % 2 == 0:
+      return pieces.Color.WHITE
+    return pieces.Color.BLACK
+
+  def __getitem__(self, pos):
+    x,y = pos
+    return self.board[y * self.size + x]
+
   def move(self, m):
     delta = {
-      'move': self.move + 1,
+      'ply': self.ply + 1,
     }
-
-    place = None
-    dx,dy = None
 
     if m.type.is_slide():
       self._move_slide(m, delta)
     else:
       self._move_place(m, delta)
 
-    return attr.assoc(self, delta)
+    return attr.assoc(self, **delta)
 
   def _move_place(self, m, delta):
     if self.ply < 2 and m.type != moves.MoveType.PLACE_FLAT:
       raise IllegalMove("Illegal opening")
+    if self[m.x,m.y]:
+      raise IllegalMove("Place on an occupied square")
+    color = self.to_move()
+    if self.ply < 2:
+      color = color.flip()
+
+    kind = pieces.Kind.FLAT
+    if m.type == moves.MoveType.PLACE_CAPSTONE:
+      slot = color.name.lower() + "Caps"
+      kind = pieces.Kind.CAPSTONE
+    else:
+      slot = color.name.lower() + "Stones"
+      if m.type == moves.MoveType.PLACE_STANDING:
+        kind = pieces.Kind.STANDING
+
+    if getattr(self, slot) <= 0:
+      raise IllegalMove("not enough stones")
+    delta[slot] = getattr(self, slot) - 1
+
+    newboard = list(self.board)
+    newboard[m.x + m.y*self.size] = [pieces.Piece(color=color, kind=kind)]
+    delta['board'] = newboard
 
   def _move_slide(self, m, delta):
     if self.ply < 2:

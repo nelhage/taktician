@@ -12,7 +12,7 @@ class MoveType(enum.Enum):
   SLIDE_DOWN     = 7
 
   def is_slide(self):
-    return self.value > MoveType.SLIDE_LEFT
+    return self.value > MoveType.SLIDE_LEFT.value
 
   def direction(self):
     assert(self.is_slide())
@@ -32,7 +32,8 @@ class MoveType(enum.Enum):
 class Move(object):
   x      = attr.ib(validator = attr.validators.instance_of(int))
   y      = attr.ib(validator = attr.validators.instance_of(int))
-  type   = attr.ib(validator = attr.validators.instance_of(MoveType))
+  type   = attr.ib(validator = attr.validators.instance_of(MoveType),
+                   default = MoveType.PLACE_FLAT)
   slides = attr.ib(validator = attr.validators.instance_of(list),
                    default = attr.Factory(list))
 

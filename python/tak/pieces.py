@@ -5,6 +5,9 @@ class Color(enum.Enum):
   WHITE = 0
   BLACK = 1
 
+  def flip(self):
+    return Color(1-self.value)
+
 class Kind(enum.Enum):
   FLAT     = 0
   STANDING = 1
