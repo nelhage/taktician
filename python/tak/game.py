@@ -11,6 +11,18 @@ class Config(object):
   capstones = attr.ib(validator = attr.validators.optional(attr.validators.instance_of(int)),
                       default = None)
 
+  @property
+  def flat_count(self):
+    if self.pieces is not None:
+      return self.pieces
+    return self.DEFAULT_PIECES[self.size]
+
+  @property
+  def capstone_count(self):
+    if self.capstones is not None:
+      return self.capstones
+    return self.DEFAULT_CAPS[self.size]
+
   DEFAULT_PIECES = [0, 0, 0, 10, 15, 21, 30, 40, 50]
   DEFAULT_CAPS   = [0, 0, 0, 0, 0, 1, 1, 1, 2]
 
@@ -32,14 +44,8 @@ class Position(object):
   @classmethod
   def from_config(cls, config):
     size   = config.size
-    pieces = config.pieces
-    if pieces is None:
-      pieces = Config.DEFAULT_PIECES[size]
-    caps = config.capstones
-    if caps is None:
-      caps = Config.DEFAULT_CAPS[size]
-
-    stones = StoneCounts(stones=pieces, caps=caps)
+    stones = StoneCounts(stones = config.flat_count,
+                         caps   = config.capstone_count)
 
     return cls(
       size = size,
@@ -50,23 +56,19 @@ class Position(object):
 
   @classmethod
   def from_squares(cls, cfg, squares, ply):
-    pieces = config.pieces
-    if pieces is None:
-      pieces = Config.DEFAULT_PIECES[size]
-    caps = config.capstones
-    if caps is None:
-      caps = Config.DEFAULT_CAPS[size]
     counts = ([0,0], [0,0])
+
     for sq in squares:
       for p in sq:
         if p.type == pieces.PieceType.CAPSTONE:
           stones[p.color.value][1] += 1
         else:
           stones[p.color.value][1] += 0
-    stones = (StoneCount(pieces - counts[0][0],
-                         caps - counts[0][1]),
-              StoneCount(pieces - counts[1][0],
-                         caps - counts[1][1]))
+
+    stones = (StoneCount(config.flat_count - counts[0][0],
+                         config.capstone_count - counts[0][1]),
+              StoneCount(config.flat_count - counts[1][0],
+                         config.capstone_count - counts[1][1]))
     return cls(
       size = cfg.size,
       ply = ply,
