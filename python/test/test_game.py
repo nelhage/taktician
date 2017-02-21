@@ -188,3 +188,22 @@ class TestSlide(object):
 
     g1 = g.move(tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1]))
     assert g1[1, 0] == [WC, B, W]
+
+  def test_cap_slide(self):
+    g = tak.Position.from_squares(
+      tak.Config(size = 5),
+      [[WC, W], [BS, W], [ ], [ ], [ ],
+       [BC],    [W],     [ ], [ ], [ ],
+       [W],     [ ],     [ ], [ ], [ ],
+       [ ],     [ ],     [ ], [ ], [ ],
+       [ ],     [ ],     [ ], [ ], [B],
+      ], 2)
+
+    for m in [
+        tak.Move(0, 0, tak.MoveType.SLIDE_UP, [2]),
+        tak.Move(0, 0, tak.MoveType.SLIDE_UP, [1, 1]),
+        tak.Move(0, 0, tak.MoveType.SLIDE_UP, [1]),
+        tak.Move(1, 1, tak.MoveType.SLIDE_LEFT, [1])]:
+      with pytest.raises(tak.IllegalMove) as exc:
+        g.move(m)
+      assert 'capstone' in str(exc.value)
