@@ -1,3 +1,4 @@
 attrs
 pytest
 pytest-cov
+numpy
