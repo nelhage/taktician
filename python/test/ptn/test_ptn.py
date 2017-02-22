@@ -66,3 +66,52 @@ class TestParseMove(object):
     for tc in cases:
       with pytest.raises(tak.ptn.BadMove):
         assert tak.ptn.parse_move(tc) == None, "parsing {0}".format(tc)
+
+
+class TestParsePTN(object):
+  TEST_GAME = '''[Event "PTN Viewer Demo"]
+[Site "Here"]
+[Date "2015.11.21"]
+[Player1 "No One"]
+[Player2 "N/A"]
+[Round "342"]
+[Result "It Works!"]
+[Size "5"]
+[TPS "x5/x3,2112S,x/x5/x,1221,x3/x5 1 1"]
+
+1. a3 c2
+2. c2> {What a nub} a3+
+3. d2+ a4>
+4. d3- b4-
+5. d2< Cc5? {Can you even believe this guy?}
+6. c2+ b3>'
+7. a5 2c3-2!
+'''
+
+  def test_parse_ptn(self):
+    ptn = tak.ptn.PTN.parse(self.TEST_GAME)
+
+    assert ptn.tags == {
+      "Event": "PTN Viewer Demo",
+      "Site": "Here",
+      "Date": "2015.11.21",
+      "Player1": "No One",
+      "Player2": "N/A",
+      "Round": "342",
+      "Result": "It Works!",
+      "Size": "5",
+      "TPS": "x5/x3,2112S,x/x5/x,1221,x3/x5 1 1",
+    }
+
+    assert ptn.moves == [
+      tak.ptn.parse_move(m) for m in
+      [
+        "a3", "c2",
+        "c2>", "a3+",
+        "d2+", "a4>",
+        "d3-", "b4-",
+        "d2<", "Cc5",
+        "c2+", "b3>",
+        "a5", "2c3-2",
+      ]
+    ]

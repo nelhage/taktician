@@ -15,7 +15,7 @@ class PTN(object):
     tags_ = re.findall(r'^\[(\w+) "([^"]+)"\]$', head, re.M)
     tags = dict(tags_)
 
-    tail = re.sub(r'{[^}]+', ' ', tail)
+    tail = re.sub(r'{[^}]+}', ' ', tail)
 
     moves = []
     tokens = re.split(r'\s+', tail)
@@ -24,8 +24,12 @@ class PTN(object):
         continue
       if re.search(r'\A(0|R|F|1|1/2)-(0|R|F|1|1/2)\Z', t):
         continue
-      if re.match(r'\A\d+\.\Z', r):
+      if re.match(r'\A\d+\.\Z', t):
         continue
+      if t == '':
+        continue
+
+      t = re.sub(r"['!?]+$", '', t)
 
       m = parse_move(t)
       moves.append(m)
@@ -109,6 +113,7 @@ def format_move(move):
   return ''.join(map(str, bits))
 
 class BadMove(Exception):
-  def __init__(self, text, error):
-    self.move = text
-    super().__init__(error)
+  def __init__(self, move, error):
+    self.move = move
+    self.error = error
+    super().__init__("{0}: {1}".format(error, move))
