@@ -41,11 +41,6 @@ class TestParseMove(object):
         tak.Move(0, 0, tak.MoveType.SLIDE_UP, [1, 1, 1]),
         "3a1+111",
       ),
-#      (
-#        "5d4-22",
-#        tak.Move(3, 3, tak.MoveType.SlideDown, Slides: tak.MkSlides(2, 2, 1)),
-#        "5d4-221",
-#      ),
     ]
 
     for case in cases:
@@ -53,6 +48,8 @@ class TestParseMove(object):
       parsed = tak.ptn.parse_move(ptn)
       assert parsed == move, "parse_ptn('{0}') = {1} != {2}".format(
         ptn, parsed, move)
+      rt = tak.ptn.format_move(parsed)
+      assert rt == out
 
   def test_invalid(self):
     cases = [

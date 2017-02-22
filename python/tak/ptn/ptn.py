@@ -37,12 +37,18 @@ slide_map = {
   '<': tak.MoveType.SLIDE_LEFT,
   '>': tak.MoveType.SLIDE_RIGHT,
 }
+slide_rmap = dict((v, k) for (k, v) in slide_map.items())
 
 place_map = {
   '':  tak.MoveType.PLACE_FLAT,
   'S': tak.MoveType.PLACE_STANDING,
   'C': tak.MoveType.PLACE_CAPSTONE,
   'F': tak.MoveType.PLACE_FLAT,
+}
+place_rmap = {
+  tak.MoveType.PLACE_FLAT: '',
+  tak.MoveType.PLACE_STANDING: 'S',
+  tak.MoveType.PLACE_CAPSTONE: 'C',
 }
 
 def parse_move(move):
@@ -80,6 +86,27 @@ def parse_move(move):
     raise BadMove(move, "inconsistent pickup and drop: {0} v {1}".format(pickup, drops))
 
   return tak.Move(x, y, typ, slides)
+
+def format_move(move):
+  bits = []
+
+  bits.append(place_rmap.get(move.type, ''))
+
+  if move.type.is_slide():
+    pickup = sum(move.slides)
+    if pickup != 1:
+      bits.append(pickup)
+
+  bits.append(chr(move.x + ord('a')))
+  bits.append(chr(move.y + ord('1')))
+
+  if move.type.is_slide():
+    bits.append(slide_rmap[move.type])
+
+    if len(move.slides) > 1:
+      bits += [chr(d + ord('0')) for d in move.slides]
+
+  return ''.join(map(str, bits))
 
 class BadMove(Exception):
   def __init__(self, text, error):
