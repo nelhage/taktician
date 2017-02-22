@@ -115,3 +115,11 @@ class TestParsePTN(object):
         "a5", "2c3-2",
       ]
     ]
+
+class TestTPS(object):
+  def test_parse_tps(self):
+    p = tak.ptn.parse_tps(
+      'x3,12,2S/x,22S,22C,11,21/121,212,12,1121C,1212S/21S,1,21,211S,12S/x,21S,2,x2 1 26',
+    )
+    assert p.ply == 50
+    assert p.size == 5
