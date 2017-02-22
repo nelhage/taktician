@@ -34,7 +34,7 @@ class Move(object):
   y      = attr.ib(validator = attr.validators.instance_of(int))
   type   = attr.ib(validator = attr.validators.instance_of(MoveType),
                    default = MoveType.PLACE_FLAT)
-  slides = attr.ib(validator = attr.validators.instance_of(list),
-                   default = attr.Factory(list))
+  slides = attr.ib(validator = attr.validators.optional(attr.validators.instance_of(list)),
+                   default = None)
 
 __all__ = ['MoveType', 'Move']
