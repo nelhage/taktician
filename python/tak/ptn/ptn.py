@@ -75,7 +75,7 @@ def parse_move(move):
 
   slides = None
   if drops:
-    slides = [ord(c) - ord('0') for c in drops]
+    slides = tuple(ord(c) - ord('0') for c in drops)
 
   if (drops or pickup) and not dir:
     raise BadMove(move, "pickup/drop without a direction")
@@ -84,7 +84,7 @@ def parse_move(move):
     pickup = '1'
 
   if pickup and not slides:
-    slides = [int(pickup)]
+    slides = (int(pickup),)
 
   if pickup and int(pickup) != sum(slides):
     raise BadMove(move, "inconsistent pickup and drop: {0} v {1}".format(pickup, drops))

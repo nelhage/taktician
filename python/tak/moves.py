@@ -34,7 +34,40 @@ class Move(object):
   y      = attr.ib(validator = attr.validators.instance_of(int))
   type   = attr.ib(validator = attr.validators.instance_of(MoveType),
                    default = MoveType.PLACE_FLAT)
-  slides = attr.ib(validator = attr.validators.optional(attr.validators.instance_of(list)),
+  slides = attr.ib(validator = attr.validators.optional(attr.validators.instance_of(tuple)),
                    default = None)
 
-__all__ = ['MoveType', 'Move']
+ALL_SLIDES = [() for i in range(9)]
+
+def _compute_slides(size):
+  slides = []
+  for i in range(1, size+1):
+    slides.append((i,))
+    for inner in ALL_SLIDES[size - i]:
+      slides.append((i,) + inner)
+  return slides
+
+for s in range(1, 9):
+  ALL_SLIDES[s] = _compute_slides(s)
+
+def enumerate_moves(size):
+  out = []
+  for x in range(size):
+    for y in range(size):
+      out.append(Move(x, y, MoveType.PLACE_FLAT))
+      out.append(Move(x, y, MoveType.PLACE_STANDING))
+      out.append(Move(x, y, MoveType.PLACE_CAPSTONE))
+
+      dirs = [
+        (MoveType.SLIDE_LEFT, x),
+        (MoveType.SLIDE_RIGHT, size - x - 1),
+        (MoveType.SLIDE_DOWN, y),
+        (MoveType.SLIDE_UP, size - y - 1),
+      ]
+      for slide in ALL_SLIDES[size]:
+        for d, l in dirs:
+          if len(slide) <= l:
+            out.append(Move(x, y, d, slide))
+  return out
+
+__all__ = ['MoveType', 'Move', 'ALL_SLIDES', 'enumerate_moves']

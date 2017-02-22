@@ -28,17 +28,17 @@ class TestParseMove(object):
       ),
       (
         "a1>",
-        tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, [1]),
+        tak.Move(0, 0, tak.MoveType.SLIDE_RIGHT, (1,)),
         "a1>",
       ),
       (
         "2a2<",
-        tak.Move(0, 1, tak.MoveType.SLIDE_LEFT, [2]),
+        tak.Move(0, 1, tak.MoveType.SLIDE_LEFT, (2,)),
         "2a2<",
       ),
       (
         "3a1+111",
-        tak.Move(0, 0, tak.MoveType.SLIDE_UP, [1, 1, 1]),
+        tak.Move(0, 0, tak.MoveType.SLIDE_UP, (1, 1, 1)),
         "3a1+111",
       ),
     ]
