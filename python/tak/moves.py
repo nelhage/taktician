@@ -16,17 +16,18 @@ class MoveType(enum.Enum):
 
   def direction(self):
     assert(self.is_slide())
+    return DIRECTIONS[self]
 
-    if self == MoveType.SLIDE_LEFT:
-      return (-1, 0)
-    if self == MoveType.SLIDE_RIGHT:
-      return (1, 0)
-    if self == MoveType.SLIDE_UP:
-      return (0, 1)
-    if self == MoveType.SLIDE_DOWN:
-      return (0, -1)
+  def from_direction(dx, dy):
+    return RDIRECTIONS[(dx, dy)]
 
-    assert(False)
+DIRECTIONS = {
+  MoveType.SLIDE_LEFT: (-1, 0),
+  MoveType.SLIDE_RIGHT: (1, 0),
+  MoveType.SLIDE_UP: (0, 1),
+  MoveType.SLIDE_DOWN: (0, -1)
+}
+RDIRECTIONS = dict((v,k) for (k,v) in DIRECTIONS.items())
 
 @attr.s(frozen=True, slots=True)
 class Move(object):
