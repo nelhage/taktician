@@ -33,6 +33,8 @@ SYMMETRIES = [
   ]
 ]
 
+assert all(abs(np.linalg.det(m)) == 1 for m in SYMMETRIES)
+
 def transform_position(sym, pos):
   sqs = list(pos.board)
   for i in range(pos.size):
