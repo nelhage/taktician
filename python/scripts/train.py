@@ -58,8 +58,9 @@ class TakModel(object):
       )
 
       self.loss = self.cross_entropy + self.regularization_loss
+      self.global_step = tf.Variable(0, name='global_step', trainable=False)
       self.train_step = (tf.train.GradientDescentOptimizer(FLAGS.eta).
-                         minimize(self.loss))
+                         minimize(self.loss, global_step=self.global_step))
 
       correct = tf.equal(tf.argmax(self.y, 1), tf.argmax(self.y_, 1))
       self.accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
@@ -72,14 +73,18 @@ def main(args):
 
   model = TakModel(train.size)
 
-  sess = tf.InteractiveSession()
+  session = tf.InteractiveSession()
+  saver = tf.train.Saver(max_to_keep=10)
 
-  tf.global_variables_initializer().run()
+  if FLAGS.restore:
+    saver.restore(session, FLAGS.restore)
+  else:
+    tf.global_variables_initializer().run()
 
   t_end = 0
   t_start = 0
   for epoch in range(FLAGS.epochs):
-    loss, acc = sess.run([model.loss, model.accuracy],
+    loss, acc = session.run([model.loss, model.accuracy],
                          feed_dict={
                            model.x: test.positions,
                            model.y_: test.moves,
@@ -87,10 +92,12 @@ def main(args):
                          })
     print("epoch={0} test loss={1:0.4f} acc={2:0.2f}% pos/s={3:.2f}".format(
       epoch, loss, 100*acc, len(train.positions)/(t_end-t_start) if t_start else 0))
+    if FLAGS.checkpoint:
+      saver.save(session, FLAGS.checkpoint, global_step=epoch)
 
     t_start = time.time()
     for (bx, by) in train.minibatches(FLAGS.batch):
-      sess.run(model.train_step, feed_dict={
+      session.run(model.train_step, feed_dict={
         model.x: bx,
         model.y_: by,
         model.keep_prob: FLAGS.dropout,
@@ -119,6 +126,11 @@ def arg_parser():
                       help='batch size')
   parser.add_argument('--epochs', type=int, default=30,
                       help='epochs')
+
+  parser.add_argument('--checkpoint', type=str, default=None,
+                      help='checkpoint directory')
+  parser.add_argument('--restore', type=str, default=None,
+                      help='restore from path')
   return parser
 
 if __name__ == '__main__':
