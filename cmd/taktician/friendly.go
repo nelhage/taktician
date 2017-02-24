@@ -89,7 +89,7 @@ func (f *Friendly) GameOver() {
 				moves = p.MoveNumber()
 			}
 			fmt.Fprintf(l,
-				"game=%s\ttime=%s\tmycolor=%s\tsize=%d\topponent=%s\tlevel=%d\tresult=%s\twinner=%s\tmoves=%d\n",
+				"%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%d\n",
 				f.g.ID,
 				time.Now().Format(time.RFC3339),
 				f.g.Color,
