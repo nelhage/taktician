@@ -24,4 +24,16 @@ class Piece(object):
   def is_road(self):
     return self.kind.is_road()
 
+  @classmethod
+  def __call__(cls, color, kind):
+    return _piece_cache[color.value][kind.value]
+
+_piece_cache = [
+  [Piece(c, p) for p in Kind]
+  for c in Color
+]
+
+def Piece(color, kind):
+  return _piece_cache[color.value][kind.value]
+
 __all__ = ['Color', 'Kind', 'Piece']
