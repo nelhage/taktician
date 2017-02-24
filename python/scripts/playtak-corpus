@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+import tak.ptn
+import tak.symmetry
+
+import attr
+
+import sqlite3
+import os.path
+import argparse
+import csv
+
+FLAGS = None
+GAMES_DIR = os.path.join(os.path.dirname(__file__), "../../games")
+
+@attr.s
+class Position(object):
+  day  = attr.ib()
+  id   = attr.ib()
+  pos  = attr.ib()
+  ply  = attr.ib()
+  move = attr.ib()
+
+def main(args):
+  db = sqlite3.connect(os.path.join(GAMES_DIR, "games.db"))
+  cur = db.cursor()
+  cur.execute('''
+SELECT day, id
+FROM games g, ratings r1, ratings r2
+WHERE r1.name = g.player1
+ AND r2.name = g.player2
+ AND NOT r1.bot AND NOT r2.bot
+ AND r1.rating >= ?
+ AND r2.rating >= ?
+ AND size = ?
+  ''', (FLAGS.rating, FLAGS.rating, FLAGS.size))
+
+  positions = []
+  for (day, id) in cur:
+    with open(os.path.join(GAMES_DIR, day, str(id) + ".ptn")) as f:
+      text = f.read()
+    ptn = tak.ptn.PTN.parse(text)
+    g = ptn.initial_position()
+    for i, m in enumerate(ptn.moves):
+      if i > FLAGS.skip and (i % FLAGS.stride) == 0:
+        if FLAGS.symmetries:
+          ps = [(p, tak.symmetry.transform_move(s, m, g.size))
+                 for (s, p) in tak.symmetry.symmetries(g)]
+        else:
+          ps = [(g, m)]
+
+        for (rg, rm) in ps:
+          positions.append(Position(day, id, rg, i, rm))
+
+      g = g.move(m)
+  with open(FLAGS.out, 'w') as f:
+    w = csv.writer(f)
+    for rec in positions:
+      w.writerow((tak.ptn.format_tps(rec.pos),
+                  tak.ptn.format_move(rec.move),
+                  rec.day, rec.id, rec.ply,
+      ))
+
+def arg_parser():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--rating', default=1600)
+  parser.add_argument('--stride', default=9)
+  parser.add_argument('--skip', default=5)
+  parser.add_argument('--size', default=5)
+  parser.add_argument('--symmetries',
+                      default=True,
+                      action='store_true')
+  parser.add_argument('--no-symmetries',
+                      action='store_false',
+                      dest='symmetries')
+  parser.add_argument('--out', default='corpus.csv')
+  return parser
+
+if __name__ == '__main__':
+  parser = arg_parser()
+  FLAGS, args = parser.parse_known_args()
+  main(args)
