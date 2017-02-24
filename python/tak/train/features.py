@@ -5,7 +5,7 @@ import enum
 import numpy as np
 
 # (1, 2, ..., K, > K)
-RESERVES_PLANES = 6
+RESERVES_PLANES = 7
 
 # we record my flat count advantage
 # (< -K, ..., -1, 0, 1, ... > K)
@@ -34,6 +34,13 @@ def feature_shape(size):
   # (x, y, planes)
   return (size, size, 2 * int(1.5*size) + EXTRA_PLANES)
 
+def clamp(n, lim):
+  if n < 0:
+    return 0
+  if n >= lim:
+    return lim-1
+  return n
+
 def features(pos, buf=None):
   if buf is None:
     buf = np.zeros(feature_shape(pos.size))
@@ -60,11 +67,17 @@ def features(pos, buf=None):
   df = wf - bf
   if me == tak.Color.BLACK:
     df = -df
-  df += MAX_FLAT_DELTA
-  if df >= FLATS_PLANES:
-    df = FLATS_PLANES-1
-  if df < 0:
-    df = 0
-
+  df = clamp(df + MAX_FLAT_DELTA, FLATS_PLANES)
   extra[:,:,FeaturePlane.FLATS + df] = 1
+
+  extra[
+    :,:, clamp(FeaturePlane.MY_RESERVES + pos.stones[me.value].stones - 1, RESERVES_PLANES)
+  ] = 1
+  if pos.stones[me.value].caps > 0 :
+    extra[:,:, FeaturePlane.MY_CAPS] = 1
+  extra[
+    :,:, clamp(FeaturePlane.THEIR_RESERVES + pos.stones[me.flip().value].stones - 1, RESERVES_PLANES)
+  ] = 1
+  if pos.stones[me.flip().value].caps > 0 :
+    extra[:,:, FeaturePlane.THEIR_CAPS] = 1
   return buf
