@@ -25,31 +25,25 @@ class TakModel(object):
       self.y_ = tf.placeholder(tf.float32, (None, mcount))
 
     with tf.name_scope('Hidden'):
-      with tf.name_scope('Layer1'):
-        self.layer1 = tf.contrib.layers.convolution2d(
-          self.x,
-          num_outputs=FLAGS.filters,
-          padding='SAME',
-          kernel_size=3,
-          trainable=True,
-          variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
-        )
-
-      with tf.name_scope('Layer2'):
-        self.layer2 = tf.contrib.layers.convolution2d(
-          self.layer1,
-          num_outputs=FLAGS.filters,
-          padding='SAME',
-          kernel_size=3,
-          trainable=True,
-          variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
-        )
+      activations = self.x
+      self.layers = []
+      for i in range(FLAGS.layers):
+        with tf.name_scope('Layer{0}'.format(i)):
+          activations = tf.contrib.layers.convolution2d(
+            activations,
+            num_outputs=FLAGS.filters,
+            padding='SAME',
+            kernel_size=FLAGS.kernel,
+            trainable=True,
+            variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
+          )
+          self.layers.append(activations)
 
     with tf.name_scope('Output'):
       icount = size*size*FLAGS.filters
       self.W = tf.Variable(tf.zeros([icount, mcount]))
       self.b = tf.Variable(tf.zeros([mcount]))
-      x = tf.reshape(self.layer2, [-1, icount])
+      x = tf.reshape(activations, [-1, icount])
       self.y = tf.matmul(x, self.W) + self.b
 
     with tf.name_scope('Train'):
@@ -98,8 +92,12 @@ def arg_parser():
   parser.add_argument('--corpus', type=str, default=None,
                       help='corpus to train')
 
+  parser.add_argument('--kernel', type=int, default=3,
+                      help='convolutional kernel size')
   parser.add_argument('--filters', type=int, default=16,
-                      help='convolutional layers')
+                      help='convolutional filters')
+  parser.add_argument('--layers', type=int, default=2,
+                      help='number of convolutional layers')
 
   parser.add_argument('--eta', type=float, default=0.5,
                       help='learning rate')
