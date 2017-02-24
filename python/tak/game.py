@@ -146,7 +146,7 @@ class Position(object):
       return pieces.Color.BLACK
     return None
 
-  def flats_winner(self):
+  def flat_counts(self):
     w, b = 0, 0
     for sq in self.board:
       if len(sq) == 0 or sq[0].kind != pieces.Kind.FLAT:
@@ -155,6 +155,10 @@ class Position(object):
         w += 1
       else:
         b += 1
+    return (w, b)
+
+  def flats_winner(self):
+    w,b = self.flat_counts()
     if w > b:
       return pieces.Color.WHITE
     if w < b:
