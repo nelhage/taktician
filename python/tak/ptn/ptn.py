@@ -1,4 +1,5 @@
 import tak
+from . import tps
 
 import attr
 
@@ -34,6 +35,12 @@ class PTN(object):
       m = parse_move(t)
       moves.append(m)
     return cls(tags = tags, moves = moves)
+
+  def initial_position(self):
+    if 'TPS' in self.tags:
+      return tps.parse_tps(self.tags['TPS'])
+    return tak.Position.from_config(
+      tak.Config(size = int(self.tags['Size'])))
 
 slide_map = {
   '-': tak.MoveType.SLIDE_DOWN,
