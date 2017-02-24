@@ -51,11 +51,51 @@ def parse_row(rtext):
       else:
         raise IllegalTPS("bad character: " + c)
 
-    squares.append(reversed(stack))
+    squares.append(list(reversed(stack)))
   return squares
+
+def format_tps(pos):
+  rows = []
+  for row in range(pos.size):
+    i = row*pos.size
+    rows.append(_format_row(pos.board[i:i+pos.size]))
+
+  return ' '.join(['/'.join(rows),
+                   str((pos.ply % 2) + 1),
+                   str(pos.ply // 2 + 1)])
+
+def _format_row(row):
+  out = []
+  i = 0
+  while i < len(row):
+    x = 0
+    while i+x < len(row) and row[i+x] == []:
+      x += 1
+    if x > 0:
+      out.append('x{0}'.format(x if x > 1 else ''))
+      i += x
+    else:
+      out.append(_format_square(row[i]))
+      i += 1
+  return ','.join(out)
+
+def _format_square(sq):
+  out = []
+  for p in reversed(sq):
+    if p.color == tak.Color.WHITE:
+      out.append('1')
+    else:
+      out.append('2')
+
+  if sq[0].kind == tak.Kind.STANDING:
+    out.append('S')
+  elif sq[0].kind == tak.Kind.CAPSTONE:
+    out.append('C')
+
+  return ''.join(out)
 
 class IllegalTPS(Exception):
   pass
 
 
-__all__ = ['parse_tps', 'IllegalTPS']
+__all__ = ['parse_tps', 'format_tps', 'IllegalTPS']
