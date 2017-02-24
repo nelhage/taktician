@@ -41,10 +41,10 @@ class TakModel(object):
           self.layers.append(activations)
 
     with tf.name_scope('Output'):
-      self.keep_prob = tf.placeholder(tf.float32)
+      self.keep_prob = tf.placeholder_with_default(1.0, tf.float32, name='keep_prob')
       icount = size*size*FLAGS.filters
-      self.W = tf.Variable(tf.zeros([icount, mcount]))
-      self.b = tf.Variable(tf.zeros([mcount]))
+      self.W = tf.Variable(tf.zeros([icount, mcount]), name="weights")
+      self.b = tf.Variable(tf.zeros([mcount]), name="biases")
 
       x = tf.reshape(tf.nn.dropout(activations, keep_prob=self.keep_prob),
                      [-1, icount])
@@ -66,7 +66,6 @@ class TakModel(object):
       self.accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
 
     tf.add_to_collection('inputs', self.x)
-    tf.add_to_collection('train_op', self.train_step)
     tf.add_to_collection('logits', self.logits)
 
 def main(args):
