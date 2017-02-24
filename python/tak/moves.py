@@ -21,6 +21,9 @@ class MoveType(enum.Enum):
   def from_direction(dx, dy):
     return RDIRECTIONS[(dx, dy)]
 
+  def __lt__(self, rhs):
+    return self.value < rhs.value
+
 DIRECTIONS = {
   MoveType.SLIDE_LEFT: (-1, 0),
   MoveType.SLIDE_RIGHT: (1, 0),
