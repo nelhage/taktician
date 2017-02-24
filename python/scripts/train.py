@@ -23,7 +23,7 @@ class TakModel(object):
 
     with tf.name_scope('Input'):
       self.x = tf.placeholder(tf.float32, (None,) + fshape)
-      self.y_ = tf.placeholder(tf.float32, (None, mcount))
+      self.labels = tf.placeholder(tf.float32, (None, mcount))
 
     with tf.name_scope('Hidden'):
       activations = self.x
@@ -48,11 +48,11 @@ class TakModel(object):
 
       x = tf.reshape(tf.nn.dropout(activations, keep_prob=self.keep_prob),
                      [-1, icount])
-      self.y = tf.matmul(x, self.W) + self.b
+      self.logits = tf.matmul(x, self.W) + self.b
 
     with tf.name_scope('Train'):
       self.cross_entropy = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(logits=self.y, labels=self.y_))
+        tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels))
       self.regularization_loss = tf.contrib.layers.apply_regularization(
         tf.contrib.layers.l2_regularizer(FLAGS.regularize),
       )
@@ -62,8 +62,12 @@ class TakModel(object):
       self.train_step = (tf.train.GradientDescentOptimizer(FLAGS.eta).
                          minimize(self.loss, global_step=self.global_step))
 
-      correct = tf.equal(tf.argmax(self.y, 1), tf.argmax(self.y_, 1))
+      correct = tf.equal(tf.argmax(self.labels, 1), tf.argmax(self.logits, 1))
       self.accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+
+    tf.add_to_collection('inputs', self.x)
+    tf.add_to_collection('train_op', self.train_step)
+    tf.add_to_collection('logits', self.logits)
 
 def main(args):
   print("Loading data...")
@@ -87,7 +91,7 @@ def main(args):
     loss, acc = session.run([model.loss, model.accuracy],
                          feed_dict={
                            model.x: test.positions,
-                           model.y_: test.moves,
+                           model.labels: test.moves,
                            model.keep_prob: 1.0,
                          })
     print("epoch={0} test loss={1:0.4f} acc={2:0.2f}% pos/s={3:.2f}".format(
@@ -99,10 +103,13 @@ def main(args):
     for (bx, by) in train.minibatches(FLAGS.batch):
       session.run(model.train_step, feed_dict={
         model.x: bx,
-        model.y_: by,
+        model.labels: by,
         model.keep_prob: FLAGS.dropout,
       })
     t_end = time.time()
+
+  if FLAGS.write_metagraph:
+    tf.train.export_meta_graph(filename=FLAGS.write_metagraph)
 
 def arg_parser():
   parser = argparse.ArgumentParser()
@@ -125,12 +132,14 @@ def arg_parser():
   parser.add_argument('--batch', type=int, default=100,
                       help='batch size')
   parser.add_argument('--epochs', type=int, default=30,
-                      help='epochs')
+                      help='train epochs')
 
   parser.add_argument('--checkpoint', type=str, default=None,
                       help='checkpoint directory')
   parser.add_argument('--restore', type=str, default=None,
                       help='restore from path')
+  parser.add_argument('--write-metagraph', type=str, default=None,
+                      help='write metagraph to path')
   return parser
 
 if __name__ == '__main__':
