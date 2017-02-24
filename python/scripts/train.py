@@ -58,19 +58,44 @@ class TakModel(object):
       self.x = tf.placeholder(tf.float32, (None,) + fshape)
       self.y_ = tf.placeholder(tf.float32, (None, mcount))
 
-    with tf.name_scope('Softmax'):
-      self.W = tf.Variable(tf.zeros([fcount, mcount]))
+    with tf.name_scope('Hidden'):
+      with tf.name_scope('Layer1'):
+        self.layer1 = tf.contrib.layers.convolution2d(
+          self.x,
+          num_outputs=FLAGS.filters,
+          padding='SAME',
+          kernel_size=3,
+          trainable=True,
+          variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
+        )
+
+      with tf.name_scope('Layer2'):
+        self.layer2 = tf.contrib.layers.convolution2d(
+          self.layer1,
+          num_outputs=FLAGS.filters,
+          padding='SAME',
+          kernel_size=3,
+          trainable=True,
+          variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
+        )
+
+    with tf.name_scope('Output'):
+      icount = size*size*FLAGS.filters
+      self.W = tf.Variable(tf.zeros([icount, mcount]))
       self.b = tf.Variable(tf.zeros([mcount]))
-      x = tf.reshape(self.x, [-1, fcount])
+      x = tf.reshape(self.layer2, [-1, icount])
       self.y = tf.matmul(x, self.W) + self.b
 
     with tf.name_scope('Train'):
       self.cross_entropy = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=self.y, labels=self.y_))
-      self.train_step = (tf.train.GradientDescentOptimizer(FLAGS.eta).
-                         minimize(self.cross_entropy))
+      self.regularization_loss = tf.contrib.layers.apply_regularization(
+        tf.contrib.layers.l2_regularizer(FLAGS.regularize),
+      )
 
-      self.loss = self.cross_entropy
+      self.loss = self.cross_entropy + self.regularization_loss
+      self.train_step = (tf.train.GradientDescentOptimizer(FLAGS.eta).
+                         minimize(self.loss))
 
       correct = tf.equal(tf.argmax(self.y, 1), tf.argmax(self.y_, 1))
       self.accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
@@ -110,17 +135,27 @@ def main(args):
         model.y_: by,
       })
 
-if __name__ == '__main__':
+def arg_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument('--corpus', type=str, default=None,
                       help='corpus to train')
 
+  parser.add_argument('--filters', type=int, default=16,
+                      help='convolutional layers')
+
   parser.add_argument('--eta', type=float, default=0.5,
                       help='learning rate')
+  parser.add_argument('--regularize', type=float, default=1e-6,
+                      help='L2 regularization scale')
   parser.add_argument('--batch', type=int, default=100,
                       help='batch size')
   parser.add_argument('--epochs', type=int, default=30,
                       help='epochs')
+  return parser
 
+if __name__ == '__main__':
+  parser = arg_parser()
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+else:
+  FLAGS, _ = arg_parser().parse_args([])
