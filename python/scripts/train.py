@@ -40,10 +40,13 @@ class TakModel(object):
           self.layers.append(activations)
 
     with tf.name_scope('Output'):
+      self.keep_prob = tf.placeholder(tf.float32)
       icount = size*size*FLAGS.filters
       self.W = tf.Variable(tf.zeros([icount, mcount]))
       self.b = tf.Variable(tf.zeros([mcount]))
-      x = tf.reshape(activations, [-1, icount])
+
+      x = tf.reshape(tf.nn.dropout(activations, keep_prob=self.keep_prob),
+                     [-1, icount])
       self.y = tf.matmul(x, self.W) + self.b
 
     with tf.name_scope('Train'):
@@ -77,6 +80,7 @@ def main(args):
                          feed_dict={
                            model.x: test.positions,
                            model.y_: test.moves,
+                           model.keep_prob: 1.0,
                          })
     print("epoch={0} test loss={1:0.4f} acc={2:0.2f}%".format(
       epoch, loss, 100*acc))
@@ -85,6 +89,7 @@ def main(args):
       sess.run(model.train_step, feed_dict={
         model.x: bx,
         model.y_: by,
+        model.keep_prob: FLAGS.dropout,
       })
 
 def arg_parser():
@@ -102,6 +107,8 @@ def arg_parser():
   parser.add_argument('--eta', type=float, default=0.5,
                       help='learning rate')
   parser.add_argument('--regularize', type=float, default=1e-6,
+                      help='L2 regularization scale')
+  parser.add_argument('--dropout', type=float, default=0.5,
                       help='L2 regularization scale')
   parser.add_argument('--batch', type=int, default=100,
                       help='batch size')
