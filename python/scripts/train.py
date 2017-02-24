@@ -41,7 +41,8 @@ class TakModel(object):
           self.layers.append(activations)
 
     with tf.name_scope('Output'):
-      self.keep_prob = tf.placeholder_with_default(1.0, tf.float32, name='keep_prob')
+      self.keep_prob = tf.placeholder_with_default(
+        tf.ones(()), shape=(), name='keep_prob')
       icount = size*size*FLAGS.filters
       self.W = tf.Variable(tf.zeros([icount, mcount]), name="weights")
       self.b = tf.Variable(tf.zeros([mcount]), name="biases")
