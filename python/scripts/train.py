@@ -1,10 +1,11 @@
 import tak.ptn
 import tak.train
 
-import sys
-import os
 import argparse
 import csv
+import os
+import sys
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -75,6 +76,8 @@ def main(args):
 
   tf.global_variables_initializer().run()
 
+  t_end = 0
+  t_start = 0
   for epoch in range(FLAGS.epochs):
     loss, acc = sess.run([model.loss, model.accuracy],
                          feed_dict={
@@ -82,15 +85,17 @@ def main(args):
                            model.y_: test.moves,
                            model.keep_prob: 1.0,
                          })
-    print("epoch={0} test loss={1:0.4f} acc={2:0.2f}%".format(
-      epoch, loss, 100*acc))
+    print("epoch={0} test loss={1:0.4f} acc={2:0.2f}% pos/s={3:.2f}".format(
+      epoch, loss, 100*acc, len(train.positions)/(t_end-t_start) if t_start else 0))
 
+    t_start = time.time()
     for (bx, by) in train.minibatches(FLAGS.batch):
       sess.run(model.train_step, feed_dict={
         model.x: bx,
         model.y_: by,
         model.keep_prob: FLAGS.dropout,
       })
+    t_end = time.time()
 
 def arg_parser():
   parser = argparse.ArgumentParser()
