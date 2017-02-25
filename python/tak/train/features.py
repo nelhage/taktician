@@ -41,10 +41,11 @@ def clamp(n, lim):
     return lim-1
   return n
 
-def features(pos, buf=None):
-  if buf is None:
+def features(pos, out=None):
+  if out is None:
     buf = np.zeros(feature_shape(pos.size))
   else:
+    buf = out
     buf[:] = 0
 
   me = pos.to_move()
