@@ -62,10 +62,10 @@ WHERE r1.name = g.player1
 
 def arg_parser():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--rating', default=1600)
-  parser.add_argument('--stride', default=9)
-  parser.add_argument('--skip', default=5)
-  parser.add_argument('--size', default=5)
+  parser.add_argument('--rating', default=1600, type=int)
+  parser.add_argument('--stride', default=9, type=int)
+  parser.add_argument('--skip', default=5, type=int)
+  parser.add_argument('--size', default=5, type=int)
   parser.add_argument('--symmetries',
                       default=True,
                       action='store_true')
