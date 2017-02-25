@@ -21,15 +21,15 @@ class TakModel(object):
     fcount = fplanes * size * size
     mcount = tak.train.move_count(size)
 
-    with tf.name_scope('Input'):
+    with tf.variable_scope('Input'):
       self.x = tf.placeholder(tf.float32, (None,) + fshape)
       self.labels = tf.placeholder(tf.float32, (None, mcount))
 
-    with tf.name_scope('Hidden'):
+    with tf.variable_scope('Hidden'):
       activations = self.x
       self.layers = []
       for i in range(FLAGS.layers):
-        with tf.name_scope('Layer{0}'.format(i)):
+        with tf.variable_scope('Layer{0}'.format(i)):
           activations = tf.contrib.layers.convolution2d(
             activations,
             num_outputs=FLAGS.filters,
@@ -49,7 +49,7 @@ class TakModel(object):
         activations = tf.nn.relu(tf.matmul(x, self.W_h) + self.b_h)
         icount = FLAGS.hidden
 
-    with tf.name_scope('Output'):
+    with tf.variable_scope('Output'):
       self.keep_prob = tf.placeholder_with_default(
         tf.ones(()), shape=(), name='keep_prob')
       self.W = tf.Variable(tf.zeros([icount, mcount]), name="weights")
@@ -59,7 +59,7 @@ class TakModel(object):
                      [-1, icount])
       self.logits = tf.matmul(x, self.W) + self.b
 
-    with tf.name_scope('Train'):
+    with tf.variable_scope('Train'):
       self.cross_entropy = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels))
       self.regularization_loss = tf.contrib.layers.apply_regularization(
