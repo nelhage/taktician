@@ -33,7 +33,7 @@ class TakModel(object):
         tmid = move2id(tm, self.size)
         self.move_permutations[si, mi] = tmid
 
-  def __call__(self, position):
+  def evaluate(self, position):
     if self.eval_symmetries:
       for i,s in enumerate(tak.symmetry.SYMMETRIES):
         features(tak.symmetry.transform_position(s, position),

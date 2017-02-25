@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import tak.train
+import tak.ptn
+
+import sys
+import argparse
+
+FLAGS = None
+
+def load_position():
+  if FLAGS.tps:
+    return tak.ptn.parse_tps(FLAGS.tps)
+
+def main(args):
+  model = tak.train.load_model(FLAGS.model, eval_symmetries=FLAGS.symmetries)
+  pos = load_position()
+
+  probs = model.evaluate(pos)
+  moves = [
+    (prob, tak.train.id2move(i, pos.size))
+    for (i,prob) in enumerate(probs)
+    if prob > FLAGS.threshold
+  ]
+  for (prob, move) in sorted(moves, key=lambda t:t[0], reverse=True):
+    print("{0:8s} {1:.2f}%".format(tak.ptn.format_move(move), 100*prob))
+
+def arg_parser():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--model', type=str, default=None,
+                      help='model to run')
+
+  parser.add_argument('--symmetries',
+                      default=False,
+                      action='store_true',
+                      help='average over all symmetries')
+
+  parser.add_argument('--tps', type=str, default=None,
+                      help='evaluate tps')
+
+  parser.add_argument('--threshold', type=float, default=0.05,
+                      help='print moves with p > THRESHOLD')
+  return parser
+
+if __name__ == '__main__':
+  parser = arg_parser()
+  FLAGS, unparsed = parser.parse_known_args()
+  main(unparsed)
