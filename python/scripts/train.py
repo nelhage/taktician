@@ -71,8 +71,11 @@ class TakModel(object):
       self.train_step = (tf.train.GradientDescentOptimizer(FLAGS.eta).
                          minimize(self.loss, global_step=self.global_step))
 
-      correct = tf.equal(tf.argmax(self.labels, 1), tf.argmax(self.logits, 1))
-      self.accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+      labels = tf.argmax(self.labels, 1)
+      self.prec1 = tf.reduce_mean(tf.cast(
+        tf.nn.in_top_k(self.logits, labels, 1), tf.float32))
+      self.prec5 = tf.reduce_mean(tf.cast(
+        tf.nn.in_top_k(self.logits, labels, 5), tf.float32))
 
     tf.add_to_collection('inputs', self.x)
     tf.add_to_collection('logits', self.logits)
@@ -96,14 +99,17 @@ def main(args):
   t_end = 0
   t_start = 0
   for epoch in range(FLAGS.epochs):
-    loss, acc = session.run([model.loss, model.accuracy],
-                         feed_dict={
-                           model.x: test.positions,
-                           model.labels: test.moves,
-                           model.keep_prob: 1.0,
-                         })
-    print("epoch={0} test loss={1:0.4f} acc={2:0.2f}% pos/s={3:.2f}".format(
-      epoch, loss, 100*acc, len(train.positions)/(t_end-t_start) if t_start else 0))
+    loss, prec1, prec5 = session.run(
+      [model.loss, model.prec1, model.prec5],
+      feed_dict={
+        model.x: test.positions,
+        model.labels: test.moves,
+        model.keep_prob: 1.0,
+      })
+    print("epoch={0} test loss={1:0.4f} acc={2:0.2f}%/{3:0.2f}% pos/s={4:.2f}".format(
+      epoch, loss,
+      100*prec1, 100*prec5,
+      len(train.positions)/(t_end-t_start) if t_start else 0))
     if FLAGS.checkpoint:
       saver.save(session, FLAGS.checkpoint, global_step=epoch)
 
