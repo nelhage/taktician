@@ -40,10 +40,18 @@ class TakModel(object):
           )
           self.layers.append(activations)
 
+      icount = size*size*FLAGS.filters
+      if FLAGS.hidden > 0:
+        self.W_h = tf.Variable(tf.zeros([icount, FLAGS.hidden]), name="weights")
+        self.b_h = tf.Variable(tf.zeros([FLAGS.hidden]), name="biases")
+
+        x = tf.reshape(activations, [-1, icount])
+        activations = tf.nn.relu(tf.matmul(x, self.W_h) + self.b_h)
+        icount = FLAGS.hidden
+
     with tf.name_scope('Output'):
       self.keep_prob = tf.placeholder_with_default(
         tf.ones(()), shape=(), name='keep_prob')
-      icount = size*size*FLAGS.filters
       self.W = tf.Variable(tf.zeros([icount, mcount]), name="weights")
       self.b = tf.Variable(tf.zeros([mcount]), name="biases")
 
@@ -122,6 +130,8 @@ def arg_parser():
                       help='convolutional filters')
   parser.add_argument('--layers', type=int, default=2,
                       help='number of convolutional layers')
+  parser.add_argument('--hidden', type=int, default=0,
+                      help='number of hidden fully-connected nodes')
 
   parser.add_argument('--eta', type=float, default=0.5,
                       help='learning rate')
