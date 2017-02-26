@@ -6,6 +6,14 @@ import tak.symmetry
 from .features import *
 from .moves import *
 
+def multinomial(probs):
+  r = np.random.random()
+  s = 0
+  for i,p in enumerate(probs):
+    s += p
+    if r < s:
+      return i
+
 class TakModel(object):
   def __init__(self, graph, session, eval_symmetries):
     self.graph = graph
@@ -43,7 +51,8 @@ class TakModel(object):
       })
       for (i,perm) in enumerate(self.move_permutations):
         probs[i] = probs[i][perm]
-      return np.mean(probs, axis=0)
+      p = np.sum(probs, axis=0)
+      return p / np.sum(p)
     else:
       features(position, out=self.buf[0])
       return self.session.run(self.softmax, feed_dict={
@@ -53,7 +62,7 @@ class TakModel(object):
   def get_move(self, position):
     probs = self.evaluate(position)
     while True:
-      i = np.argmax(np.random.multinomial(1, probs))
+      i = multinomial(probs)
       m = id2move(i, position.size)
       try:
         return m, position.move(m)
