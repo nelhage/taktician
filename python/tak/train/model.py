@@ -50,6 +50,18 @@ class TakModel(object):
         self.input: self.buf,
       })[0]
 
+  def get_move(self, position):
+    probs = self.evaluate(position)
+    while True:
+      i = np.argmax(np.random.multinomial(1, probs))
+      m = id2move(i, position.size)
+      try:
+        return m, position.move(m)
+      except tak.IllegalMove:
+        p = probs[i]
+        probs[i] = 0
+        probs /= (1-p)
+
 def load_model(path, eval_symmetries=True):
   graph = tf.Graph()
   with graph.as_default():
