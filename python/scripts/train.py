@@ -40,18 +40,7 @@ class TakModel(object):
           )
           self.layers.append(activations)
 
-      activations = tf.contrib.layers.convolution2d(
-        activations,
-        num_outputs=FLAGS.filters,
-        padding='SAME',
-        kernel_size=FLAGS.kernel,
-        stride=2,
-        trainable=True,
-        variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
-      )
-
-      icount = (size//2+1)*(size//2+1)*FLAGS.filters
-
+      icount = size*size*FLAGS.filters
       if FLAGS.hidden > 0:
         self.W_h = tf.Variable(tf.zeros([icount, FLAGS.hidden]), name="weights")
         self.b_h = tf.Variable(tf.zeros([FLAGS.hidden]), name="biases")
