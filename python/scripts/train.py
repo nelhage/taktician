@@ -147,7 +147,9 @@ def arg_parser():
   parser.add_argument('--hidden', type=int, default=0,
                       help='number of hidden fully-connected nodes')
 
-  parser.add_argument('optimizer', type=str, default='GradientDescentOptimizer',
+  parser.add_argument('--optimizer',
+                      type=str,
+                      default='GradientDescentOptimizer',
                       help='tensorflow optimizer class',
                       choices=OPTIMIZERS)
   parser.add_argument('--eta', type=float, default=0.5,
