@@ -69,7 +69,7 @@ class TakModel(object):
       self.loss = self.cross_entropy + self.regularization_loss
       self.global_step = tf.Variable(0, name='global_step', trainable=False)
       self.learning_rate = tf.placeholder(tf.float32)
-      self.train_step = (tf.train.GradientDescentOptimizer(self.learning_rate).
+      self.train_step = (getattr(tf.train, FLAGS.optimizer)(self.learning_rate).
                          minimize(self.loss, global_step=self.global_step))
 
       labels = tf.argmax(self.labels, 1)
@@ -127,6 +127,12 @@ def main(args):
   if FLAGS.write_metagraph:
     tf.train.export_meta_graph(filename=FLAGS.write_metagraph)
 
+OPTIMIZERS = [
+  name for name in dir(tf.train)
+  if (isinstance(getattr(tf.train, name), type) and
+      issubclass(getattr(tf.train, name), tf.train.Optimizer))
+]
+
 def arg_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument('--corpus', type=str, default=None,
@@ -141,6 +147,9 @@ def arg_parser():
   parser.add_argument('--hidden', type=int, default=0,
                       help='number of hidden fully-connected nodes')
 
+  parser.add_argument('optimizer', type=str, default='GradientDescentOptimizer',
+                      help='tensorflow optimizer class',
+                      choices=OPTIMIZERS)
   parser.add_argument('--eta', type=float, default=0.5,
                       help='learning rate')
   parser.add_argument('--regularize', type=float, default=1e-6,
