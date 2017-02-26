@@ -36,10 +36,18 @@ SYMMETRIES = [
 assert all(abs(np.linalg.det(m)) == 1 for m in SYMMETRIES)
 
 def transform_position(sym, pos):
+  ix = np.stack([
+    np.repeat(np.arange(pos.size), pos.size),
+    np.tile(np.arange(pos.size), pos.size),
+    (pos.size-1)*np.ones(pos.size*pos.size)
+  ], axis=-1)
+  ix = np.transpose(np.matmul(sym, np.transpose(ix))).astype(np.int)
+  ix = ix.reshape((pos.size, pos.size, 3))
+
   sqs = list(pos.board)
   for i in range(pos.size):
     for j in range(pos.size):
-      oi, oj, _ = np.matmul(sym, [i, j, pos.size - 1])
+      oi, oj, _ = ix[i,j]
       sqs[oi + oj*pos.size] = pos[i, j]
   return tak.Position.from_squares(
     tak.Config(size = pos.size),
