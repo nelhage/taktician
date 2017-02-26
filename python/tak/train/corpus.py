@@ -19,7 +19,7 @@ class Dataset(object):
       yield (self.positions[perm[i:i+batch_size]], self.moves[perm[i:i+batch_size]])
       i += batch_size
 
-def load_corpus_file(path):
+def load_positions(path):
   positions = []
 
   with open(path) as f:
@@ -29,7 +29,10 @@ def load_corpus_file(path):
       positions.append((
         tak.ptn.parse_tps(tps),
         tak.ptn.parse_move(m)))
+  return positions
 
+def load_corpus_file(path):
+  positions = load_positions(path)
   size = positions[0][0].size
 
   xs = np.zeros((len(positions),) + tak.train.feature_shape(size))
@@ -45,4 +48,4 @@ def load_corpus(dir):
     load_corpus_file(os.path.join(dir, 'train.csv')),
     load_corpus_file(os.path.join(dir, 'test.csv')))
 
-__all__ = ['Dataset', 'load_corpus_file', 'load_corpus']
+__all__ = ['Dataset', 'load_corpus_file', 'load_corpus', 'load_positions']

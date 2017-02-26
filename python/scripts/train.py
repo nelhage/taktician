@@ -163,6 +163,6 @@ def arg_parser():
 if __name__ == '__main__':
   parser = arg_parser()
   FLAGS, unparsed = parser.parse_known_args()
-  tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+  tf.app.run(main=main, argv=unparsed)
 else:
   FLAGS, _ = arg_parser().parse_args([])
