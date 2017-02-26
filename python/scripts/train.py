@@ -68,7 +68,8 @@ class TakModel(object):
 
       self.loss = self.cross_entropy + self.regularization_loss
       self.global_step = tf.Variable(0, name='global_step', trainable=False)
-      self.train_step = (tf.train.GradientDescentOptimizer(FLAGS.eta).
+      self.learning_rate = tf.placeholder(tf.float32)
+      self.train_step = (tf.train.GradientDescentOptimizer(self.learning_rate).
                          minimize(self.loss, global_step=self.global_step))
 
       labels = tf.argmax(self.labels, 1)
@@ -118,6 +119,7 @@ def main(args):
       session.run(model.train_step, feed_dict={
         model.x: bx,
         model.labels: by,
+        model.learning_rate: FLAGS.eta,
         model.keep_prob: FLAGS.dropout,
       })
     t_end = time.time()
