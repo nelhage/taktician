@@ -152,7 +152,7 @@ def arg_parser():
                       default='GradientDescentOptimizer',
                       help='tensorflow optimizer class',
                       choices=OPTIMIZERS)
-  parser.add_argument('--eta', type=float, default=0.5,
+  parser.add_argument('--eta', type=float, default=0.05,
                       help='learning rate')
   parser.add_argument('--regularize', type=float, default=1e-6,
                       help='L2 regularization scale')
