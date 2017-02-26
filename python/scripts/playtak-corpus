@@ -4,6 +4,8 @@ import tak.symmetry
 
 import attr
 
+import hashlib
+import struct
 import sqlite3
 import os.path
 import argparse
@@ -20,6 +22,16 @@ class Position(object):
   ply  = attr.ib()
   move = attr.ib()
 
+def want_move(day, id, i):
+  if i < FLAGS.skip:
+    return False
+  if FLAGS.stride:
+    return (i - FLAGS.skip) % FLAGS.stride == 0
+  data = [FLAGS.seed, day, id, i]
+  h = hashlib.sha256(b"\0".join([str(d).encode('utf-8') for d in data])).digest()
+  v, = struct.unpack("L", h[:8])
+  return v % FLAGS.sample == 0
+
 def main(args):
   db = sqlite3.connect(os.path.join(GAMES_DIR, "games.db"))
   cur = db.cursor()
@@ -32,6 +44,7 @@ WHERE r1.name = g.player1
  AND r1.rating >= ?
  AND r2.rating >= ?
  AND size = ?
+ORDER BY day ASC,id ASC
   ''', (FLAGS.rating, FLAGS.rating, FLAGS.size))
 
   positions = []
@@ -41,7 +54,7 @@ WHERE r1.name = g.player1
     ptn = tak.ptn.PTN.parse(text)
     g = ptn.initial_position()
     for i, m in enumerate(ptn.moves):
-      if i > FLAGS.skip and (i % FLAGS.stride) == 0:
+      if want_move(day, id, i):
         if FLAGS.symmetries:
           ps = [(p, tak.symmetry.transform_move(s, m, g.size))
                  for (s, p) in tak.symmetry.symmetries(g)]
@@ -63,15 +76,26 @@ WHERE r1.name = g.player1
 def arg_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument('--rating', default=1600, type=int)
-  parser.add_argument('--stride', default=9, type=int)
+
+  group = parser.add_mutually_exclusive_group(required=True)
+  group.add_argument('--stride', default=None, type=int,
+                     help='select every Nth move')
+  group.add_argument('--sample', default=None, type=int,
+                     help='select 1/N moves at random')
+
+  parser.add_argument('--seed', default=1, type=int,
+                      help='random seed')
+
   parser.add_argument('--skip', default=5, type=int)
   parser.add_argument('--size', default=5, type=int)
+
   parser.add_argument('--symmetries',
                       default=True,
                       action='store_true')
   parser.add_argument('--no-symmetries',
                       action='store_false',
                       dest='symmetries')
+
   parser.add_argument('--out', default='corpus.csv')
   return parser
 
