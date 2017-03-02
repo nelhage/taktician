@@ -4,12 +4,15 @@ import tak.symmetry
 
 import attr
 
-import hashlib
-import struct
-import sqlite3
-import os.path
 import argparse
 import csv
+import hashlib
+import json
+import os.path
+import sqlite3
+import struct
+import subprocess
+import sys
 
 FLAGS = None
 GAMES_DIR = os.path.join(os.path.dirname(__file__), "../../games")
@@ -45,17 +48,24 @@ def in_test_set(day, id):
 def main(args):
   db = sqlite3.connect(os.path.join(GAMES_DIR, "games.db"))
   cur = db.cursor()
-  cur.execute('''
+  sql = '''
 SELECT day, id
 FROM games g, ratings r1, ratings r2
 WHERE r1.name = g.player1
  AND r2.name = g.player2
  AND NOT r1.bot AND NOT r2.bot
- AND r1.rating >= ?
- AND r2.rating >= ?
- AND size = ?
+ AND r1.rating >= :rating
+ AND r2.rating >= :rating
+ AND size = :size
 ORDER BY day ASC,id ASC
-  ''', (FLAGS.rating, FLAGS.rating, FLAGS.size))
+  '''
+  if FLAGS.limit:
+    sql += ' LIMIT :limit'
+  cur.execute(sql, {
+    'rating': FLAGS.rating,
+    'size': FLAGS.size,
+    'limit': FLAGS.limit
+  })
 
   train = []
   test = []
@@ -95,6 +105,21 @@ ORDER BY day ASC,id ASC
                     tak.ptn.format_move(rec.move),
                     rec.day, rec.id, rec.ply,
         ))
+  with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
+    json.dump({
+      'sha1': read_git_commit(),
+      'argv': sys.argv,
+      'opts': vars(FLAGS),
+    }, fh, indent=2)
+
+def read_git_commit():
+  sha1 = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
+  try:
+    subprocess.check_call(['git', 'diff-index', '--cached', '--quiet', 'HEAD'])
+    subprocess.check_call(['git', 'diff-index', '--quiet', 'HEAD'])
+  except subprocess.CalledProcessError:
+    sha1 += "-dirty"
+  return sha1
 
 def arg_parser():
   parser = argparse.ArgumentParser()
@@ -108,6 +133,9 @@ def arg_parser():
 
   parser.add_argument('--seed', default=1, type=int,
                       help='random seed')
+
+  parser.add_argument('--limit', default=None, type=int,
+                      help='Only look at N games')
 
   parser.add_argument('--test-fraction', default=0.05, type=float,
                       help='select fraction of games to use for training set')
