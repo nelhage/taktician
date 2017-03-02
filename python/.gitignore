@@ -5,4 +5,3 @@ __pycache__
 .coverage
 htmlcov/
 data/train
-data/graphs
