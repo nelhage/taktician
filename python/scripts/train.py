@@ -99,6 +99,7 @@ def main(args):
 
   t_end = 0
   t_start = 0
+  lr = FLAGS.eta
   for epoch in range(FLAGS.epochs):
     loss, prec1, prec5 = session.run(
       [model.loss, model.prec1, model.prec5],
@@ -119,10 +120,13 @@ def main(args):
       session.run(model.train_step, feed_dict={
         model.x: bx,
         model.labels: by,
-        model.learning_rate: FLAGS.eta,
+        model.learning_rate: lr,
         model.keep_prob: FLAGS.dropout,
       })
     t_end = time.time()
+    if FLAGS.lr_interval and ((epoch+1) % FLAGS.lr_interval) == 0:
+      lr /= FLAGS.lr_scale
+      print("scaling eta={0}".format(lr))
 
   if FLAGS.write_metagraph:
     tf.train.export_meta_graph(filename=FLAGS.write_metagraph)
@@ -154,6 +158,10 @@ def arg_parser():
                       choices=OPTIMIZERS)
   parser.add_argument('--eta', type=float, default=0.05,
                       help='learning rate')
+  parser.add_argument('--lr_scale', type=int, default=1,
+                      help='scale learning rate down')
+  parser.add_argument('--lr_interval', type=int, default=None,
+                      help='scale learning rate every N epochs')
   parser.add_argument('--regularize', type=float, default=1e-6,
                       help='L2 regularization scale')
   parser.add_argument('--dropout', type=float, default=0.5,
