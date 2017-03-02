@@ -22,15 +22,25 @@ class Position(object):
   ply  = attr.ib()
   move = attr.ib()
 
+def seeded_hash(data):
+  data = data + (FLAGS.seed,)
+  h = hashlib.sha256(b"\0".join([str(d).encode('utf-8') for d in data])).digest()
+  v, = struct.unpack("Q", h[:8])
+  return v
+
 def want_move(day, id, i):
   if i < FLAGS.skip:
     return False
   if FLAGS.stride:
     return (i - FLAGS.skip) % FLAGS.stride == 0
-  data = [FLAGS.seed, day, id, i]
-  h = hashlib.sha256(b"\0".join([str(d).encode('utf-8') for d in data])).digest()
-  v, = struct.unpack("L", h[:8])
+  v = seeded_hash((day, id, i))
   return v % FLAGS.sample == 0
+
+def in_test_set(day, id):
+  if FLAGS.test_fraction == 0:
+    return False
+  v = seeded_hash((day, id))
+  return v < (FLAGS.test_fraction * (1 << 64))
 
 def main(args):
   db = sqlite3.connect(os.path.join(GAMES_DIR, "games.db"))
@@ -47,7 +57,9 @@ WHERE r1.name = g.player1
 ORDER BY day ASC,id ASC
   ''', (FLAGS.rating, FLAGS.rating, FLAGS.size))
 
-  positions = []
+  train = []
+  test = []
+
   for (day, id) in cur:
     with open(os.path.join(GAMES_DIR, day, str(id) + ".ptn")) as f:
       text = f.read()
@@ -61,17 +73,28 @@ ORDER BY day ASC,id ASC
         else:
           ps = [(g, m)]
 
+        if in_test_set(day, id):
+          out = test
+        else:
+          out = train
         for (rg, rm) in ps:
-          positions.append(Position(day, id, rg, i, rm))
+          out.append(Position(day, id, rg, i, rm))
 
       g = g.move(m)
-  with open(FLAGS.out, 'w') as f:
-    w = csv.writer(f)
-    for rec in positions:
-      w.writerow((tak.ptn.format_tps(rec.pos),
-                  tak.ptn.format_move(rec.move),
-                  rec.day, rec.id, rec.ply,
-      ))
+
+  try:
+    os.makedirs(FLAGS.out)
+  except FileExistsError:
+    pass
+
+  for (positions, path) in [(train, "train"), (test, "test")]:
+    with open(os.path.join(FLAGS.out, path+".csv"), 'w') as f:
+      w = csv.writer(f)
+      for rec in positions:
+        w.writerow((tak.ptn.format_tps(rec.pos),
+                    tak.ptn.format_move(rec.move),
+                    rec.day, rec.id, rec.ply,
+        ))
 
 def arg_parser():
   parser = argparse.ArgumentParser()
@@ -86,6 +109,9 @@ def arg_parser():
   parser.add_argument('--seed', default=1, type=int,
                       help='random seed')
 
+  parser.add_argument('--test-fraction', default=0.05, type=float,
+                      help='select fraction of games to use for training set')
+
   parser.add_argument('--skip', default=5, type=int)
   parser.add_argument('--size', default=5, type=int)
 
@@ -96,7 +122,7 @@ def arg_parser():
                       action='store_false',
                       dest='symmetries')
 
-  parser.add_argument('--out', default='corpus.csv')
+  parser.add_argument('--out', '-o', default='data/corpus')
   return parser
 
 if __name__ == '__main__':
