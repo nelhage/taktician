@@ -1,5 +1,0 @@
-graph-1: sha1=79b7a72cf71f19f1bb1d72f3f69d2ab3ef40710f python scripts/train.py --corpus data/corpus/playtak-2017-02-23/ --eta=0.1 --layers=4 --filters=64 --regularize=5e-5 --dropout=0.5 --checkpoint data/train --epochs 20
-graph-2: graph-1, trained 30 more epochs at eta=0.05
-graph-2: sha1=0e0135fdc12748df21aa51e9a9fe43bd50823783
-  scripts/train.py --corpus data/corpus/playtak-2017-02-23/ --eta=0.1 --layers=4 --filters=64 --regularize=5e-5 --dropout=0.5 --checkpoint data/train/4x64 --eta=0.05 --optimizer GradientDescentOptimizer
-  scripts/train.py --corpus data/corpus/playtak-2017-02-23/ --eta=0.1 --layers=4 --filters=64 --regularize=5e-5 --dropout=0.5 --checkpoint data/train/4x64.1 --eta=0.01 --optimizer GradientDescentOptimizer --restore data/train/4x64-22
