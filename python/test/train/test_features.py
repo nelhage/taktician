@@ -1,5 +1,6 @@
 import tak.train
 import tak.ptn
+import tak.symmetry
 
 import numpy as np
 
@@ -17,7 +18,6 @@ class TestFeatures(object):
     assert np.all(f[:,:,:14] == 0)
 
     assert np.all(f[:,:,16] == 1)
-
 
   def test_basic_features(self):
     b = tak.ptn.parse_tps(
@@ -74,3 +74,15 @@ class TestFeatures(object):
       ext[:,:, tak.train.FeaturePlane.FLATS:tak.train.FeaturePlane.FLATS_MAX],
     )
     assert np.all(ext[:,:, tak.train.FeaturePlane.FLATS] == 1)
+
+  def test_symmetry_features(self):
+    pos = tak.ptn.parse_tps("2,x,21S,2,2,2/2,2C,2,1S,x2/x3,2,x2/1,11112,1121,1C,x2/x2,1S,12,1,1/x3,1,x,1 1 20")
+    feat = tak.train.Featurizer(pos.size)
+
+    manual = [
+      feat.features(tak.symmetry.transform_position(sym, pos))
+      for sym in tak.symmetry.SYMMETRIES
+    ]
+    computed = feat.features_symmetries(pos)
+    for i in range(len(manual)):
+      assert np.all(manual[i] == computed[i])

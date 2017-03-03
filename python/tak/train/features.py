@@ -1,4 +1,7 @@
 import tak
+import tak.symmetry
+
+from . import moves
 
 import enum
 
@@ -30,10 +33,6 @@ class FeaturePlane(object):
 
 EXTRA_PLANES = FeaturePlane.MAX
 
-def feature_shape(size):
-  # (x, y, planes)
-  return (size, size, 2 * int(1.5*size) + EXTRA_PLANES)
-
 def clamp(n, lim):
   if n < 0:
     return 0
@@ -41,44 +40,117 @@ def clamp(n, lim):
     return lim-1
   return n
 
+class Featurizer(object):
+  def __init__(self, size):
+    self.size = size
+    self.precompute()
+
+  def feature_shape(self):
+    # (x, y, planes)
+    return (self. size, self.size, self.stack_planes + EXTRA_PLANES)
+
+  def precompute(self):
+    self.stack_depth  = int(1.5*self.size)
+    self.stack_planes = 2 * self.stack_depth
+
+    identity = np.transpose(
+      np.stack([
+        np.repeat(np.arange(self.size), self.size),
+        np.tile(np.arange(self.size), self.size),
+        np.full((self.size*self.size,), self.size-1, dtype=np.intp),
+      ], axis=-1))
+    self.symmetry_perms = []
+    self.move_perms = []
+
+    for sym in tak.symmetry.SYMMETRIES:
+      ix = np.transpose(np.matmul(np.linalg.inv(sym), identity)).astype(np.int)
+      self.symmetry_perms.append(
+        np.ravel_multi_index([ix[:,0], ix[:,1]], (self.size, self.size)))
+
+      moves = np.ndarray(self.move_count(), dtype=np.intp)
+      for i in range(len(moves)):
+        tm = tak.symmetry.transform_move(sym, self.id2move(i), self.size)
+        tmid = self.move2id(tm)
+        moves[i] = tmid
+      self.move_perms.append(moves)
+
+  def id2move(self, i):
+    return moves.id2move(i, self.size)
+
+  def move2id(self, m):
+    return moves.move2id(m, self.size)
+
+  def move_count(self):
+    return moves.move_count(self.size)
+
+  def features(self, pos, out=None):
+    if pos.size != self.size:
+      raise ValueError("size mismatch")
+
+    if out is None:
+      buf = np.zeros(self.feature_shape())
+    else:
+      buf = out
+      buf[:] = 0
+
+    me = pos.to_move()
+    extra = buf[:,:,self.stack_planes:]
+
+    for i in range(pos.size):
+      for j in range(pos.size):
+        sq = pos[i,j]
+        for k,s in enumerate(sq[:self.stack_depth]):
+          buf[i,j,2*k]     = s.color == me
+          buf[i,j,2*k + 1] = s.color != me
+          if k == 0:
+            extra[i,j,FeaturePlane.CAPSTONE] = s.kind == tak.Kind.CAPSTONE
+            extra[i,j,FeaturePlane.STANDING] = s.kind == tak.Kind.STANDING
+
+    extra[:,:,FeaturePlane.ONES] = 1
+
+    wf, bf = pos.flat_counts()
+    df = wf - bf
+    if me == tak.Color.BLACK:
+      df = -df
+    df = clamp(df + MAX_FLAT_DELTA, FLATS_PLANES)
+    extra[:,:,FeaturePlane.FLATS + df] = 1
+
+    extra[
+      :,:, clamp(FeaturePlane.MY_RESERVES + pos.stones[me.value].stones - 1, RESERVES_PLANES)
+    ] = 1
+    if pos.stones[me.value].caps > 0 :
+      extra[:,:, FeaturePlane.MY_CAPS] = 1
+    extra[
+      :,:, clamp(FeaturePlane.THEIR_RESERVES + pos.stones[me.flip().value].stones - 1, RESERVES_PLANES)
+    ] = 1
+    if pos.stones[me.flip().value].caps > 0 :
+      extra[:,:, FeaturePlane.THEIR_CAPS] = 1
+    return buf
+
+  def features_symmetries(self, pos, out=None):
+    if out is not None:
+      assert out.shape == (8,) + self.feature_shape()
+      feat = out
+    else:
+      feat = np.ndarray((8,) + self.feature_shape())
+
+    self.features(pos, feat[0])
+
+    sqs = self.size * self.size
+
+    vec = feat[0].reshape((sqs, -1))
+
+    for i in range(1,8):
+      feat[i] = vec[self.symmetry_perms[i]].reshape(self.feature_shape())
+    return feat
+
+  def unpermute_moves(self, moves):
+    assert moves.shape == (8, self.move_count())
+    for (i, perm) in enumerate(self.move_perms):
+        moves[i] = moves[i][perm]
+
+def feature_shape(size):
+  return Featurizer(size).feature_shape()
+
 def features(pos, out=None):
-  if out is None:
-    buf = np.zeros(feature_shape(pos.size))
-  else:
-    buf = out
-    buf[:] = 0
-
-  me = pos.to_move()
-  max_depth = int(1.5 * pos.size)
-  extra = buf[:,:,2 * max_depth:]
-
-  for i in range(pos.size):
-    for j in range(pos.size):
-      sq = pos[i,j]
-      for k,s in enumerate(sq[:max_depth]):
-        buf[i,j,2*k]     = s.color == me
-        buf[i,j,2*k + 1] = s.color != me
-        if k == 0:
-          extra[i,j,FeaturePlane.CAPSTONE] = s.kind == tak.Kind.CAPSTONE
-          extra[i,j,FeaturePlane.STANDING] = s.kind == tak.Kind.STANDING
-
-  extra[:,:,FeaturePlane.ONES] = 1
-
-  wf, bf = pos.flat_counts()
-  df = wf - bf
-  if me == tak.Color.BLACK:
-    df = -df
-  df = clamp(df + MAX_FLAT_DELTA, FLATS_PLANES)
-  extra[:,:,FeaturePlane.FLATS + df] = 1
-
-  extra[
-    :,:, clamp(FeaturePlane.MY_RESERVES + pos.stones[me.value].stones - 1, RESERVES_PLANES)
-  ] = 1
-  if pos.stones[me.value].caps > 0 :
-    extra[:,:, FeaturePlane.MY_CAPS] = 1
-  extra[
-    :,:, clamp(FeaturePlane.THEIR_RESERVES + pos.stones[me.flip().value].stones - 1, RESERVES_PLANES)
-  ] = 1
-  if pos.stones[me.flip().value].caps > 0 :
-    extra[:,:, FeaturePlane.THEIR_CAPS] = 1
-  return buf
+  return Featurizer(pos.size).features(pos, out)

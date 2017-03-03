@@ -49,6 +49,7 @@ def transform_position(sym, pos):
     for j in range(pos.size):
       oi, oj, _ = ix[i,j]
       sqs[oi + oj*pos.size] = pos[i, j]
+
   return tak.Position.from_squares(
     tak.Config(size = pos.size),
     sqs,

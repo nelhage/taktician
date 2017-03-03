@@ -4,7 +4,6 @@ import numpy as np
 import tak.symmetry
 
 from .features import *
-from .moves import *
 
 def multinomial(probs):
   r = np.random.random()
@@ -27,34 +26,24 @@ class TakModel(object):
     self.logits, = self.graph.get_collection('logits')
     self.softmax = tf.nn.softmax(self.logits)
 
+    self.features = Featurizer(self.size)
+
     if eval_symmetries:
       self.buf = np.ndarray((8,) + feature_shape(self.size))
-      self._compute_move_perms()
     else:
       self.buf = np.ndarray((1,) + feature_shape(self.size))
 
-  def _compute_move_perms(self):
-    self.move_permutations = np.ndarray((8, move_count(self.size)), dtype=np.intp)
-    for si, sym in enumerate(tak.symmetry.SYMMETRIES):
-      for mi in range(move_count(self.size)):
-        tm = tak.symmetry.transform_move(sym, id2move(mi, self.size), self.size)
-        tmid = move2id(tm, self.size)
-        self.move_permutations[si, mi] = tmid
-
   def evaluate(self, position):
     if self.eval_symmetries:
-      for i,s in enumerate(tak.symmetry.SYMMETRIES):
-        features(tak.symmetry.transform_position(s, position),
-                 out=self.buf[i])
+      self.features.features_symmetries(position, self.buf)
       probs = self.session.run(self.softmax, feed_dict={
         self.input: self.buf,
       })
-      for (i,perm) in enumerate(self.move_permutations):
-        probs[i] = probs[i][perm]
+      self.features.unpermute_moves(probs)
       p = np.sum(probs, axis=0)
       return p / np.sum(p)
     else:
-      features(position, out=self.buf[0])
+      self.features.features(position, out=self.buf[0])
       return self.session.run(self.softmax, feed_dict={
         self.input: self.buf,
       })[0]
@@ -63,7 +52,7 @@ class TakModel(object):
     probs = self.evaluate(position)
     while True:
       i = multinomial(probs)
-      m = id2move(i, position.size)
+      m = self.features.id2move(i)
       try:
         return m, position.move(m)
       except tak.IllegalMove:
