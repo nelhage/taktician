@@ -31,21 +31,30 @@ def load_positions(path):
         tak.ptn.parse_move(m)))
   return positions
 
-def load_corpus_file(path):
+def load_corpus_file(path, add_symmetries=False):
   positions = load_positions(path)
   size = positions[0][0].size
+  feat = tak.train.Featurizer(size)
 
-  xs = np.zeros((len(positions),) + tak.train.feature_shape(size))
-  ys = np.zeros((len(positions), tak.train.move_count(size)))
+  count = len(positions)
+  if add_symmetries:
+    count *= 8
+  xs = np.zeros((count,) + feat.feature_shape())
+  ys = np.zeros((count, feat.move_count()))
 
   for i, (p, m) in enumerate(positions):
-    tak.train.features(p, xs[i])
-    ys[i][tak.train.move2id(m, size)] = 1
+    if add_symmetries:
+      feat.features_symmetries(p, out=xs[8*i:8*(i+1)])
+      for j,sym in enumerate(tak.symmetry.SYMMETRIES):
+        ys[8*i + j][feat.move2id(tak.symmetry.transform_move(sym, m, size))] = 1
+    else:
+      feat.features(p, out=xs[i])
+      ys[i][tak.train.move2id(m, size)] = 1
   return Dataset(size, xs, ys)
 
-def load_corpus(dir):
+def load_corpus(dir, add_symmetries=False):
   return (
-    load_corpus_file(os.path.join(dir, 'train.csv')),
-    load_corpus_file(os.path.join(dir, 'test.csv')))
+    load_corpus_file(os.path.join(dir, 'train.csv'), add_symmetries),
+    load_corpus_file(os.path.join(dir, 'test.csv'), add_symmetries))
 
 __all__ = ['Dataset', 'load_corpus_file', 'load_corpus', 'load_positions']

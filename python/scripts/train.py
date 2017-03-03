@@ -83,7 +83,7 @@ class TakModel(object):
 
 def main(args):
   print("Loading data...")
-  train, test = tak.train.load_corpus(FLAGS.corpus)
+  train, test = tak.train.load_corpus(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
   print("Loaded {0} training cases and {1} test cases...".format(
     len(train.positions), len(test.positions)))
 
@@ -177,6 +177,9 @@ def arg_parser():
                       help='restore from path')
   parser.add_argument('--write-metagraph', type=str, default=None,
                       help='write metagraph to path')
+
+  parser.add_argument('--no-symmetries', default=True,
+                      dest='symmetries', action='store_false')
   return parser
 
 if __name__ == '__main__':

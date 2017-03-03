@@ -4,6 +4,7 @@ import tak.symmetry
 from . import moves
 
 import enum
+import functools
 
 import numpy as np
 
@@ -40,6 +41,31 @@ def clamp(n, lim):
     return lim-1
   return n
 
+@functools.lru_cache()
+def _compute_perms(size):
+  identity = np.transpose(
+    np.stack([
+      np.repeat(np.arange(size), size),
+      np.tile(np.arange(size), size),
+      np.full((size*size,), size-1, dtype=np.intp),
+    ], axis=-1))
+  symmetry_perms = []
+  move_perms = []
+
+  for sym in tak.symmetry.SYMMETRIES:
+    ix = np.transpose(np.matmul(np.linalg.inv(sym), identity)).astype(np.int)
+    symmetry_perms.append(
+      np.ravel_multi_index([ix[:,0], ix[:,1]], (size, size)))
+
+    perm = np.ndarray(moves.move_count(size), dtype=np.intp)
+    for i in range(len(perm)):
+      tm = tak.symmetry.transform_move(sym, moves.id2move(i, size), size)
+      tmid = moves.move2id(tm, size)
+      perm[i] = tmid
+
+    move_perms.append(perm)
+  return (symmetry_perms, move_perms)
+
 class Featurizer(object):
   def __init__(self, size):
     self.size = size
@@ -52,27 +78,7 @@ class Featurizer(object):
   def precompute(self):
     self.stack_depth  = int(1.5*self.size)
     self.stack_planes = 2 * self.stack_depth
-
-    identity = np.transpose(
-      np.stack([
-        np.repeat(np.arange(self.size), self.size),
-        np.tile(np.arange(self.size), self.size),
-        np.full((self.size*self.size,), self.size-1, dtype=np.intp),
-      ], axis=-1))
-    self.symmetry_perms = []
-    self.move_perms = []
-
-    for sym in tak.symmetry.SYMMETRIES:
-      ix = np.transpose(np.matmul(np.linalg.inv(sym), identity)).astype(np.int)
-      self.symmetry_perms.append(
-        np.ravel_multi_index([ix[:,0], ix[:,1]], (self.size, self.size)))
-
-      moves = np.ndarray(self.move_count(), dtype=np.intp)
-      for i in range(len(moves)):
-        tm = tak.symmetry.transform_move(sym, self.id2move(i), self.size)
-        tmid = self.move2id(tm)
-        moves[i] = tmid
-      self.move_perms.append(moves)
+    self.symmetry_perms, self.move_perms = _compute_perms(self.size)
 
   def id2move(self, i):
     return moves.id2move(i, self.size)
