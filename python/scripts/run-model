@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import tak.train
+import tak.model
 import tak.ptn
 
 import sys
@@ -12,7 +12,7 @@ def load_position():
     return tak.ptn.parse_tps(FLAGS.tps)
 
 def main(args):
-  model = tak.train.load_model(FLAGS.model, eval_symmetries=FLAGS.symmetries)
+  model = tak.model.load_model(FLAGS.model, eval_symmetries=FLAGS.symmetries)
   pos = load_position()
 
   probs = model.evaluate(pos)

@@ -1,9 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-import tak.symmetry
-
-from .features import *
+import tak.train
 
 def multinomial(probs):
   r = np.random.random()
@@ -13,7 +11,7 @@ def multinomial(probs):
     if r < s:
       return i
 
-class TakModel(object):
+class Evaluator(object):
   def __init__(self, graph, session, eval_symmetries):
     self.graph = graph
     self.session = session
@@ -22,16 +20,16 @@ class TakModel(object):
     self.input, = self.graph.get_collection('inputs')
     assert len(self.input.shape) == 4
     self.size = int(self.input.shape[1])
-    assert self.input.shape[1:] == feature_shape(self.size)
     self.logits, = self.graph.get_collection('logits')
     self.softmax = tf.nn.softmax(self.logits)
 
-    self.features = Featurizer(self.size)
+    self.features = tak.train.Featurizer(self.size)
+    assert self.input.shape[1:] == self.features.feature_shape()
 
     if eval_symmetries:
-      self.buf = np.ndarray((8,) + feature_shape(self.size))
+      self.buf = np.ndarray((8,) + self.features.feature_shape())
     else:
-      self.buf = np.ndarray((1,) + feature_shape(self.size))
+      self.buf = np.ndarray((1,) + self.features.feature_shape())
 
   def evaluate(self, position):
     if self.eval_symmetries:
@@ -66,6 +64,6 @@ def load_model(path, eval_symmetries=True):
     session = tf.Session()
     saver = tf.train.import_meta_graph(path + '.meta')
     saver.restore(session, path)
-    return TakModel(graph, session, eval_symmetries)
+    return Evaluator(graph, session, eval_symmetries)
 
-__all__ = ['TakModel', 'load_model']
+__all__ = ['Evaluator', 'load_model']

@@ -1,4 +1,4 @@
-import tak.train
+import tak.model
 import tak.ptn
 
 import argparse
@@ -10,7 +10,7 @@ import numpy as np
 FLAGS = None
 
 def main(args):
-  model = tak.train.load_model(FLAGS.model,
+  model = tak.model.load_model(FLAGS.model,
                                eval_symmetries=FLAGS.symmetries)
 
   positions = tak.train.load_positions(FLAGS.corpus)

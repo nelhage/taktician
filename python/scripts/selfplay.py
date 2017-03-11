@@ -1,11 +1,11 @@
 import tak
 import tak.ptn
-import tak.train
+import tak.model
 
 import argparse
 
 def main(args):
-  model = tak.train.load_model(FLAGS.model, eval_symmetries=FLAGS.symmetries)
+  model = tak.model.load_model(FLAGS.model, eval_symmetries=FLAGS.symmetries)
   pos = tak.Position.from_config(tak.Config(size=5))
 
   with open(FLAGS.out, 'w') as ptn:
