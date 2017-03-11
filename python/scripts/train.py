@@ -75,9 +75,6 @@ def main(args):
       lr /= FLAGS.lr_scale
       print("scaling eta={0}".format(lr))
 
-  if FLAGS.write_metagraph:
-    tf.train.export_meta_graph(filename=FLAGS.write_metagraph)
-
 OPTIMIZERS = [
   name for name in dir(tf.train)
   if (isinstance(getattr(tf.train, name), type) and
@@ -122,8 +119,6 @@ def arg_parser():
                       help='checkpoint directory')
   parser.add_argument('--restore', type=str, default=None,
                       help='restore from path')
-  parser.add_argument('--write-metagraph', type=str, default=None,
-                      help='write metagraph to path')
 
   parser.add_argument('--no-symmetries', default=True,
                       dest='symmetries', action='store_false')
