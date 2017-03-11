@@ -20,16 +20,21 @@ def main(args):
   print("Loaded {0} training cases and {1} test cases...".format(
     len(train.positions), len(test.positions)))
 
-  model = tak.model.Model(tak.proto.ModelDef(
+  model_def = tak.proto.ModelDef(
     size    = train.size,
 
     layers  = FLAGS.layers,
     kernel  = FLAGS.kernel,
     filters = FLAGS.filters,
     hidden  = FLAGS.hidden,
-  ))
+  )
+  model = tak.model.Model(model_def)
   model.add_train_ops(FLAGS.regularize,
                       optimizer=FLAGS.optimizer)
+
+  if FLAGS.checkpoint:
+    with open(FLAGS.checkpoint + ".model", 'wb') as fh:
+      fh.write(model_def.SerializeToString())
 
   session = tf.InteractiveSession()
   saver = tf.train.Saver(max_to_keep=10)
