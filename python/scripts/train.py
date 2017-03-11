@@ -1,5 +1,7 @@
 import tak.ptn
 import tak.train
+import tak.proto
+import tak.model
 
 import argparse
 import csv
@@ -12,82 +14,22 @@ import tensorflow as tf
 
 FLAGS = None
 
-class TakModel(object):
-  def __init__(self, size):
-    self.size = size
-
-    fshape = tak.train.feature_shape(size)
-    _, _, fplanes = fshape
-    fcount = fplanes * size * size
-    mcount = tak.train.move_count(size)
-
-    with tf.variable_scope('Input'):
-      self.x = tf.placeholder(tf.float32, (None,) + fshape)
-      self.labels = tf.placeholder(tf.float32, (None, mcount))
-
-    with tf.variable_scope('Hidden'):
-      activations = self.x
-      self.layers = []
-      for i in range(FLAGS.layers):
-        with tf.variable_scope('Layer{0}'.format(i)):
-          activations = tf.contrib.layers.convolution2d(
-            activations,
-            num_outputs=FLAGS.filters,
-            padding='SAME',
-            kernel_size=FLAGS.kernel,
-            trainable=True,
-            variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
-          )
-          self.layers.append(activations)
-
-      icount = size*size*FLAGS.filters
-      if FLAGS.hidden > 0:
-        self.W_h = tf.Variable(tf.zeros([icount, FLAGS.hidden]), name="weights")
-        self.b_h = tf.Variable(tf.zeros([FLAGS.hidden]), name="biases")
-
-        x = tf.reshape(activations, [-1, icount])
-        activations = tf.nn.relu(tf.matmul(x, self.W_h) + self.b_h)
-        icount = FLAGS.hidden
-
-    with tf.variable_scope('Output'):
-      self.keep_prob = tf.placeholder_with_default(
-        tf.ones(()), shape=(), name='keep_prob')
-      self.W = tf.Variable(tf.zeros([icount, mcount]), name="weights")
-      self.b = tf.Variable(tf.zeros([mcount]), name="biases")
-
-      x = tf.reshape(tf.nn.dropout(activations, keep_prob=self.keep_prob),
-                     [-1, icount])
-      self.logits = tf.matmul(x, self.W) + self.b
-
-    with tf.variable_scope('Train'):
-      self.cross_entropy = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels))
-      self.regularization_loss = tf.contrib.layers.apply_regularization(
-        tf.contrib.layers.l2_regularizer(FLAGS.regularize),
-      )
-
-      self.loss = self.cross_entropy + self.regularization_loss
-      self.global_step = tf.Variable(0, name='global_step', trainable=False)
-      self.learning_rate = tf.placeholder(tf.float32)
-      self.train_step = (getattr(tf.train, FLAGS.optimizer)(self.learning_rate).
-                         minimize(self.loss, global_step=self.global_step))
-
-      labels = tf.argmax(self.labels, 1)
-      self.prec1 = tf.reduce_mean(tf.cast(
-        tf.nn.in_top_k(self.logits, labels, 1), tf.float32))
-      self.prec5 = tf.reduce_mean(tf.cast(
-        tf.nn.in_top_k(self.logits, labels, 5), tf.float32))
-
-    tf.add_to_collection('inputs', self.x)
-    tf.add_to_collection('logits', self.logits)
-
 def main(args):
   print("Loading data...")
   train, test = tak.train.load_corpus(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
   print("Loaded {0} training cases and {1} test cases...".format(
     len(train.positions), len(test.positions)))
 
-  model = TakModel(train.size)
+  model = tak.model.Model(tak.proto.ModelDef(
+    size    = train.size,
+
+    layers  = FLAGS.layers,
+    kernel  = FLAGS.kernel,
+    filters = FLAGS.filters,
+    hidden  = FLAGS.hidden,
+  ))
+  model.add_train_ops(FLAGS.regularize,
+                      optimizer=FLAGS.optimizer)
 
   session = tf.InteractiveSession()
   saver = tf.train.Saver(max_to_keep=10)
