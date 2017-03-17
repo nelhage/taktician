@@ -1,4 +1,15 @@
 {
+  "opts": {
+    "rating": 1600,
+    "sample": 9,
+    "limit": null,
+    "stride": null,
+    "size": 5,
+    "skip": 8,
+    "test_fraction": 0.05,
+    "out": "data/corpus/playtak-2017-03-02-1600-nosym",
+    "seed": 1
+  },
   "argv": [
     "scripts/playtak-corpus",
     "--rating",
@@ -10,16 +21,5 @@
     "--sample",
     "9"
   ],
-  "sha1": "3a871c9c11ae99405a75f0e3fbc2887947482298",
-  "opts": {
-    "rating": 1600,
-    "out": "data/corpus/playtak-2017-03-02-1600-nosym",
-    "stride": null,
-    "test_fraction": 0.05,
-    "seed": 1,
-    "skip": 8,
-    "sample": 9,
-    "limit": null,
-    "size": 5
-  }
+  "sha1": "0e49c4fd6d709d3c342e41bfc543e03f800d8f2c-dirty"
 }

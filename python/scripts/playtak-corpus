@@ -20,6 +20,7 @@ GAMES_DIR = os.path.join(os.path.dirname(__file__), "../../games")
 class Position(object):
   day  = attr.ib()
   id   = attr.ib()
+  value = attr.ib()
   pos  = attr.ib()
   ply  = attr.ib()
   move = attr.ib()
@@ -44,11 +45,29 @@ def in_test_set(day, id):
   v = seeded_hash((day, id))
   return v < (FLAGS.test_fraction * (1 << 64))
 
+RESULT_MAP = {
+  'R-0': 1.0,
+  '0-R': -1.0,
+  'F-0': 1.0,
+  '0-F': -1.0,
+
+  '1-0': None,
+  '0-1': None,
+  '1/2-1/2': 0,
+  '0-0': None,
+
+  '': None,
+  None: None,
+}
+
+def parse_result(s):
+  return RESULT_MAP[s]
+
 def main(args):
   db = sqlite3.connect(os.path.join(GAMES_DIR, "games.db"))
   cur = db.cursor()
   sql = '''
-SELECT day, id
+SELECT day, id, result
 FROM games g, ratings r1, ratings r2
 WHERE r1.name = g.player1
  AND r2.name = g.player2
@@ -69,10 +88,11 @@ ORDER BY day ASC,id ASC
   train = []
   test = []
 
-  for (day, id) in cur:
+  for (day, id, result_s) in cur:
     with open(os.path.join(GAMES_DIR, day, str(id) + ".ptn")) as f:
       text = f.read()
     ptn = tak.ptn.PTN.parse(text)
+    result = parse_result(result_s)
     g = ptn.initial_position()
     for i, m in enumerate(ptn.moves):
       if want_move(day, id, i):
@@ -80,9 +100,11 @@ ORDER BY day ASC,id ASC
           out = test
         else:
           out = train
-        out.append(Position(day, id, g, i, m))
+        out.append(Position(day, id, result, g, i, m))
 
       g = g.move(m)
+      if result is not None:
+        result = -result;
 
   try:
     os.makedirs(FLAGS.out)
@@ -95,6 +117,7 @@ ORDER BY day ASC,id ASC
       for rec in positions:
         w.writerow((tak.ptn.format_tps(rec.pos),
                     tak.ptn.format_move(rec.move),
+                    rec.value,
                     rec.day, rec.id, rec.ply,
         ))
   with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
