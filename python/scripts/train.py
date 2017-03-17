@@ -29,8 +29,9 @@ def main(args):
     hidden  = FLAGS.hidden,
   )
   model = tak.model.PredictionModel(model_def)
-  model.add_train_ops(FLAGS.regularize,
-                      optimizer=FLAGS.optimizer)
+  learning_rate = tf.placeholder(tf.float32)
+  optimizer = getattr(tf.train, FLAGS.optimizer)(learning_rate)
+  model.add_train_ops(optimizer=optimizer, regularize=FLAGS.regularize)
 
   if FLAGS.checkpoint:
     with open(FLAGS.checkpoint + ".model", 'wb') as fh:
@@ -67,7 +68,7 @@ def main(args):
       session.run(model.train_step, feed_dict={
         model.x: bx,
         model.labels: by,
-        model.learning_rate: lr,
+        learning_rate: lr,
         model.keep_prob: FLAGS.dropout,
       })
     t_end = time.time()

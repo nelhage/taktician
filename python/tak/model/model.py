@@ -63,7 +63,7 @@ class PredictionModel(object):
       self.logits = tf.matmul(x, self.W) + self.b
     tf.add_to_collection('logits', self.logits)
 
-  def add_train_ops(self, regularize=0, optimizer=tf.train.GradientDescentOptimizer.__name__):
+  def add_train_ops(self, optimizer, regularize=0):
     with tf.variable_scope('Input'):
       self.labels = tf.placeholder(tf.float32, (None, self.move_count))
 
@@ -76,9 +76,7 @@ class PredictionModel(object):
 
       self.loss = self.cross_entropy + self.regularization_loss
       self.global_step = tf.Variable(0, name='global_step', trainable=False)
-      self.learning_rate = tf.placeholder(tf.float32)
-      self.train_step = (getattr(tf.train, optimizer)(self.learning_rate).
-                         minimize(self.loss, global_step=self.global_step))
+      self.train_step = optimizer.minimize(self.loss, global_step=self.global_step)
 
       labels = tf.argmax(self.labels, 1)
       self.prec1 = tf.reduce_mean(tf.cast(
