@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "scripts/playtak-corpus",
+    "--rating",
+    "1600",
+    "--out",
+    "data/corpus/playtak-2017-03-02-1600-nosym-small",
+    "--skip",
+    "8",
+    "--sample",
+    "9",
+    "--limit",
+    "1000"
+  ],
+  "opts": {
+    "out": "data/corpus/playtak-2017-03-02-1600-nosym-small",
+    "stride": null,
+    "sample": 9,
+    "rating": 1600,
+    "size": 5,
+    "skip": 8,
+    "seed": 1,
+    "test_fraction": 0.05,
+    "limit": 1000
+  },
+  "sha1": "9627841119fe54b5f52ea3ec8058d06820043bea-dirty"
+}
