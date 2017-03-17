@@ -28,7 +28,7 @@ def main(args):
     filters = FLAGS.filters,
     hidden  = FLAGS.hidden,
   )
-  model = tak.model.Model(model_def)
+  model = tak.model.PredictionModel(model_def)
   model.add_train_ops(FLAGS.regularize,
                       optimizer=FLAGS.optimizer)
 

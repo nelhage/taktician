@@ -2,18 +2,11 @@ import tak.train
 
 import tensorflow as tf
 
-class Model(object):
-  def __init__(self, model_def):
+class PerceptionModel(object):
+  def __init__(self, model_def, x):
     self.size = model_def.size
-
-    fshape = tak.train.feature_shape(self.size)
-    _, _, fplanes = fshape
-    fcount = fplanes * self.size * self.size
-    mcount = tak.train.move_count(self.size)
-
-    with tf.variable_scope('Input'):
-      self.x = tf.placeholder(tf.float32, (None,) + fshape)
-      self.labels = tf.placeholder(tf.float32, (None, mcount))
+    self.x = x
+    tf.add_to_collection('inputs', self.x)
 
     with tf.variable_scope('Hidden'):
       activations = self.x
@@ -30,28 +23,50 @@ class Model(object):
           )
           self.layers.append(activations)
 
-      icount = self.size*self.size*model_def.filters
+      outputs = self.size*self.size*model_def.filters
       if model_def.hidden > 0:
-        self.W_h = tf.Variable(tf.zeros([icount, model_def.hidden]), name="weights")
+        self.W_h = tf.Variable(tf.zeros([outputs, model_def.hidden]), name="weights")
         self.b_h = tf.Variable(tf.zeros([model_def.hidden]), name="biases")
 
-        x = tf.reshape(activations, [-1, icount])
+        x = tf.reshape(activations, [-1, outputs])
         activations = tf.nn.relu(tf.matmul(x, self.W_h) + self.b_h)
-        icount = model_def.hidden
+        outputs = model_def.hidden
+
+    self.keep_prob = tf.placeholder_with_default(
+      tf.ones(()), shape=(), name='keep_prob')
+
+    self.output = tf.nn.dropout(activations, keep_prob=self.keep_prob)
+    self.output_count = outputs
+
+class PredictionModel(object):
+  def __init__(self, model_def, perception=None):
+    self.size = model_def.size
+
+    if perception is None:
+      fshape = tak.train.feature_shape(self.size)
+      with tf.variable_scope('Input'):
+        self.x = tf.placeholder(tf.float32, (None,) + fshape)
+      perception = PerceptionModel(model_def, self.x)
+    else:
+      self.x = perception.x
+
+    self.perception = perception
+
+    self.move_count = tak.train.move_count(self.size)
+    self.keep_prob = perception.keep_prob
 
     with tf.variable_scope('Output'):
-      self.keep_prob = tf.placeholder_with_default(
-        tf.ones(()), shape=(), name='keep_prob')
-      self.W = tf.Variable(tf.zeros([icount, mcount]), name="weights")
-      self.b = tf.Variable(tf.zeros([mcount]), name="biases")
+      self.W = tf.Variable(tf.zeros([perception.output_count, self.move_count]), name="weights")
+      self.b = tf.Variable(tf.zeros([self.move_count]), name="biases")
 
-      x = tf.reshape(tf.nn.dropout(activations, keep_prob=self.keep_prob),
-                     [-1, icount])
+      x = tf.reshape(perception.output, [-1, perception.output_count])
       self.logits = tf.matmul(x, self.W) + self.b
-    tf.add_to_collection('inputs', self.x)
     tf.add_to_collection('logits', self.logits)
 
   def add_train_ops(self, regularize=0, optimizer=tf.train.GradientDescentOptimizer.__name__):
+    with tf.variable_scope('Input'):
+      self.labels = tf.placeholder(tf.float32, (None, self.move_count))
+
     with tf.variable_scope('Train'):
       self.cross_entropy = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels))
