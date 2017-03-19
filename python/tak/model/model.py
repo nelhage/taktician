@@ -83,3 +83,42 @@ class PredictionModel(object):
         tf.nn.in_top_k(self.logits, labels, 1), tf.float32))
       self.prec5 = tf.reduce_mean(tf.cast(
         tf.nn.in_top_k(self.logits, labels, 5), tf.float32))
+
+class EvaluationModel(object):
+  def __init__(self, model_def, perception=None):
+    self.size = model_def.size
+
+    if perception is None:
+      fshape = tak.train.feature_shape(self.size)
+      with tf.variable_scope('Input'):
+        self.x = tf.placeholder(tf.float32, (None,) + fshape)
+      perception = PerceptionModel(model_def, self.x)
+    else:
+      self.x = perception.x
+
+    self.perception = perception
+
+    self.keep_prob = perception.keep_prob
+
+    with tf.variable_scope('Output'):
+      self.W = tf.Variable(tf.zeros([perception.output_count, 1]), name="weights")
+      self.b = tf.Variable(tf.zeros([1]), name="biases")
+
+      x = tf.reshape(perception.output, [-1, perception.output_count])
+      self.predictions = tf.reshape(tf.sigmoid(tf.matmul(x, self.W) + self.b), (-1,))
+    tf.add_to_collection('predictions', self.predictions)
+
+  def add_train_ops(self, optimizer, regularize=0):
+    with tf.variable_scope('Input'):
+      self.labels = tf.placeholder(tf.float32, (None,))
+
+    with tf.variable_scope('Train'):
+      self.mse_loss = tf.losses.mean_squared_error(
+        labels=self.labels, predictions=self.predictions)
+      self.regularization_loss = tf.contrib.layers.apply_regularization(
+        tf.contrib.layers.l2_regularizer(regularize),
+      )
+
+      self.loss = self.mse_loss + self.regularization_loss
+      self.global_step = tf.Variable(0, name='global_step', trainable=False)
+      self.train_step = optimizer.minimize(self.loss, global_step=self.global_step)
