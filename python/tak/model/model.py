@@ -105,7 +105,7 @@ class EvaluationModel(object):
       self.W = tf.Variable(tf.zeros([perception.output.shape[-1], 1]), name="weights")
       self.b = tf.Variable(tf.zeros([1]), name="biases")
 
-      self.predictions = tf.reshape(tf.sigmoid(
+      self.predictions = tf.reshape(tf.tanh(
         tf.matmul(perception.output, self.W) + self.b), (-1,))
     tf.summary.histogram('predictions', self.predictions)
     tf.add_to_collection('predictions', self.predictions)
