@@ -35,8 +35,9 @@ class PerceptionModel(object):
     self.keep_prob = tf.placeholder_with_default(
       tf.ones(()), shape=(), name='keep_prob')
 
-    self.output = tf.nn.dropout(activations, keep_prob=self.keep_prob)
-    self.output_count = outputs
+    self.output = tf.reshape(
+      tf.nn.dropout(activations, keep_prob=self.keep_prob),
+      (-1, outputs))
 
 class PredictionModel(object):
   def __init__(self, model_def, perception=None):
@@ -56,11 +57,10 @@ class PredictionModel(object):
     self.keep_prob = perception.keep_prob
 
     with tf.variable_scope('Output'):
-      self.W = tf.Variable(tf.zeros([perception.output_count, self.move_count]), name="weights")
+      self.W = tf.Variable(tf.zeros([perception.output.shape[-1], self.move_count]), name="weights")
       self.b = tf.Variable(tf.zeros([self.move_count]), name="biases")
 
-      x = tf.reshape(perception.output, [-1, perception.output_count])
-      self.logits = tf.matmul(x, self.W) + self.b
+      self.logits = tf.matmul(perception.output, self.W) + self.b
     tf.add_to_collection('logits', self.logits)
 
   def add_train_ops(self, optimizer, regularize=0):
@@ -101,11 +101,11 @@ class EvaluationModel(object):
     self.keep_prob = perception.keep_prob
 
     with tf.variable_scope('Output'):
-      self.W = tf.Variable(tf.zeros([perception.output_count, 1]), name="weights")
+      self.W = tf.Variable(tf.zeros([perception.output.shape[-1], 1]), name="weights")
       self.b = tf.Variable(tf.zeros([1]), name="biases")
 
-      x = tf.reshape(perception.output, [-1, perception.output_count])
-      self.predictions = tf.reshape(tf.sigmoid(tf.matmul(x, self.W) + self.b), (-1,))
+      self.predictions = tf.reshape(tf.sigmoid(
+        tf.matmul(perception.output, self.W) + self.b), (-1,))
     tf.add_to_collection('predictions', self.predictions)
 
   def add_train_ops(self, optimizer, regularize=0):
