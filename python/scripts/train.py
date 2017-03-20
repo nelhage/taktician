@@ -61,8 +61,12 @@ def main(args):
   optimizer = getattr(tf.train, FLAGS.optimizer)(learning_rate)
   model.add_train_ops(optimizer=optimizer, regularize=FLAGS.regularize)
 
-  if FLAGS.checkpoint:
-    with open(FLAGS.checkpoint + ".model", 'wb') as fh:
+  if FLAGS.log_dir:
+    try:
+      os.makedirs(FLAGS.log_dir)
+    except FileExistsError:
+      pass
+    with open(os.path.join(FLAGS.log_dir, "model_def"), 'wb') as fh:
       fh.write(model_def.SerializeToString())
 
   session = tf.InteractiveSession()
@@ -76,12 +80,14 @@ def main(args):
   t_end = 0
   t_start = 0
   lr = FLAGS.eta
+  if FLAGS.log_dir:
+    checkpoint = os.path.join(FLAGS.log_dir, 'checkpoint')
   for epoch in range(FLAGS.epochs):
     print_progress(epoch, session, model, test, "pos/s={0:.2f}".format(
       len(train.positions)/(t_end-t_start) if t_start else 0
     ))
-    if FLAGS.checkpoint:
-      saver.save(session, FLAGS.checkpoint, global_step=epoch)
+    if FLAGS.log_dir:
+      saver.save(session, checkpoint, global_step=epoch)
 
     t_start = time.time()
     for (bx, bm, br) in train.minibatches(FLAGS.batch):
@@ -104,8 +110,8 @@ def main(args):
   print_progress(epoch, session, model, test, "pos/s={0:.2f}".format(
     len(train.positions)/(t_end-t_start),
   ))
-  if FLAGS.checkpoint:
-    saver.save(session, FLAGS.checkpoint, global_step=epoch)
+  if FLAGS.log_dir:
+    saver.save(session, checkpoint, global_step=epoch)
 
 OPTIMIZERS = [
   name for name in dir(tf.train)
@@ -151,8 +157,8 @@ def arg_parser():
   parser.add_argument('--epochs', type=int, default=30,
                       help='train epochs')
 
-  parser.add_argument('--checkpoint', type=str, default=None,
-                      help='checkpoint directory')
+  parser.add_argument('--log_dir', type=str, default=None,
+                      help='log directory directory')
   parser.add_argument('--restore', type=str, default=None,
                       help='restore from path')
 
