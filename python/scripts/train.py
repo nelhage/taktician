@@ -70,6 +70,12 @@ def main(args):
       fh.write(model_def.SerializeToString())
 
   session = tf.InteractiveSession()
+  if FLAGS.log_dir:
+    writer = tf.summary.FileWriter(FLAGS.log_dir, session.graph)
+    summary_op = tf.summary.merge_all()
+  else:
+    writer = None
+
   saver = tf.train.Saver(max_to_keep=10)
 
   if FLAGS.restore:
@@ -90,7 +96,7 @@ def main(args):
       saver.save(session, checkpoint, global_step=epoch)
 
     t_start = time.time()
-    for (bx, bm, br) in train.minibatches(FLAGS.batch):
+    for i, (bx, bm, br) in enumerate(train.minibatches(FLAGS.batch)):
       feed = {
         model.x: bx,
         learning_rate: lr,
@@ -100,7 +106,17 @@ def main(args):
         feed[model.labels] = br
       else:
         feed[model.labels] = bm
-      session.run(model.train_step, feed_dict=feed)
+      ops = {
+        'train': model.train_step
+      }
+      if writer and i % 100 == 0:
+        ops['summary'] = summary_op
+        ops['global_step'] = model.global_step
+
+      vals = session.run(ops, feed_dict=feed)
+      if 'summary' in vals:
+        writer.add_summary(vals['summary'], vals['global_step'])
+
     t_end = time.time()
     if FLAGS.lr_interval and ((epoch+1) % FLAGS.lr_interval) == 0:
       lr /= FLAGS.lr_scale

@@ -38,6 +38,7 @@ class PerceptionModel(object):
     self.output = tf.reshape(
       tf.nn.dropout(activations, keep_prob=self.keep_prob),
       (-1, outputs))
+    tf.summary.histogram('perception activations', self.output)
 
 class PredictionModel(object):
   def __init__(self, model_def, perception=None):
@@ -106,6 +107,7 @@ class EvaluationModel(object):
 
       self.predictions = tf.reshape(tf.sigmoid(
         tf.matmul(perception.output, self.W) + self.b), (-1,))
+    tf.summary.histogram('predictions', self.predictions)
     tf.add_to_collection('predictions', self.predictions)
 
   def add_train_ops(self, optimizer, regularize=0):
@@ -115,10 +117,12 @@ class EvaluationModel(object):
     with tf.variable_scope('Train'):
       self.mse_loss = tf.losses.mean_squared_error(
         labels=self.labels, predictions=self.predictions)
+      tf.summary.scalar('mse_loss', self.mse_loss)
       self.regularization_loss = tf.contrib.layers.apply_regularization(
         tf.contrib.layers.l2_regularizer(regularize),
       )
 
       self.loss = self.mse_loss + self.regularization_loss
+      tf.summary.scalar('loss', self.loss)
       self.global_step = tf.Variable(0, name='global_step', trainable=False)
       self.train_step = optimizer.minimize(self.loss, global_step=self.global_step)
