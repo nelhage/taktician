@@ -20,6 +20,7 @@ class PerceptionModel(object):
             kernel_size=model_def.kernel,
             trainable=True,
             variables_collections={'weights': [tf.GraphKeys.WEIGHTS]},
+            activation_fn=tf.nn.relu,
           )
           self.layers.append(activations)
 
