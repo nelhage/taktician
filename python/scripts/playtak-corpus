@@ -24,6 +24,7 @@ class Position(object):
   pos  = attr.ib()
   ply  = attr.ib()
   move = attr.ib()
+  plies = attr.ib()
 
 def seeded_hash(data):
   data = data + (FLAGS.seed,)
@@ -92,15 +93,23 @@ ORDER BY day ASC,id ASC
     with open(os.path.join(GAMES_DIR, day, str(id) + ".ptn")) as f:
       text = f.read()
     ptn = tak.ptn.PTN.parse(text)
+    if not ptn.moves: continue
+
     result = parse_result(result_s)
     g = ptn.initial_position()
+
+    want = want_move
+    if FLAGS.one:
+      want_ply = seeded_hash((day, id)) % len(ptn.moves)
+      want = lambda day, id, ply: ply == want_ply
+
     for i, m in enumerate(ptn.moves):
-      if want_move(day, id, i):
+      if want(day, id, i):
         if in_test_set(day, id):
           out = test
         else:
           out = train
-        out.append(Position(day, id, result, g, i, m))
+        out.append(Position(day, id, result, g, i, m, len(ptn.moves)))
 
       g = g.move(m)
       if result is not None:
@@ -118,7 +127,7 @@ ORDER BY day ASC,id ASC
         w.writerow((tak.ptn.format_tps(rec.pos),
                     tak.ptn.format_move(rec.move),
                     rec.value,
-                    rec.day, rec.id, rec.ply,
+                    rec.day, rec.id, rec.ply, rec.plies,
         ))
   with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
     json.dump({
@@ -145,6 +154,8 @@ def arg_parser():
                      help='select every Nth move')
   group.add_argument('--sample', default=None, type=int,
                      help='select 1/N moves at random')
+  group.add_argument('--one', default=False, action='store_true',
+                     help='select one position uniformly at random')
 
   parser.add_argument('--seed', default=1, type=int,
                       help='random seed')
