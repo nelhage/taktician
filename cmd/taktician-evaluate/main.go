@@ -191,8 +191,8 @@ func main() {
 	if *c2 != "" {
 		log.Printf("p2c=%s", *c2)
 	}
-	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d",
-		len(st.Games), *seed, st.Ties, st.Cutoff, st.White, st.Black)
+	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d depth=%d limit=%s",
+		len(st.Games), *seed, st.Ties, st.Cutoff, st.White, st.Black, *depth, *limit)
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
