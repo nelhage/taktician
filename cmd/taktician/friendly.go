@@ -22,7 +22,7 @@ const (
 
 	undoTimeout = 30 * time.Second
 
-	defaultLevel = 7
+	defaultLevel = 6
 
 	docURL = "http://bit.ly/25h33rC"
 )
