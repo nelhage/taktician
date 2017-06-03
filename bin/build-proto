@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu
+cd "$(dirname "$0")/.."
+protoc -I proto/ \
+       --python_out=python/tak/proto/ --go_out=pb \
+       proto/*.proto

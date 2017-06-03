@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='model.proto',
   package='tak.proto',
   syntax='proto3',
-  serialized_pb=_b('\n\x0bmodel.proto\x12\ttak.proto\"Y\n\x08ModelDef\x12\x0c\n\x04size\x18\x01 \x01(\x05\x12\x0e\n\x06layers\x18\x02 \x01(\x05\x12\x0e\n\x06kernel\x18\x03 \x01(\x05\x12\x0f\n\x07\x66ilters\x18\x04 \x01(\x05\x12\x0e\n\x06hidden\x18\x05 \x01(\x05\x62\x06proto3')
+  serialized_pb=_b('\n\x0bmodel.proto\x12\ttak.proto\"Y\n\x08ModelDef\x12\x0c\n\x04size\x18\x01 \x01(\x05\x12\x0e\n\x06layers\x18\x02 \x01(\x05\x12\x0e\n\x06kernel\x18\x03 \x01(\x05\x12\x0f\n\x07\x66ilters\x18\x04 \x01(\x05\x12\x0e\n\x06hidden\x18\x05 \x01(\x05\x42\x04Z\x02pbb\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -94,4 +94,6 @@ ModelDef = _reflection.GeneratedProtocolMessageType('ModelDef', (_message.Messag
 _sym_db.RegisterMessage(ModelDef)
 
 
+DESCRIPTOR.has_options = True
+DESCRIPTOR._options = _descriptor._ParseOptions(descriptor_pb2.FileOptions(), _b('Z\002pb'))
 # @@protoc_insertion_point(module_scope)
