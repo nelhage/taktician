@@ -6,9 +6,11 @@ Package pb is a generated protocol buffer package.
 
 It is generated from these files:
 	model.proto
+	position.proto
 
 It has these top-level messages:
 	ModelDef
+	Position
 */
 package pb
 

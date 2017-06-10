@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import tak.ptn
+import tak.proto
 
 import attr
 
@@ -15,16 +16,6 @@ import sys
 
 FLAGS = None
 GAMES_DIR = os.path.join(os.path.dirname(__file__), "../../games")
-
-@attr.s
-class Position(object):
-  day  = attr.ib()
-  id   = attr.ib()
-  value = attr.ib()
-  pos  = attr.ib()
-  ply  = attr.ib()
-  move = attr.ib()
-  plies = attr.ib()
 
 def seeded_hash(data):
   data = data + (FLAGS.seed,)
@@ -109,7 +100,18 @@ ORDER BY day ASC,id ASC
           out = test
         else:
           out = train
-        out.append(Position(day, id, result, g, i, m, len(ptn.moves)))
+        out.append(tak.proto.Position(
+          day = day,
+          id = int(id),
+          ply = i,
+
+          tps = tak.ptn.format_tps(g),
+
+          move = tak.ptn.format_move(m),
+
+          value = result,
+          plies = len(ptn.moves)
+        ))
 
       g = g.move(m)
       if result is not None:
@@ -124,9 +126,7 @@ ORDER BY day ASC,id ASC
     with open(os.path.join(FLAGS.out, path+".csv"), 'w') as f:
       w = csv.writer(f)
       for rec in positions:
-        w.writerow((tak.ptn.format_tps(rec.pos),
-                    tak.ptn.format_move(rec.move),
-                    rec.value,
+        w.writerow((rec.tps, rec.move, rec.value,
                     rec.day, rec.id, rec.ply, rec.plies,
         ))
   with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
