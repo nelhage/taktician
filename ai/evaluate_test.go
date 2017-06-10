@@ -42,7 +42,7 @@ func TestEvaluateWinner(t *testing.T) {
 		if eval < tc.min || eval > tc.max {
 			t.Errorf("%d: eval=%d (not in [%d,%d])", i, eval, tc.min, tc.max)
 		}
-		termEval := evaluateTerminal(p, &defaultTerminal)
+		termEval := evaluateTerminal(p, &defaultWeights)
 		if termEval < tc.min || termEval > tc.max {
 			t.Errorf("%d: evalTerminal=%d (not in [%d,%d])", i, termEval, tc.min, tc.max)
 		}
@@ -82,8 +82,8 @@ func benchmarkEval(b *testing.B, tps string) {
 	}
 	c := bitboard.Precompute(uint(p.Size()))
 	w := DefaultWeights[p.Size()]
-	w.Potential = 100
-	w.Threat = 300
+	w[Potential] = 100
+	w[Threat] = 300
 	eval := MakeEvaluator(p.Size(), &w)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -9,58 +9,60 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type FlatScores struct {
-	Hard, Soft int
-}
+type Feature int
 
-type TerminalWeights struct {
-	Plies            int
-	Flats            int
-	Reserves         int
-	OpponentReserves int
-}
+//go:generate stringer -type=Feature
+const (
+	Tempo Feature = iota
+	TopFlat
+	Standing
+	Capstone
 
-type Weights struct {
-	Tempo int
+	HardTopCap
+	CapMobility
 
-	TopFlat  int
-	Standing int
-	Capstone int
+	FlatCaptives_Soft
+	FlatCaptives_Hard
+	StandingCaptives_Soft
+	StandingCaptives_Hard
+	CapstoneCaptives_Soft
+	CapstoneCaptives_Hard
 
-	HardTopCap  int
-	CapMobility int
+	Liberties
+	GroupLiberties
 
-	FlatCaptives     FlatScores
-	StandingCaptives FlatScores
-	CapstoneCaptives FlatScores
+	Groups
+	Groups_1
+	Groups_2
+	Groups_3
+	Groups_4
+	Groups_5
+	Groups_6
+	Groups_7
+	Groups_8
 
-	Liberties      int
-	GroupLiberties int
+	Potential
+	Threat
 
-	Groups [8]int
+	EmptyControl
+	FlatControl
 
-	Potential int
-	Threat    int
+	Center
+	CenterControl
 
-	EmptyControl int
-	FlatControl  int
+	ThrowMine
+	ThrowTheirs
+	ThrowEmpty
 
-	Center        int
-	CenterControl int
+	Terminal_Plies
+	Terminal_Flats
+	Terminal_Reserves
+	Terminal_OpponentReserves
 
-	ThrowMine   int
-	ThrowTheirs int
-	ThrowEmpty  int
+	MaxFeature
+)
 
-	Terminal TerminalWeights
-}
-
-var defaultTerminal = TerminalWeights{
-	Flats:            500,
-	Plies:            -100,
-	OpponentReserves: 10,
-	Reserves:         1,
-}
+type Weights [MaxFeature]int64
 
 var defaultWeights = Weights{
 	Tempo: 50,
@@ -72,26 +74,17 @@ var defaultWeights = Weights{
 	HardTopCap:  100,
 	CapMobility: 10,
 
-	FlatCaptives: FlatScores{
-		Hard: 200,
-		Soft: -200,
-	},
-	StandingCaptives: FlatScores{
-		Hard: 300,
-		Soft: -100,
-	},
-	CapstoneCaptives: FlatScores{
-		Hard: 250,
-		Soft: -100,
-	},
+	FlatCaptives_Hard: 200,
+	FlatCaptives_Soft: -200,
 
-	Groups: [8]int{
-		0,   // 0
-		0,   // 1
-		0,   // 2
-		100, // 3
-		300, // 4
-	},
+	StandingCaptives_Hard: 300,
+	StandingCaptives_Soft: -100,
+
+	CapstoneCaptives_Hard: 250,
+	CapstoneCaptives_Soft: -100,
+
+	Groups_3: 100,
+	Groups_4: 300,
 
 	Potential: 100,
 	Threat:    300,
@@ -102,68 +95,44 @@ var defaultWeights = Weights{
 	Center:        40,
 	CenterControl: 10,
 
-	Terminal: defaultTerminal,
+	Terminal_Flats:            500,
+	Terminal_Plies:            -100,
+	Terminal_OpponentReserves: 10,
+	Terminal_Reserves:         1,
 }
 
-var defaultWeights6 = Weights{
-	Tempo: 50,
-
-	TopFlat:  400,
-	Standing: 200,
-	Capstone: 300,
-
-	HardTopCap:  100,
-	CapMobility: 10,
-
-	FlatCaptives: FlatScores{
-		Hard: 200,
-		Soft: -200,
-	},
-	StandingCaptives: FlatScores{
-		Hard: 300,
-		Soft: -150,
-	},
-	CapstoneCaptives: FlatScores{
-		Hard: 250,
-		Soft: -150,
-	},
-
-	Groups: [8]int{
-		0,   // 0
-		0,   // 1
-		0,   // 2
-		100, // 3
-		300, // 4
-		500, // 5
-	},
-
-	Potential: 100,
-	Threat:    300,
-
-	EmptyControl: 20,
-	FlatControl:  50,
-
-	Center:        40,
-	CenterControl: 10,
-
-	Terminal: defaultTerminal,
+var overrides6 = Weights{
+	Groups_5:              500,
+	StandingCaptives_Soft: -150,
+	CapstoneCaptives_Soft: -150,
 
 	ThrowMine:   10,
 	ThrowTheirs: 50,
 	ThrowEmpty:  40,
 }
 
-var DefaultWeights = []Weights{
-	defaultWeights,  // 0
-	defaultWeights,  // 1
-	defaultWeights,  // 2
-	defaultWeights,  // 3
-	defaultWeights,  // 4
-	defaultWeights,  // 5
-	defaultWeights6, // 6
-	defaultWeights,  // 7
-	defaultWeights,  // 8
+func init() {
+	defaultWeights6 := defaultWeights
+	for i, v := range overrides6 {
+		if v != 0 {
+			defaultWeights6[i] = v
+		}
+	}
+
+	DefaultWeights = []Weights{
+		defaultWeights,  // 0
+		defaultWeights,  // 1
+		defaultWeights,  // 2
+		defaultWeights,  // 3
+		defaultWeights,  // 4
+		defaultWeights,  // 5
+		defaultWeights6, // 6
+		defaultWeights,  // 7
+		defaultWeights,  // 8
+	}
 }
+
+var DefaultWeights []Weights
 
 func MakeEvaluator(size int, w *Weights) EvaluationFunc {
 	if w == nil {
@@ -176,7 +145,7 @@ func MakeEvaluator(size int, w *Weights) EvaluationFunc {
 
 const moveScale = 100
 
-func evaluateTerminal(p *tak.Position, w *TerminalWeights) int64 {
+func evaluateTerminal(p *tak.Position, w *Weights) int64 {
 	d := p.WinDetails()
 	if d.Winner == tak.NoColor {
 		return 0
@@ -197,10 +166,10 @@ func evaluateTerminal(p *tak.Position, w *TerminalWeights) int64 {
 
 	v := WinBase
 
-	v += int64(w.Reserves)*reserves +
-		int64(w.Flats)*flats +
-		int64(w.OpponentReserves)*opponent +
-		int64(w.Plies*p.MoveNumber())
+	v += w[Terminal_Reserves]*reserves +
+		w[Terminal_Flats]*flats +
+		w[Terminal_OpponentReserves]*opponent +
+		w[Terminal_Plies]*int64(p.MoveNumber())
 
 	if d.Winner == p.ToMove() {
 		return v
@@ -224,7 +193,7 @@ func EvaluateWinner(_ *bitboard.Constants, p *tak.Position) int64 {
 
 func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	if over, _ := p.GameOver(); over {
-		return evaluateTerminal(p, &w.Terminal)
+		return evaluateTerminal(p, w)
 	}
 
 	var score int64
@@ -232,20 +201,20 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 	analysis := p.Analysis()
 
 	if p.ToMove() == tak.White {
-		score += int64(w.TopFlat/2 + w.Tempo)
+		score += int64(w[TopFlat]/2 + w[Tempo])
 	} else {
-		score -= int64(w.TopFlat/2 + w.Tempo)
+		score -= int64(w[TopFlat]/2 + w[Tempo])
 	}
 
-	score += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing)) * w.TopFlat)
-	score -= int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing)) * w.TopFlat)
-	score += int64(bitboard.Popcount(p.White&p.Standing) * w.Standing)
-	score -= int64(bitboard.Popcount(p.Black&p.Standing) * w.Standing)
-	score += int64(bitboard.Popcount(p.White&p.Caps) * w.Capstone)
-	score -= int64(bitboard.Popcount(p.Black&p.Caps) * w.Capstone)
+	score += int64(bitboard.Popcount(p.White&^(p.Caps|p.Standing))) * w[TopFlat]
+	score -= int64(bitboard.Popcount(p.Black&^(p.Caps|p.Standing))) * w[TopFlat]
+	score += int64(bitboard.Popcount(p.White&p.Standing)) * w[Standing]
+	score -= int64(bitboard.Popcount(p.Black&p.Standing)) * w[Standing]
+	score += int64(bitboard.Popcount(p.White&p.Caps)) * w[Capstone]
+	score -= int64(bitboard.Popcount(p.Black&p.Caps)) * w[Capstone]
 
-	score += int64(bitboard.Popcount(p.White&^c.Edge) * w.Center)
-	score -= int64(bitboard.Popcount(p.Black&^c.Edge) * w.Center)
+	score += int64(bitboard.Popcount(p.White&^c.Edge)) * w[Center]
+	score -= int64(bitboard.Popcount(p.Black&^c.Edge)) * w[Center]
 
 	mask := uint64((1 << c.Size) - 1)
 	for i, h := range p.Height {
@@ -267,9 +236,9 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 		}
 		if p.Caps&bit != 0 {
 			if ((p.Black & bit) == 0) == ((s & 1) == 0) {
-				score += sign * int64(w.HardTopCap)
+				score += sign * w[HardTopCap]
 			}
-			score += sign * int64(w.CapMobility) *
+			score += sign * w[CapMobility] *
 				int64(bitboard.Popcount(mobility(c, p, bit, int(h))))
 		}
 		if hf > 0 {
@@ -278,39 +247,39 @@ func evaluate(c *bitboard.Constants, w *Weights, p *tak.Position) int64 {
 			bt := bitboard.Popcount(throw & p.Black)
 			et := bitboard.Popcount(throw &^ (p.White | p.Black))
 			if sign == 1 {
-				score += int64(w.ThrowMine*wt +
-					w.ThrowTheirs*bt +
-					w.ThrowEmpty*et)
+				score += w[ThrowMine]*int64(wt) +
+					w[ThrowTheirs]*int64(bt) +
+					w[ThrowEmpty]*int64(et)
 			} else {
-				score += int64(w.ThrowMine*bt +
-					w.ThrowTheirs*wt +
-					w.ThrowEmpty*et)
+				score += w[ThrowMine]*int64(bt) +
+					w[ThrowTheirs]*int64(wt) +
+					w[ThrowEmpty]*int64(et)
 			}
 		}
 
 		switch {
 		case p.Standing&(1<<uint(i)) != 0:
-			score += sign * (int64(hf*w.StandingCaptives.Hard) +
-				int64(sf*w.StandingCaptives.Soft))
+			score += sign * (int64(hf)*w[StandingCaptives_Hard] +
+				int64(sf)*w[StandingCaptives_Soft])
 		case p.Caps&(1<<uint(i)) != 0:
-			score += sign * (int64(hf*w.CapstoneCaptives.Hard) +
-				int64(sf*w.CapstoneCaptives.Soft))
+			score += sign * (int64(hf)*w[CapstoneCaptives_Hard] +
+				int64(sf)*w[CapstoneCaptives_Soft])
 		default:
-			score += sign * (int64(hf*w.FlatCaptives.Hard) +
-				int64(sf*w.FlatCaptives.Soft))
+			score += sign * (int64(hf)*w[FlatCaptives_Hard] +
+				int64(sf)*w[FlatCaptives_Soft])
 		}
 	}
 
-	score += int64(scoreGroups(c, analysis.WhiteGroups, w, p.Black|p.Standing))
-	score -= int64(scoreGroups(c, analysis.BlackGroups, w, p.White|p.Standing))
+	score += scoreGroups(c, analysis.WhiteGroups, w, p.Black|p.Standing)
+	score -= scoreGroups(c, analysis.BlackGroups, w, p.White|p.Standing)
 
-	if w.Liberties != 0 {
+	if w[Liberties] != 0 {
 		wr := p.White &^ p.Standing
 		br := p.Black &^ p.Standing
 		wl := bitboard.Popcount(bitboard.Grow(c, ^p.Black, wr) &^ p.White)
 		bl := bitboard.Popcount(bitboard.Grow(c, ^p.White, br) &^ p.Black)
-		score += int64(w.Liberties * wl)
-		score -= int64(w.Liberties * bl)
+		score += w[Liberties] * int64(wl)
+		score -= w[Liberties] * int64(bl)
 	}
 
 	score += scoreThreats(c, w, p)
@@ -354,19 +323,19 @@ func mobility(c *bitboard.Constants, p *tak.Position, bit uint64, height int) ui
 	return m
 }
 
-func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) int {
-	sc := 0
+func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) int64 {
+	var sc int64
 	var allg uint64
 	for _, g := range gs {
 		w, h := bitboard.Dimensions(c, g)
 
-		sc += ws.Groups[w]
-		sc += ws.Groups[h]
+		sc += ws[int(Groups)+w]
+		sc += ws[int(Groups)+h]
 		allg |= g
 	}
-	if ws.GroupLiberties != 0 {
+	if ws[GroupLiberties] != 0 {
 		libs := bitboard.Popcount(bitboard.Grow(c, ^other, allg) &^ allg)
-		sc += libs * ws.GroupLiberties
+		sc += int64(libs) * ws[GroupLiberties]
 	}
 
 	return sc
@@ -443,7 +412,7 @@ func countThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
 }
 
 func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
-	if ws.Potential == 0 && ws.Threat == 0 {
+	if ws[Potential] == 0 && ws[Threat] == 0 {
 		return 0
 	}
 
@@ -456,7 +425,7 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 		return -ForcedWin
 	}
 
-	return int64((wp-bp)*ws.Potential) + int64((wt-bt)*ws.Threat)
+	return int64(wp-bp)*ws[Potential] + int64(wt-bt)*ws[Threat]
 }
 
 func computeInfluence(c *bitboard.Constants, mine uint64, out []uint64) {
@@ -502,7 +471,7 @@ func computeControl(c *bitboard.Constants, p *tak.Position) (uint64, uint64) {
 }
 
 func scoreControl(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
-	if ws.EmptyControl == 0 && ws.FlatControl == 0 {
+	if ws[EmptyControl] == 0 && ws[FlatControl] == 0 {
 		return 0
 	}
 	wc, bc := computeControl(c, p)
@@ -510,12 +479,12 @@ func scoreControl(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 	empty := c.Mask &^ (p.White | p.Black)
 	flat := (p.White | p.Black) &^ (p.Standing | p.Caps)
 	var s int64
-	s += int64(ws.EmptyControl *
-		(bitboard.Popcount(wc&empty) - bitboard.Popcount(bc&empty)))
-	s += int64(ws.FlatControl *
-		(bitboard.Popcount(wc&flat) - bitboard.Popcount(bc&flat)))
-	s += int64(ws.CenterControl *
-		(bitboard.Popcount(wc&^c.Edge) - bitboard.Popcount(bc&^c.Edge)))
+	s += ws[EmptyControl] *
+		int64(bitboard.Popcount(wc&empty)-bitboard.Popcount(bc&empty))
+	s += ws[FlatControl] *
+		int64(bitboard.Popcount(wc&flat)-bitboard.Popcount(bc&flat))
+	s += ws[CenterControl] *
+		int64(bitboard.Popcount(wc&^c.Edge)-bitboard.Popcount(bc&^c.Edge))
 	return s
 }
 
