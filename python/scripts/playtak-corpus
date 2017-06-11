@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import tak.ptn
 import tak.proto
+import tak.train
 
 import attr
 
@@ -124,18 +125,10 @@ ORDER BY day ASC,id ASC
 
   for (positions, path) in [(train, "train"), (test, "test")]:
     if FLAGS.proto:
-      with open(os.path.join(FLAGS.out, path+".dat"), 'wb') as f:
-        for rec in positions:
-          data = rec.SerializeToString()
-          f.write(struct.pack(">L", len(data)))
-          f.write(data)
+      tak.train.write_proto(os.path.join(FLAGS.out, path+".dat"), positions)
     else:
-      with open(os.path.join(FLAGS.out, path+".csv"), 'w') as f:
-        w = csv.writer(f)
-        for rec in positions:
-          w.writerow((rec.tps, rec.move, rec.value,
-                      rec.day, rec.id, rec.ply, rec.plies,
-          ))
+      tak.train.write_csv(os.path.join(FLAGS.out, path+".csv"), positions)
+
   with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
     json.dump({
       'sha1': read_git_commit(),

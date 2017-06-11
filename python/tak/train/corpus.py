@@ -1,9 +1,10 @@
 import tak.ptn
 import tak.proto
 
-import os
-import csv
 import attr
+import csv
+import os
+import struct
 
 import numpy as np
 
@@ -33,6 +34,27 @@ class Dataset(object):
   def __len__(self):
     return len(self.instances[0])
 
+def xread(fh, n):
+  b = fh.read(n)
+  if len(b) == 0:
+    raise EOFError
+
+  if len(b) != n:
+    raise IOError("incomplete read ({0}/{1} at off={2})".format(
+      len(b), n, fh.tell()))
+  return b
+
+def load_proto(path):
+  positions = []
+  with open(path, 'rb') as f:
+    while True:
+      try:
+        rlen, = struct.unpack(">L", xread(f, 4))
+        positions.append(tak.proto.Position.FromString(xread(f, rlen)))
+      except EOFError:
+        break
+  return positions
+
 def load_csv(path):
   positions = []
 
@@ -55,6 +77,21 @@ def load_csv(path):
 
       positions.append(p)
     return positions
+
+def write_csv(path, positions):
+  with open(path, 'w') as f:
+    w = csv.writer(f)
+    for rec in positions:
+      w.writerow((rec.tps, rec.move, rec.value,
+                  rec.day, rec.id, rec.ply, rec.plies,
+      ))
+
+def write_proto(path, positions):
+  with open(path, 'wb') as f:
+    for rec in positions:
+      data = rec.SerializeToString()
+      f.write(struct.pack(">L", len(data)))
+      f.write(data)
 
 def parse(positions, add_symmetries=False):
   out = []
@@ -101,10 +138,16 @@ def to_features(positions, add_symmetries=False):
   return Dataset(size, (xs, ys))
 
 def raw_load(dir):
-  return (
-    load_csv(os.path.join(dir, 'train.csv')),
-    load_csv(os.path.join(dir, 'test.csv')),
-  )
+  if os.path.isfile(os.path.join(dir, 'train.csv')):
+    return (
+      load_csv(os.path.join(dir, 'train.csv')),
+      load_csv(os.path.join(dir, 'test.csv')),
+    )
+  else:
+    return (
+      load_proto(os.path.join(dir, 'train.dat')),
+      load_proto(os.path.join(dir, 'test.dat')),
+    )
 
 def load_corpus(dir, add_symmetries=False):
   train, test = raw_load(dir)
@@ -118,4 +161,7 @@ def load_features(dir, add_symmetries=False):
     to_features(train, add_symmetries),
     to_features(test, add_symmetries))
 
-__all__ = ['Dataset', 'load_corpus', 'load_features']
+__all__ = ['Instance', 'Dataset',
+           'load_csv', 'load_proto',
+           'write_csv', 'write_proto',
+           'load_corpus', 'load_features']
