@@ -16,9 +16,11 @@ FLAGS = None
 
 def main(args):
   print("Loading data...")
-  train, test = tak.train.load_corpus(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
-  print("Loaded {0} training cases and {1} test cases...".format(
-    len(train.positions), len(test.positions)))
+  t = time.time()
+  train, test = tak.train.load_features(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
+  e = time.time()
+  print("Loaded {0} training cases and {1} test cases in {2:.3f}s...".format(
+    len(train.instances), len(test.instances), e-t))
 
   model_def = tak.proto.ModelDef(
     size    = train.size,
@@ -52,14 +54,14 @@ def main(args):
     loss, prec1, prec5 = session.run(
       [model.loss, model.prec1, model.prec5],
       feed_dict={
-        model.x: test.positions,
-        model.labels: test.moves,
+        model.x: test.instances[0],
+        model.labels: test.instances[1],
         model.keep_prob: 1.0,
       })
     print("epoch={0} test loss={1:0.4f} acc={2:0.2f}%/{3:0.2f}% pos/s={4:.2f}".format(
       epoch, loss,
       100*prec1, 100*prec5,
-      len(train.positions)/(t_end-t_start) if t_start else 0))
+      len(train)/(t_end-t_start) if t_start else 0))
     if FLAGS.checkpoint:
       saver.save(session, FLAGS.checkpoint, global_step=epoch)
 

@@ -123,12 +123,19 @@ ORDER BY day ASC,id ASC
     pass
 
   for (positions, path) in [(train, "train"), (test, "test")]:
-    with open(os.path.join(FLAGS.out, path+".csv"), 'w') as f:
-      w = csv.writer(f)
-      for rec in positions:
-        w.writerow((rec.tps, rec.move, rec.value,
-                    rec.day, rec.id, rec.ply, rec.plies,
-        ))
+    if FLAGS.proto:
+      with open(os.path.join(FLAGS.out, path+".dat"), 'wb') as f:
+        for rec in positions:
+          data = rec.SerializeToString()
+          f.write(struct.pack(">L", len(data)))
+          f.write(data)
+    else:
+      with open(os.path.join(FLAGS.out, path+".csv"), 'w') as f:
+        w = csv.writer(f)
+        for rec in positions:
+          w.writerow((rec.tps, rec.move, rec.value,
+                      rec.day, rec.id, rec.ply, rec.plies,
+          ))
   with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
     json.dump({
       'sha1': read_git_commit(),
@@ -170,6 +177,8 @@ def arg_parser():
   parser.add_argument('--size', default=5, type=int)
 
   parser.add_argument('--out', '-o', default='data/corpus')
+  parser.add_argument('--proto', default=False, action='store_true',
+                      help='Store positions as lists of protobuf')
   return parser
 
 if __name__ == '__main__':
