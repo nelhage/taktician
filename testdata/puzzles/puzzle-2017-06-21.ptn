@@ -1,0 +1,12 @@
+[Site "PlayTak.com"]
+[Event "Online Play"]
+[Date "2017.06.21"]
+[Time "19:58:33"]
+[Player1 "White"]
+[Player2 "Black"]
+[Clock "1:0 +5"]
+[Result "R-0"]
+[Size "5"]
+[TPS "1,1,1,x2/2,112,1,2,x/x2,121C,1,x/x3,1,2/2,2,2C,121S,x 2 14"]
+
+14. d4-
