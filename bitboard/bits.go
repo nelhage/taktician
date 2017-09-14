@@ -21,20 +21,6 @@ func Precompute(size uint) Constants {
 	return c
 }
 
-func Popcount(x uint64) int {
-	// bit population count, see
-	// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-	if x == 0 {
-		return 0
-	}
-	x -= (x >> 1) & 0x5555555555555555
-	x = (x>>2)&0x3333333333333333 + x&0x3333333333333333
-	x += x >> 4
-	x &= 0x0f0f0f0f0f0f0f0f
-	x *= 0x0101010101010101
-	return int(x >> 56)
-}
-
 func Flood(c *Constants, within uint64, seed uint64) uint64 {
 	for {
 		next := Grow(c, within, seed)
