@@ -20,7 +20,7 @@ def main(args):
   train, test = tak.train.load_features(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
   e = time.time()
   print("Loaded {0} training cases and {1} test cases in {2:.3f}s...".format(
-    len(train.instances), len(test.instances), e-t))
+    len(train), len(test), e-t))
 
   model_def = tak.proto.ModelDef(
     size    = train.size,
