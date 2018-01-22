@@ -96,23 +96,23 @@ def write_proto(path, positions):
 def parse(positions, add_symmetries=False):
   out = []
   for p in positions:
-    position = tak.ptn.parse_tps(p.tps),
-    move = tak.ptn.parse_move(p.move),
+    position = tak.ptn.parse_tps(p.tps)
+    move = tak.ptn.parse_move(p.move)
 
     if add_symmetries:
       for sym in tak.symmetry.SYMMETRIES:
         sp = tak.symmetry.transform_position(sym, position)
-        sm = tak.symmetry.transform_move(sym, move)
+        sm = tak.symmetry.transform_move(sym, move, position.size)
         out.append(Instance(
           proto = p,
           position = sp,
           move = sm))
     else:
-        out.append(Instance(
-          proto = p,
-          position = position,
-          move = move))
-    return out
+      out.append(Instance(
+        proto = p,
+        position = position,
+        move = move))
+  return out
 
 def to_features(positions, add_symmetries=False):
   p = tak.ptn.parse_tps(positions[0].tps)
