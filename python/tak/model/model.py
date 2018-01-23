@@ -24,20 +24,19 @@ class PerceptionModel(object):
           )
           self.layers.append(activations)
 
-      outputs = self.size*self.size*model_def.filters
       if model_def.hidden > 0:
-        self.W_h = tf.Variable(tf.zeros([outputs, model_def.hidden]), name="weights")
-        self.b_h = tf.Variable(tf.zeros([model_def.hidden]), name="biases")
-
-        x = tf.reshape(activations, [-1, outputs])
-        activations = tf.nn.relu(tf.matmul(x, self.W_h) + self.b_h)
-        outputs = model_def.hidden
+        activations = tf.contrib.layers.fully_connected(
+          tf.contrib.layers.flatten(activations),
+          scope = 'Hidden',
+          num_outputs = model_def.hidden,
+          activation_fn = tf.nn.relu,
+        )
+    activations = tf.contrib.layers.flatten(activations)
 
     self.keep_prob = tf.placeholder_with_default(
       tf.ones(()), shape=(), name='keep_prob')
 
     self.output = tf.nn.dropout(activations, keep_prob=self.keep_prob)
-    self.output_count = outputs
 
 class PredictionModel(object):
   def __init__(self, model_def, perception=None):
@@ -56,12 +55,12 @@ class PredictionModel(object):
     self.move_count = tak.train.move_count(self.size)
     self.keep_prob = perception.keep_prob
 
-    with tf.variable_scope('Output'):
-      self.W = tf.Variable(tf.zeros([perception.output_count, self.move_count]), name="weights")
-      self.b = tf.Variable(tf.zeros([self.move_count]), name="biases")
-
-      x = tf.reshape(perception.output, [-1, perception.output_count])
-      self.logits = tf.matmul(x, self.W) + self.b
+    self.logits = tf.contrib.layers.fully_connected(
+      tf.contrib.layers.flatten(perception.output),
+      scope = 'Output',
+      num_outputs = self.move_count,
+      activation_fn = None,
+    )
     tf.add_to_collection('logits', self.logits)
 
   def add_train_ops(self, optimizer, regularize=0):
