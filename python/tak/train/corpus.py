@@ -27,7 +27,7 @@ class Dataset(object):
   def minibatches(self, batch_size):
     perm = np.random.permutation(len(self.instances[0]))
     i = 0
-    while i < len(self.instances):
+    while i < len(self):
       yield [o[perm[i:i+batch_size]] for o in self.instances]
       i += batch_size
 
