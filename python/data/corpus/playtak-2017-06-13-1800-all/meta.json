@@ -1,0 +1,26 @@
+{
+  "sha1": "2dc1228c843c0f823b6cfab18a2649da6355c3bf-dirty",
+  "opts": {
+    "test_fraction": 0.05,
+    "stride": null,
+    "size": 5,
+    "skip": 2,
+    "sample": 1,
+    "out": "data/corpus/playtak-2017-06-13-1800-all",
+    "rating": 1800,
+    "limit": null,
+    "seed": 1,
+    "one": false,
+    "proto": true
+  },
+  "argv": [
+    "scripts/playtak-corpus",
+    "--rating",
+    "1800",
+    "--sample=1",
+    "--skip=2",
+    "--out",
+    "data/corpus/playtak-2017-06-13-1800-all",
+    "--proto"
+  ]
+}

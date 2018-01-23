@@ -2,3 +2,4 @@ data/graphs/*.data-* filter=lfs diff=lfs merge=lfs -text
 data/graphs/*.meta filter=lfs diff=lfs merge=lfs -text
 data/graphs/*.index filter=lfs diff=lfs merge=lfs -text
 data/corpus/*/*.csv filter=lfs diff=lfs merge=lfs -text
+data/corpus/*/*.dat filter=lfs diff=lfs merge=lfs -text
