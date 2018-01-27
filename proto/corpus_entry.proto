@@ -3,7 +3,7 @@ syntax = "proto3";
 package tak.proto;
 option go_package="pb";
 
-message Position {
+message CorpusEntry {
     string day = 1;
     int32 id = 2;
     int32 ply = 3;

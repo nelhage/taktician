@@ -11,7 +11,7 @@ import numpy as np
 @attr.s(frozen=True)
 class Instance(object):
   proto    = attr.ib(
-    validator = attr.validators.instance_of(tak.proto.Position))
+    validator = attr.validators.instance_of(tak.proto.CorpusEntry))
 
   position = attr.ib(
     validator = attr.validators.instance_of(tak.Position))
@@ -50,7 +50,7 @@ def load_proto(path):
     while True:
       try:
         rlen, = struct.unpack(">L", xread(f, 4))
-        positions.append(tak.proto.Position.FromString(xread(f, rlen)))
+        positions.append(tak.proto.CorpusEntry.FromString(xread(f, rlen)))
       except EOFError:
         break
   return positions
@@ -61,7 +61,7 @@ def load_csv(path):
   with open(path) as f:
     reader = csv.reader(f)
     for row in reader:
-      p = tak.proto.Position()
+      p = tak.proto.CorpusEntry()
       p.tps = row[0]
       p.move = row[1]
       if len(row) > 2 and row[2]:

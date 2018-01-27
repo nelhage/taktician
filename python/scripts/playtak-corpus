@@ -101,7 +101,7 @@ ORDER BY day ASC,id ASC
           out = test
         else:
           out = train
-        out.append(tak.proto.Position(
+        out.append(tak.proto.CorpusEntry(
           day = day,
           id = int(id),
           ply = i,

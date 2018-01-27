@@ -1,2 +1,2 @@
 from .model_pb2 import ModelDef
-from .position_pb2 import Position
+from .corpus_entry_pb2 import CorpusEntry
