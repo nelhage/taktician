@@ -10,6 +10,7 @@ service Taktician {
 message AnalyzeRequest {
     string position = 1;
     int32 depth = 2;
+    bool precise = 3;
 }
 
 message AnalyzeResponse {

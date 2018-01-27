@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='tak/proto/taktician.proto',
   package='tak.proto',
   syntax='proto3',
-  serialized_pb=_b('\n\x19tak/proto/taktician.proto\x12\ttak.proto\"1\n\x0e\x41nalyzeRequest\x12\x10\n\x08position\x18\x01 \x01(\t\x12\r\n\x05\x64\x65pth\x18\x02 \x01(\x05\";\n\x0f\x41nalyzeResponse\x12\n\n\x02pv\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x01(\x03\x12\r\n\x05\x64\x65pth\x18\x03 \x01(\x05\x32O\n\tTaktician\x12\x42\n\x07\x41nalyze\x12\x19.tak.proto.AnalyzeRequest\x1a\x1a.tak.proto.AnalyzeResponse\"\x00\x42\x04Z\x02pbb\x06proto3')
+  serialized_pb=_b('\n\x19tak/proto/taktician.proto\x12\ttak.proto\"B\n\x0e\x41nalyzeRequest\x12\x10\n\x08position\x18\x01 \x01(\t\x12\r\n\x05\x64\x65pth\x18\x02 \x01(\x05\x12\x0f\n\x07precise\x18\x03 \x01(\x08\";\n\x0f\x41nalyzeResponse\x12\n\n\x02pv\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x01(\x03\x12\r\n\x05\x64\x65pth\x18\x03 \x01(\x05\x32O\n\tTaktician\x12\x42\n\x07\x41nalyze\x12\x19.tak.proto.AnalyzeRequest\x1a\x1a.tak.proto.AnalyzeResponse\"\x00\x42\x04Z\x02pbb\x06proto3')
 )
 
 
@@ -46,6 +46,13 @@ _ANALYZEREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='precise', full_name='tak.proto.AnalyzeRequest.precise', index=2,
+      number=3, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -59,7 +66,7 @@ _ANALYZEREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=40,
-  serialized_end=89,
+  serialized_end=106,
 )
 
 
@@ -103,8 +110,8 @@ _ANALYZERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=91,
-  serialized_end=150,
+  serialized_start=108,
+  serialized_end=167,
 )
 
 DESCRIPTOR.message_types_by_name['AnalyzeRequest'] = _ANALYZEREQUEST
@@ -135,8 +142,8 @@ _TAKTICIAN = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=152,
-  serialized_end=231,
+  serialized_start=169,
+  serialized_end=248,
   methods=[
   _descriptor.MethodDescriptor(
     name='Analyze',

@@ -16,32 +16,38 @@ import (
 )
 
 type server struct {
-	sync.Mutex
-
-	cache       *ai.MinimaxAI
-	cacheConfig ai.MinimaxConfig
+	cache struct {
+		sync.Mutex
+		player  *ai.MinimaxAI
+		cfg     ai.MinimaxConfig
+		precise bool
+	}
 }
 
 func (s *server) Analyze(ctx context.Context, req *pb.AnalyzeRequest) (*pb.AnalyzeResponse, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.cache.Lock()
+	defer s.cache.Unlock()
 
 	p, e := ptn.ParseTPS(req.Position)
 	if e != nil {
 		return nil, e
 	}
 
-	if s.cacheConfig.Size != p.Size() || s.cacheConfig.Depth != int(req.Depth) {
-		s.cacheConfig = ai.MinimaxConfig{
+	if s.cache.cfg.Size != p.Size() || s.cache.cfg.Depth != int(req.Depth) || s.cache.precise != req.Precise {
+		s.cache.cfg = ai.MinimaxConfig{
 			Size:  p.Size(),
 			Depth: int(req.Depth),
 			Debug: 1,
 		}
-		s.cache = ai.NewMinimax(s.cacheConfig)
+		if req.Precise {
+			s.cache.cfg.MakePrecise()
+		}
+		s.cache.player = ai.NewMinimax(s.cache.cfg)
+		s.cache.precise = req.Precise
 	}
 
 	var resp pb.AnalyzeResponse
-	pv, value, _ := s.cache.Analyze(ctx, p)
+	pv, value, _ := s.cache.player.Analyze(ctx, p)
 	for _, m := range pv {
 		resp.Pv = append(resp.Pv, ptn.FormatMove(m))
 	}
