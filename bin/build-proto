@@ -1,6 +1,13 @@
 #!/bin/bash
 set -eu
 cd "$(dirname "$0")/.."
-protoc -I proto/ \
-       --python_out=python/tak/proto/ --go_out=pb \
-       proto/*.proto
+protoc \
+    -I proto/ \
+    --go_out=plugins=grpc:pb \
+    $(find proto/ -name '*.proto')
+python/venv/bin/python \
+    -m grpc_tools.protoc \
+    -I proto \
+    --python_out=python/ \
+    --grpc_python_out=python/ \
+    $(find proto/ -name '*.proto')

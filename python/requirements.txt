@@ -2,4 +2,6 @@ attrs
 pytest
 pytest-cov
 numpy
+grpcio
+grpcio-tools
 tensorflow==1.4.1

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package tak.proto;
+option go_package="pb";
+
+service Taktician {
+    rpc Analyze(AnalyzeRequest) returns(AnalyzeResponse) {}
+}
+
+message AnalyzeRequest {
+    string position = 1;
+    int32 depth = 2;
+}
+
+message AnalyzeResponse {
+    repeated string pv = 1;
+    int64 value = 2;
+    int32 depth = 3;
+}
