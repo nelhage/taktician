@@ -92,8 +92,20 @@ def main(args):
       [tak.ptn.format_move(m) for m in variant],
       list(resp.pv), resp.value))
     store_pvs(child, list(resp.pv), resp.value)
+
   if FLAGS.output is not None:
-    tak.train.corpus.write_proto(FLAGS.output, collect_children(root))
+    try:
+      os.makedirs(FLAGS.output)
+    except FileExistsError:
+      pass
+    train, test = [], []
+    for entry in collect_children(root):
+      if random.random() < FLAGS.test_fraction:
+        test.append(entry)
+      else:
+        train.append(entry)
+      tak.train.corpus.write_proto(os.path.join(FLAGS.output, 'train.dat'), train)
+      tak.train.corpus.write_proto(os.path.join(FLAGS.output, 'test.dat'), test)
 
 def arg_parser():
   parser = argparse.ArgumentParser()
@@ -105,6 +117,8 @@ def arg_parser():
                       help='write corpus to file')
   parser.add_argument('--greedy', type=float, default=None,
                       help='explore pv with probability')
+  parser.add_argument('--test-fraction', default=0.05, type=float,
+                      help='select fraction of games to use for training set')
 
   return parser
 
