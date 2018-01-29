@@ -6,7 +6,7 @@ import argparse
 
 def main(args):
   model = tak.model.load_model(FLAGS.model, eval_symmetries=FLAGS.symmetries)
-  pos = tak.Position.from_config(tak.Config(size=5))
+  pos = tak.Position.from_config(tak.Config(size=FLAGS.size))
 
   with open(FLAGS.out, 'w') as ptn:
     ptn.write('[Size "{0}"]\n'.format(pos.size))
@@ -17,7 +17,7 @@ def main(args):
         m = tak.ptn.parse_move('a1')
         pos = pos.move(m)
       elif pos.ply == 1:
-        m = tak.ptn.parse_move('a5')
+        m = tak.ptn.parse_move('a{}'.format(FLAGS.size))
         pos = pos.move(m)
       else:
         m, pos = model.get_move(pos)
@@ -32,6 +32,8 @@ def arg_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument('--model', type=str, default=None,
                       help='model to run')
+  parser.add_argument('--size', type=int, default=5,
+                      help='game size')
 
   parser.add_argument('--symmetries',
                       default=False,
