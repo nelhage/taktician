@@ -12,6 +12,9 @@ import random
 
 FLAGS = None
 
+def terminal_value(value):
+   return value > (1<<29) or value < -(1<<29)
+
 class Node(object):
   def __init__(self, position):
     self.position = position
@@ -25,7 +28,10 @@ def select_child(all_moves, root):
   node = root
   while node.pv is not None:
     while True:
-      mv = random.choice(all_moves)
+      if node.pv and not node.terminal and FLAGS.greedy and random.random() < FLAGS.greedy:
+        mv = node.pv
+      else:
+        mv = random.choice(all_moves)
       if mv not in node.children:
         try:
           pos = node.position.move(mv)
@@ -42,12 +48,14 @@ def select_child(all_moves, root):
   return (variant, node)
 
 def store_pvs(child, pvs, value):
-  if value < (1<<29) and value > -(1<<29):
+  if not terminal_value(value):
     pvs = pvs[:1]
 
   for pv in pvs:
     child.pv = tak.ptn.parse_move(pv)
     child.value = value
+    if terminal_value(value):
+      child.terminal = True
     try:
       pos = child.position.move(child.pv)
     except tak.game.IllegalMove:
@@ -95,6 +103,8 @@ def arg_parser():
                       help='examine N positions')
   parser.add_argument('--output', type=str, default=None,
                       help='write corpus to file')
+  parser.add_argument('--greedy', type=float, default=None,
+                      help='explore pv with probability')
 
   return parser
 
