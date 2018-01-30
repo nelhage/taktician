@@ -14,6 +14,8 @@ import (
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/pb/tak/proto"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/symmetry"
+	"github.com/nelhage/taktician/tak"
 )
 
 type server struct {
@@ -55,6 +57,30 @@ func (s *server) Analyze(ctx context.Context, req *pb.AnalyzeRequest) (*pb.Analy
 	resp.Value = value
 
 	return &resp, nil
+}
+
+func (s *server) Canonicalize(ctx context.Context, req *pb.CanonicalizeRequest) (*pb.CanonicalizeResponse, error) {
+	var ms []tak.Move
+	for _, mstr := range req.Moves {
+		mv, e := ptn.ParseMove(mstr)
+		if e != nil {
+			return nil, e
+		}
+		ms = append(ms, mv)
+	}
+
+	ms, e := symmetry.Canonical(int(req.Size), ms)
+	if e != nil {
+		return nil, e
+	}
+
+	var outms []string
+	for _, m := range ms {
+		outms = append(outms, ptn.FormatMove(m))
+	}
+	return &pb.CanonicalizeResponse{
+		Moves: outms,
+	}, nil
 }
 
 func main() {

@@ -4,7 +4,8 @@ package tak.proto;
 option go_package="pb";
 
 service Taktician {
-    rpc Analyze(AnalyzeRequest) returns(AnalyzeResponse) {}
+    rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse) {}
+    rpc Canonicalize(CanonicalizeRequest) returns (CanonicalizeResponse) {}
 }
 
 message AnalyzeRequest {
@@ -17,4 +18,13 @@ message AnalyzeResponse {
     repeated string pv = 1;
     int64 value = 2;
     int32 depth = 3;
+}
+
+message CanonicalizeRequest {
+    int32 size = 1;
+    repeated string moves = 2;
+}
+
+message CanonicalizeResponse {
+    repeated string moves = 1;
 }

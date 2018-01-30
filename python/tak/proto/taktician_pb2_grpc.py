@@ -19,6 +19,11 @@ class TakticianStub(object):
         request_serializer=tak_dot_proto_dot_taktician__pb2.AnalyzeRequest.SerializeToString,
         response_deserializer=tak_dot_proto_dot_taktician__pb2.AnalyzeResponse.FromString,
         )
+    self.Canonicalize = channel.unary_unary(
+        '/tak.proto.Taktician/Canonicalize',
+        request_serializer=tak_dot_proto_dot_taktician__pb2.CanonicalizeRequest.SerializeToString,
+        response_deserializer=tak_dot_proto_dot_taktician__pb2.CanonicalizeResponse.FromString,
+        )
 
 
 class TakticianServicer(object):
@@ -32,6 +37,13 @@ class TakticianServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def Canonicalize(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_TakticianServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -39,6 +51,11 @@ def add_TakticianServicer_to_server(servicer, server):
           servicer.Analyze,
           request_deserializer=tak_dot_proto_dot_taktician__pb2.AnalyzeRequest.FromString,
           response_serializer=tak_dot_proto_dot_taktician__pb2.AnalyzeResponse.SerializeToString,
+      ),
+      'Canonicalize': grpc.unary_unary_rpc_method_handler(
+          servicer.Canonicalize,
+          request_deserializer=tak_dot_proto_dot_taktician__pb2.CanonicalizeRequest.FromString,
+          response_serializer=tak_dot_proto_dot_taktician__pb2.CanonicalizeResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
