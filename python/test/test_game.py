@@ -298,7 +298,7 @@ class TestGameOver(object):
         [W], [B], [WS], [B], [W],
         [B], [W], [B ], [W], [B],
         [W], [B], [W ], [B], [W],
-      ], (None, tak.WinReason.FLATS)),
+      ], (tak.Color.BLACK, tak.WinReason.FLATS)),
     ]
     for i, tc in enumerate(cases):
       sq, want = tc
