@@ -72,7 +72,9 @@ def collect_children(root):
     if node.pv is not None:
       yield tak.proto.CorpusEntry(
         tps=tak.ptn.format_tps(node.position),
-        move=tak.ptn.format_move(node.pv)
+        move=tak.ptn.format_move(node.pv),
+        ply=node.position.ply,
+        value=node.value,
       )
     stk.extend(node.children.values())
 
