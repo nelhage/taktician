@@ -15,7 +15,7 @@ def parse_tps(tps):
 
   squares = []
   rows = board.split("/")
-  for row in rows:
+  for row in reversed(rows):
     rsq = parse_row(row)
     if len(rsq) != len(rows):
       raise IllegalTPS("inconsistent size")
@@ -60,7 +60,7 @@ def format_tps(pos):
     i = row*pos.size
     rows.append(_format_row(pos.board[i:i+pos.size]))
 
-  return ' '.join(['/'.join(rows),
+  return ' '.join(['/'.join(reversed(rows)),
                    str((pos.ply % 2) + 1),
                    str(pos.ply // 2 + 1)])
 

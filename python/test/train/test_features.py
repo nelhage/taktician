@@ -25,8 +25,8 @@ class TestFeatures(object):
     f = tak.train.features(b)
     assert np.sum(f[:,:,0]) == 1
     assert np.sum(f[:,:,1]) == 1
-    assert f[0,0,0] == 1.0
-    assert f[4,4,1] == 1.0
+    assert f[0,4,0] == 1.0
+    assert f[4,0,1] == 1.0
 
     assert np.all(f[:,:,2:14] == 0)
 
@@ -35,8 +35,8 @@ class TestFeatures(object):
     f1 = tak.train.features(b1)
     assert np.sum(f1[:,:,0]) == 1
     assert np.sum(f1[:,:,1]) == 1
-    assert f1[0,0,1] == 1.0
-    assert f1[4,4,0] == 1.0
+    assert f1[0,4,1] == 1.0
+    assert f1[4,0,0] == 1.0
 
   def test_flats(self):
     f = tak.train.features(
