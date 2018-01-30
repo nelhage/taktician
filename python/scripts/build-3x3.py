@@ -5,95 +5,82 @@ import tak.proto
 import tak.model
 import tak.symmetry
 
+import datetime
 import argparse
 import grpc
 import attr
 import random
+import os
 
 FLAGS = None
 
 def terminal_value(value):
    return value > (1<<29) or value < -(1<<29)
 
-class Node(object):
-  def __init__(self, position):
-    self.position = position
-    self.pv = None
-    self.value = None
-    self.terminal = position.winner()[0] is not None
-    self.children = {}
+def play_rollout(stub, all_moves, date, id):
+  ms = []
+  g = tak.game.Position.from_config(tak.game.Config(size=3))
+  g = g.move(tak.ptn.parse_move('a1'))
 
-def select_child(all_moves, root):
-  variant = []
-  node = root
-  while node.pv is not None:
+  if random.random() < 0.5:
+    g = g.move(tak.ptn.parse_move('a3'))
+  else:
+    g = g.move(tak.ptn.parse_move('c3'))
+
+  while not g.winner()[0]:
+    resp = stub.Analyze(
+      tak.proto.AnalyzeRequest(position=tak.ptn.format_tps(g), depth=8))
+    greedy = FLAGS.greedy and random.random() < FLAGS.greedy
+
     while True:
-      if node.pv and not node.terminal and FLAGS.greedy and random.random() < FLAGS.greedy:
-        mv = node.pv
+      if greedy:
+        mv = tak.ptn.parse_move(resp.pv[0])
       else:
         mv = random.choice(all_moves)
-      if mv not in node.children:
-        try:
-          pos = node.position.move(mv)
-        except tak.game.IllegalMove:
-          continue
-        node.children[mv] = Node(pos)
+
+      try:
+        nextg = g.move(mv)
         break
-      node = node.children[mv]
-      variant.append(mv)
-      if node.terminal:
-        variant = []
-        node = root
+      except tak.game.IllegalMove as ex:
+        if greedy:
+          print("wtf tako; illegal move b='{}' mv={} e={}".format(
+            tak.ptn.format_tps(g),
+            tak.ptn.format_move(mv),
+            ex,
+          ))
+          import pdb; pdb.set_trace()
+        continue
 
-  return (variant, node)
+    ms.append(tak.proto.CorpusEntry(
+      day = date,
+      id = id,
+      ply = g.ply,
+      tps = tak.ptn.format_tps(g),
+      move = resp.pv[0],
+      value = resp.value,
+    ))
+    g = nextg
+  return ms
 
-def store_pvs(child, pvs, value):
-  if not terminal_value(value):
-    pvs = pvs[:1]
-
-  for pv in pvs:
-    child.pv = tak.ptn.parse_move(pv)
-    child.value = value
-    if terminal_value(value):
-      child.terminal = True
-    try:
-      pos = child.position.move(child.pv)
-    except tak.game.IllegalMove:
-      return
-    child.children[child.pv] = Node(pos)
-
-    child = child.children[child.pv]
-    value = -value
-
-def collect_children(root):
-  stk = [root]
-  while stk:
-    node = stk.pop()
-    if node.pv is not None:
-      yield tak.proto.CorpusEntry(
-        tps=tak.ptn.format_tps(node.position),
-        move=tak.ptn.format_move(node.pv),
-        ply=node.position.ply,
-        value=node.value,
-      )
-    stk.extend(node.children.values())
+def flatten_rollouts(rollouts):
+  for game in rollouts:
+    for pos in game:
+      yield pos
 
 def main(args):
   channel = grpc.insecure_channel(FLAGS.server)
   stub = tak.proto.TakticianStub(channel)
 
-  root = Node(tak.game.Position.from_config(tak.game.Config(size=3)))
   all_moves = tak.enumerate_moves(3)
 
+  rollouts = []
+
+  date = str(datetime.date.today())
   for i in range(FLAGS.iterations):
-    variant, child = select_child(all_moves, root)
-    resp = stub.Analyze(
-      tak.proto.AnalyzeRequest(position=tak.ptn.format_tps(child.position),
-                               depth=8))
-    print("variant={} pv={} v={}".format(
-      [tak.ptn.format_move(m) for m in variant],
-      list(resp.pv), resp.value))
-    store_pvs(child, list(resp.pv), resp.value)
+    rollout = play_rollout(stub, all_moves, date, i)
+    rollouts.append(rollout)
+    print("pvs={}".format(
+      [m.move for m in rollout]))
 
   if FLAGS.output is not None:
     try:
@@ -101,7 +88,7 @@ def main(args):
     except FileExistsError:
       pass
     train, test = [], []
-    for entry in collect_children(root):
+    for entry in flatten_rollouts(rollouts):
       if random.random() < FLAGS.test_fraction:
         test.append(entry)
       else:
