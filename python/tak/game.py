@@ -34,7 +34,7 @@ class StoneCounts(object):
 
 class WinReason(enum.Enum):
   ROAD = 1
-  FLATS = 1
+  FLATS = 2
 
 @attr.s(frozen=True, slots=True)
 class Position(object):
