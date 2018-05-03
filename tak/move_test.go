@@ -265,3 +265,44 @@ func TestEqual(t *testing.T) {
 		t.Errorf("%#v = %#v!", a, b)
 	}
 }
+
+func BenchmarkPlace5(b *testing.B) {
+	p := New(Config{Size: 5})
+	p, e := p.Move(Move{0, 0, PlaceFlat, 0})
+	if e != nil {
+		b.Fatal(e)
+	}
+	p, e = p.Move(Move{4, 4, PlaceFlat, 0})
+	if e != nil {
+		b.Fatal(e)
+	}
+
+	p1 := Alloc(5)
+
+	m := Move{2, 2, PlaceFlat, 0}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p.MovePreallocated(m, p1)
+	}
+}
+
+func BenchmarkCopy5(b *testing.B) {
+	b.ReportAllocs()
+
+	b1 := Alloc(5)
+	b2 := Alloc(5)
+	for i := 0; i < b.N; i++ {
+		copyPosition(b1, b2)
+	}
+}
+
+func BenchmarkCopy8(b *testing.B) {
+	b.ReportAllocs()
+
+	b1 := Alloc(8)
+	b2 := Alloc(8)
+	for i := 0; i < b.N; i++ {
+		copyPosition(b1, b2)
+	}
+}
