@@ -22,9 +22,12 @@ type MCTSConfig struct {
 	C     float64
 	Seed  int64
 
-	Size int
+	InitialVisits int
+	MMDepth       int
+	MaxRollout    int
+	EvalThreshold int64
 
-	Policy PolicyFunc
+	Size int
 }
 
 type PolicyFunc func(ctx context.Context,
@@ -42,25 +45,16 @@ type MonteCarloAI struct {
 	r *rand.Rand
 }
 
-const (
-	visitThreshold = 10
-	maxMoves       = 50
-	evalThreshold  = 2000
-)
-
 type tree struct {
 	position    *tak.Position
 	move        tak.Move
 	simulations int
 
-	value int64
+	proven int
+	value  int
 
 	parent   *tree
 	children []*tree
-}
-
-func proven(v int64) bool {
-	return v > ai.WinThreshold || v < -ai.WinThreshold
 }
 
 type bySims []*tree
@@ -75,7 +69,6 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	tree := &tree{
 		position: p,
 	}
-	ai.populate(ctx, tree)
 	start := time.Now()
 	deadline, limited := ctx.Deadline()
 	if !limited || deadline.Sub(start) > ai.cfg.Limit {
@@ -86,9 +79,12 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	for time.Now().Before(deadline) {
 		node := ai.descend(tree)
 		ai.populate(ctx, node)
-		var val int64
-		if !proven(node.value) {
-			val = ai.evaluate(ctx, node)
+		if tree.proven != 0 {
+			break
+		}
+		var val int
+		if node.proven == 0 {
+			val = ai.rollout(ctx, node)
 		}
 		if ai.cfg.Debug > 4 {
 			var s []string
@@ -106,13 +102,16 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 			next = time.Now().Add(10 * time.Second)
 		}
 	}
+	if tree.proven != 0 {
+		return ai.mm.GetMove(ctx, p)
+	}
 	best := tree.children[0]
 	i := 0
 	sort.Sort(bySims(tree.children))
 	for _, c := range tree.children {
 		if ai.cfg.Debug > 2 {
-			log.Printf("[mcts][%s]: n=%d v=%d(%0.3f)",
-				ptn.FormatMove(c.move), c.simulations, c.value,
+			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f)",
+				ptn.FormatMove(c.move), c.simulations, c.proven, c.value,
 				float64(c.value)/float64(c.simulations))
 		}
 		if c.simulations > best.simulations {
@@ -135,7 +134,7 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 func (mc *MonteCarloAI) printpv(t *tree) {
 	depth := 0
 	ts := []*tree{t}
-	for t.children != nil && t.simulations > visitThreshold {
+	for t.children != nil && t.simulations > mc.cfg.InitialVisits {
 		best := t.children[0]
 		for _, c := range t.children {
 			if c.simulations > best.simulations {
@@ -156,16 +155,21 @@ func (mc *MonteCarloAI) printpv(t *tree) {
 	for _, m := range ms {
 		ptns = append(ptns, ptn.FormatMove(m))
 	}
-	log.Printf("pv=[%s] n=%d v=%d",
-		strings.Join(ptns, " "),
-		ts[1].simulations, ts[1].value,
-	)
+	if len(ts) > 0 {
+		log.Printf("pv=[%s] n=%d v=%d",
+			strings.Join(ptns, " "),
+			ts[1].simulations, ts[1].value,
+		)
+	}
 }
 
 func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
 	_, v, _ := mc.mm.Analyze(ctx, t.position)
-	if proven(v) {
-		t.value = v
+	if v > ai.WinThreshold {
+		t.proven = 1
+		return
+	} else if v < -ai.WinThreshold {
+		t.proven = -1
 		return
 	}
 
@@ -208,17 +212,19 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 	if t.children == nil {
 		return t
 	}
-	if t.simulations < visitThreshold {
-		return ai.descendPolicy(t)
-	}
 	var best *tree
 	var val float64
 	i := 0
 	for _, c := range t.children {
 		var s float64
-		if c.simulations == 0 {
+		if c.proven > 0 {
+			s = 0.01
+		} else if c.proven < 0 {
+			s = 100
+		} else if c.simulations == 0 {
 			s = 10
 		} else {
+			// TODO proven
 			s = -float64(c.value)/float64(c.simulations) +
 				ai.cfg.C*math.Sqrt(math.Log(float64(t.simulations))/float64(c.simulations))
 		}
@@ -239,11 +245,11 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 	return ai.descend(best)
 }
 
-func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) int64 {
+func (ai *MonteCarloAI) rollout(ctx context.Context, t *tree) int {
 	p := t.position.Clone()
 	alloc := tak.Alloc(p.Size())
 
-	for i := 0; i < maxMoves; i++ {
+	for i := 0; i < ai.cfg.MaxRollout; i++ {
 		if ok, c := p.GameOver(); ok {
 			switch c {
 			case tak.NoColor:
@@ -254,43 +260,31 @@ func (ai *MonteCarloAI) evaluate(ctx context.Context, t *tree) int64 {
 				return -1
 			}
 		}
-		next := ai.cfg.Policy(ctx, ai, p, alloc)
+		next := UniformRandomPolicy(ctx, ai, p, alloc)
 		if next == nil {
 			return 0
 		}
 		p, alloc = next, p
 	}
 	v := ai.eval(&ai.c, p)
-	if v > evalThreshold {
+	if v > ai.cfg.EvalThreshold {
 		return 1
-	} else if v < -evalThreshold {
+	} else if v < -ai.cfg.EvalThreshold {
 		return -1
 	}
 	return 0
 }
 
-func (mc *MonteCarloAI) update(t *tree, value int64) {
+func (mc *MonteCarloAI) update(t *tree, value int) {
 	for t != nil {
-		foundWin := false
-		foundLose := true
-		for _, c := range t.children {
-			if c.value < -ai.WinThreshold {
-				foundWin = true
-				break
+		if t.proven != 0 {
+			if t.proven < 0 && t.parent != nil {
+				t.parent.proven = 1
 			}
-			if !proven(c.value) {
-				foundLose = false
-			}
-		}
-		if foundWin {
-			t.value = ai.WinThreshold
-		} else if foundLose {
-			t.value = -ai.WinThreshold
 		} else {
 			t.value += value
-			value = -value
 		}
-
+		value = -value
 		t.simulations++
 		t = t.parent
 	}
@@ -307,15 +301,23 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 	if mc.cfg.Seed == 0 {
 		mc.cfg.Seed = time.Now().Unix()
 	}
-	if mc.cfg.Policy == nil {
-		mc.cfg.Policy = EvalWeightedPolicy
+	if mc.cfg.InitialVisits == 0 {
+		mc.cfg.InitialVisits = 3
+	}
+	if mc.cfg.MMDepth == 0 {
+		mc.cfg.MMDepth = 3
+	}
+	if mc.cfg.MaxRollout == 0 {
+		mc.cfg.MaxRollout = 50
+	}
+	if mc.cfg.EvalThreshold == 0 {
+		mc.cfg.EvalThreshold = 2000
 	}
 	mc.r = rand.New(rand.NewSource(mc.cfg.Seed))
 	mc.mm = ai.NewMinimax(ai.MinimaxConfig{
 		Size:     cfg.Size,
 		Evaluate: ai.EvaluateWinner,
-		TableMem: -1,
-		Depth:    1,
+		Depth:    mc.cfg.MMDepth,
 		Seed:     mc.cfg.Seed,
 	})
 	mc.eval = ai.MakeEvaluator(mc.cfg.Size, nil)
