@@ -26,16 +26,16 @@ type MCTSConfig struct {
 	MMDepth       int
 	MaxRollout    int
 	EvalThreshold int64
+	Policy        string
 
 	Size int
 
 	DumpTree string
 }
 
-type PolicyFunc func(ctx context.Context,
-	m *MonteCarloAI,
-	p *tak.Position,
-	next *tak.Position) *tak.Position
+type Policy interface {
+	Select(ctx context.Context, m *MonteCarloAI, p *tak.Position) *tak.Position
+}
 
 type MonteCarloAI struct {
 	c bitboard.Constants
@@ -43,6 +43,8 @@ type MonteCarloAI struct {
 	cfg  MCTSConfig
 	mm   *ai.MinimaxAI
 	eval ai.EvaluationFunc
+
+	policy Policy
 
 	r *rand.Rand
 }
@@ -252,7 +254,6 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 
 func (ai *MonteCarloAI) rollout(ctx context.Context, t *tree) int {
 	p := t.position.Clone()
-	alloc := tak.Alloc(p.Size())
 
 	for i := 0; i < ai.cfg.MaxRollout; i++ {
 		if ok, c := p.GameOver(); ok {
@@ -265,11 +266,11 @@ func (ai *MonteCarloAI) rollout(ctx context.Context, t *tree) int {
 				return -1
 			}
 		}
-		next := UniformRandomPolicy(ctx, ai, p, alloc)
+		next := ai.policy.Select(ctx, ai, p)
 		if next == nil {
 			return 0
 		}
-		p, alloc = next, p
+		p = next
 	}
 	v := ai.eval(&ai.c, p)
 	if v > ai.cfg.EvalThreshold {
@@ -318,6 +319,7 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 	if mc.cfg.EvalThreshold == 0 {
 		mc.cfg.EvalThreshold = 2000
 	}
+	mc.policy = mc.buildPolicy()
 	mc.r = rand.New(rand.NewSource(mc.cfg.Seed))
 	mc.mm = ai.NewMinimax(ai.MinimaxConfig{
 		Size:     cfg.Size,
