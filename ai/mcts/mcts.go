@@ -61,6 +61,19 @@ type tree struct {
 	children []*tree
 }
 
+func (t *tree) ucb(C float64, N int) float64 {
+	if t.proven > 0 {
+		return -100
+	} else if t.proven < 0 {
+		return 100
+	} else if t.simulations == 0 {
+		return 10
+	} else {
+		return -float64(t.value)/float64(t.simulations) +
+			C*math.Sqrt(math.Log(float64(N))/float64(t.simulations))
+	}
+}
+
 type bySims []*tree
 
 func (b bySims) Len() int           { return len(b) }
@@ -102,8 +115,8 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 				s = append(s, ptn.FormatMove(t.move))
 				t = t.parent
 			}
-			log.Printf("evaluate: [%s] = %d",
-				strings.Join(s, "<-"), val)
+			log.Printf("evaluate: [%s] = %d p=%d",
+				strings.Join(s, "<-"), val, node.proven)
 		}
 		ai.update(node, val)
 		if tick != nil {
@@ -125,9 +138,11 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	}
 	for _, c := range tree.children {
 		if ai.cfg.Debug > 2 {
-			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f)",
+			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f) ucb=%f",
 				ptn.FormatMove(c.move), c.simulations, c.proven, c.value,
-				float64(c.value)/float64(c.simulations))
+				float64(c.value)/float64(c.simulations),
+				c.ucb(ai.cfg.C, tree.simulations),
+			)
 		}
 		if c.simulations > best.simulations {
 			best = c
@@ -153,9 +168,11 @@ func (mc *MonteCarloAI) printdbg(t *tree) {
 	log.Printf("===")
 	for _, c := range t.children {
 		if c.simulations*20 > t.simulations {
-			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f)",
+			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f) ucb=%f",
 				ptn.FormatMove(c.move), c.simulations, c.proven, c.value,
-				float64(c.value)/float64(c.simulations))
+				float64(c.value)/float64(c.simulations),
+				c.ucb(mc.cfg.C, t.simulations),
+			)
 		}
 	}
 }
