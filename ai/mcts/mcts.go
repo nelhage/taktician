@@ -202,26 +202,6 @@ func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
 	}
 }
 
-func (mc *MonteCarloAI) descendPolicy(t *tree) *tree {
-	var best *tree
-	val := ai.MinEval
-	i := 0
-	for _, c := range t.children {
-		v := mc.eval(&mc.c, c.position)
-		if v > val {
-			best = c
-			val = v
-			i = 1
-		} else if v == val {
-			i++
-			if mc.r.Intn(i) == 0 {
-				best = c
-			}
-		}
-	}
-	return best
-}
-
 func (ai *MonteCarloAI) descend(t *tree) *tree {
 	if t.children == nil {
 		return t
