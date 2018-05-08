@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,23 +11,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
 var (
-	size    = flag.Int("size", 5, "board size")
-	zero    = flag.Bool("zero", false, "start with zero weights, not defaults")
-	w1      = flag.String("w1", "", "first set of weights")
-	w2      = flag.String("w2", "", "second set of weights")
-	c1      = flag.String("c1", "", "custom config 1")
-	c2      = flag.String("c2", "", "custom config 2")
-	perturb = flag.Float64("perturb", 0.0, "perturb weights")
-	seed    = flag.Int64("seed", 0, "starting random seed")
-	games   = flag.Int("games", 10, "number of games to play per opening/color")
-	cutoff  = flag.Int("cutoff", 80, "cut games off after how many plies")
-	swap    = flag.Bool("swap", true, "swap colors each game")
+	size   = flag.Int("size", 5, "board size")
+	zero   = flag.Bool("zero", false, "start with zero weights, not defaults")
+	p1     = flag.String("p1", "minimax", "player1 AI engine")
+	p2     = flag.String("p2", "minimax", "player2 AI engine")
+	w1     = flag.String("w1", "", "first set of weights")
+	w2     = flag.String("w2", "", "second set of weights")
+	c1     = flag.String("c1", "", "custom config 1")
+	c2     = flag.String("c2", "", "custom config 2")
+	seed   = flag.Int64("seed", 0, "starting random seed")
+	games  = flag.Int("games", 10, "number of games to play per opening/color")
+	cutoff = flag.Int("cutoff", 80, "cut games off after how many plies")
+	swap   = flag.Bool("swap", true, "swap colors each game")
 
 	prefix = flag.String("prefix", "", "ptn file to start games at the end of")
 	seeds  = flag.String("seeds", "", "directory of seed positions")
@@ -40,8 +39,6 @@ var (
 
 	out     = flag.String("out", "", "directory to write ptns to")
 	verbose = flag.Bool("v", false, "verbose output")
-
-	search = flag.Bool("search", false, "search for a good set of weights")
 
 	memProfile = flag.String("mem-profile", "", "write memory profile")
 )
@@ -117,62 +114,22 @@ func main() {
 		starts = []*tak.Position{tak.New(tak.Config{Size: *size})}
 	}
 
-	weights1 := ai.DefaultWeights[*size]
-	weights2 := ai.DefaultWeights[*size]
-	if *zero {
-		weights1 = ai.Weights{}
-		weights2 = ai.Weights{}
-	}
-	if *w1 != "" {
-		if err := json.Unmarshal([]byte(*w1), &weights1); err != nil {
-			log.Fatal("w1:", err)
-		}
-	}
-	if *w2 != "" {
-		if err := json.Unmarshal([]byte(*w2), &weights2); err != nil {
-			log.Fatal("w2:", err)
-		}
-	}
-
-	cfg1 := ai.MinimaxConfig{
-		Depth: *depth,
-		Size:  *size,
-	}
-	cfg2 := ai.MinimaxConfig{
-		Depth: *depth,
-		Size:  *size,
-	}
-	if *c1 != "" {
-		if err := json.Unmarshal([]byte(*c1), &cfg1); err != nil {
-			log.Fatal("c1:", err)
-		}
-	}
-	if *c2 != "" {
-		if err := json.Unmarshal([]byte(*c2), &cfg2); err != nil {
-			log.Fatal("c2:", err)
-		}
-	}
-
-	if *search {
-		doSearch(cfg1, weights1)
-		return
-	}
-
-	st := Simulate(&Config{
-		Cfg1:    cfg1,
-		Cfg2:    cfg2,
-		W1:      weights1,
-		W2:      weights2,
+	cfg := &Config{
+		Size:    *size,
+		Depth:   *depth,
 		Swap:    *swap,
 		Games:   *games,
 		Threads: *threads,
 		Seed:    *seed,
 		Cutoff:  *cutoff,
 		Limit:   *limit,
-		Perturb: *perturb,
 		Initial: starts,
 		Verbose: *verbose,
-	})
+	}
+	cfg.F1 = buildFactory(cfg, *p1, *c1, *w1)
+	cfg.F2 = buildFactory(cfg, *p2, *c2, *w2)
+
+	st := Simulate(cfg)
 
 	if *out != "" {
 		for _, r := range st.Games {
@@ -180,17 +137,6 @@ func main() {
 		}
 	}
 
-	var j []byte
-	j, _ = json.Marshal(&weights1)
-	log.Printf("p1w=%s", j)
-	if *c1 != "" {
-		log.Printf("p1c=%s", *c1)
-	}
-	j, _ = json.Marshal(&weights2)
-	log.Printf("p2w=%s", j)
-	if *c2 != "" {
-		log.Printf("p2c=%s", *c2)
-	}
 	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d depth=%d limit=%s",
 		len(st.Games), *seed, st.Ties, st.Cutoff, st.White, st.Black, *depth, *limit)
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",

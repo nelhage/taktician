@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"reflect"
 	"sync"
 	"time"
 
@@ -14,6 +13,8 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
+type AIFactory func() ai.TakPlayer
+
 type Config struct {
 	Games int
 
@@ -21,8 +22,10 @@ type Config struct {
 
 	Initial []*tak.Position
 
-	Cfg1, Cfg2 ai.MinimaxConfig
-	W1, W2     ai.Weights
+	F1, F2 AIFactory
+
+	Size  int
+	Depth int
 
 	Swap    bool
 	Threads int
@@ -49,8 +52,8 @@ type gameSpec struct {
 	c            *Config
 	opening      *tak.Position
 	i            int
-	white, black *ai.MinimaxConfig
 	r            *rand.Rand
+	white, black AIFactory
 	p1color      tak.Color
 }
 
@@ -124,27 +127,13 @@ func startGames(c *Config, rc chan<- Result) {
 			n *= 2
 		}
 		for g := 0; g < n; g++ {
-			var white, black *ai.MinimaxConfig
-			w1 := c.W1
-			w2 := c.W2
-			if c.Perturb != 0.0 {
-				w1 = perturbWeights(c.Perturb, w1)
-				w2 = perturbWeights(c.Perturb, w2)
-			}
-			cfg1 := c.Cfg1
-			cfg1.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w1)
-			cfg1.Seed = r.Int63()
-
-			cfg2 := c.Cfg2
-			cfg2.Evaluate = ai.MakeEvaluator(c.Cfg1.Size, &w2)
-			cfg2.Seed = r.Int63()
-
 			var p1color tak.Color
+			var white, black AIFactory
 			if g%2 == 0 || !c.Swap {
-				white, black = &cfg1, &cfg2
+				white, black = c.F1, c.F2
 				p1color = tak.White
 			} else {
-				black, white = &cfg1, &cfg2
+				black, white = c.F2, c.F1
 				p1color = tak.Black
 			}
 
@@ -167,8 +156,8 @@ func startGames(c *Config, rc chan<- Result) {
 
 func worker(games <-chan gameSpec, out chan<- Result) {
 	for g := range games {
-		white := ai.NewMinimax(*g.white)
-		black := ai.NewMinimax(*g.black)
+		white := g.white()
+		black := g.black()
 		var ms []tak.Move
 		p := g.opening
 		for i := 0; i < g.c.Cutoff; i++ {
@@ -203,21 +192,4 @@ func worker(games <-chan gameSpec, out chan<- Result) {
 			Moves:    ms,
 		}
 	}
-}
-
-func perturbWeights(p float64, w ai.Weights) ai.Weights {
-	r := reflect.Indirect(reflect.ValueOf(&w))
-	typ := r.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		f := typ.Field(i)
-		if f.Type.Kind() != reflect.Int {
-			continue
-		}
-		v := r.Field(i).Interface().(int)
-		adj := rand.NormFloat64() * p
-		v = int(float64(v) * (1 + adj))
-		r.Field(i).SetInt(int64(v))
-	}
-
-	return w
 }
