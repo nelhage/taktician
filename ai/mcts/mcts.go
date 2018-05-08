@@ -219,30 +219,32 @@ func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
 }
 
 func (ai *MonteCarloAI) descend(t *tree) *tree {
-	if t.children == nil {
-		return t
-	}
-	var best *tree
-	var val float64 = math.Inf(-1)
-	i := 0
-	for _, c := range t.children {
-		s := c.ucb(ai.cfg.C, t.simulations)
+	for {
+		if len(t.children) == 0 {
+			return t
+		}
+		var best *tree
+		var val float64 = math.Inf(-1)
+		i := 0
+		for _, c := range t.children {
+			s := c.ucb(ai.cfg.C, t.simulations)
 
-		if s > val {
-			best = c
-			val = s
-			i = 1
-		} else if s == val {
-			i++
-			if ai.r.Intn(i) == 0 {
+			if s > val {
 				best = c
+				val = s
+				i = 1
+			} else if s == val {
+				i++
+				if ai.r.Intn(i) == 0 {
+					best = c
+				}
 			}
 		}
+		if best == nil {
+			best = t.children[0]
+		}
+		t = best
 	}
-	if best == nil {
-		return t.children[0]
-	}
-	return ai.descend(best)
 }
 
 func (ai *MonteCarloAI) rollout(ctx context.Context, t *tree) int {
