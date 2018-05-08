@@ -32,6 +32,7 @@ var (
 	prefix = flag.String("prefix", "", "ptn file to start games at the end of")
 	seeds  = flag.String("seeds", "", "directory of seed positions")
 
+	debug = flag.Int("debug", 0, "debug level")
 	depth = flag.Int("depth", 3, "depth to search each move")
 	limit = flag.Duration("limit", 0, "amount of time to search each move")
 
@@ -118,6 +119,7 @@ func main() {
 		Zero:    *zero,
 		Size:    *size,
 		Depth:   *depth,
+		Debug:   *debug,
 		Swap:    *swap,
 		Games:   *games,
 		Threads: *threads,

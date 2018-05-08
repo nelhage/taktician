@@ -27,6 +27,7 @@ type Config struct {
 	Zero  bool
 	Size  int
 	Depth int
+	Debug int
 
 	Swap    bool
 	Threads int

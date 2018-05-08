@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"reflect"
@@ -10,6 +11,16 @@ import (
 )
 
 func buildFactory(cfg *Config, player string, conf string, ws string) AIFactory {
+	if player == "minimax" {
+		return buildMinimaxFactory(cfg, player, conf, ws)
+	} else if player == "mcts" {
+		return buildMCTSFactory(cfg, player, conf, ws)
+	} else {
+		panic(fmt.Sprintf("unknown engine: %s", player))
+	}
+}
+
+func buildMinimaxFactory(cfg *Config, player string, conf string, ws string) AIFactory {
 	weights := ai.DefaultWeights[cfg.Size]
 	if *zero {
 		weights = ai.Weights{}
@@ -22,6 +33,7 @@ func buildFactory(cfg *Config, player string, conf string, ws string) AIFactory 
 	mmcfg := ai.MinimaxConfig{
 		Depth: cfg.Depth,
 		Size:  cfg.Size,
+		Debug: cfg.Debug,
 	}
 	if conf != "" {
 		if err := json.Unmarshal([]byte(conf), &mmcfg); err != nil {
