@@ -118,7 +118,9 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 			log.Printf("evaluate: [%s] = %d p=%d",
 				strings.Join(s, "<-"), val, node.proven)
 		}
+
 		ai.update(node, val)
+
 		if tick != nil {
 			select {
 			case <-tick:
@@ -127,17 +129,31 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 			}
 		}
 	}
+
+	if ai.cfg.DumpTree != "" {
+		ai.dumpTree(tree)
+	}
+
 	if tree.proven != 0 {
-		return ai.mm.GetMove(ctx, p)
+		best := tree.children[0]
+		for _, c := range tree.children {
+			if c.proven < best.proven {
+				best = c
+			}
+		}
+		if ai.cfg.Debug > 1 {
+			log.Printf("proven m=%s v=%d", ptn.FormatMove(best.move), -best.proven)
+		}
+		return best.move
 	}
 	best := tree.children[0]
 	i := 0
 	sort.Sort(bySims(tree.children))
-	if ai.cfg.Debug > 2 {
+	if ai.cfg.Debug > 1 {
 		log.Printf("=== mcts done ===")
 	}
 	for _, c := range tree.children {
-		if ai.cfg.Debug > 2 {
+		if ai.cfg.Debug > 1 {
 			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f) ucb=%f",
 				ptn.FormatMove(c.move), c.simulations, c.proven, c.value,
 				float64(c.value)/float64(c.simulations),
@@ -157,9 +173,6 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	}
 	if ai.cfg.Debug > 1 {
 		log.Printf("[mcts] evaluated simulations=%d value=%d", tree.simulations, tree.value)
-	}
-	if ai.cfg.DumpTree != "" {
-		ai.dumpTree(tree)
 	}
 	return best.move
 }
