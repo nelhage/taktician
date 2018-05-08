@@ -11,6 +11,9 @@ import (
 
 func buildFactory(cfg *Config, player string, conf string, ws string) AIFactory {
 	weights := ai.DefaultWeights[cfg.Size]
+	if *zero {
+		weights = ai.Weights{}
+	}
 	if ws != "" {
 		if err := json.Unmarshal([]byte(ws), &weights); err != nil {
 			log.Fatal("weights:", err)

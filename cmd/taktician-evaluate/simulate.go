@@ -24,6 +24,7 @@ type Config struct {
 
 	F1, F2 AIFactory
 
+	Zero  bool
 	Size  int
 	Depth int
 

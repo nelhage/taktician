@@ -115,6 +115,7 @@ func main() {
 	}
 
 	cfg := &Config{
+		Zero:    *zero,
 		Size:    *size,
 		Depth:   *depth,
 		Swap:    *swap,
