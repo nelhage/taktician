@@ -231,7 +231,6 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 		} else if c.simulations == 0 {
 			s = 10
 		} else {
-			// TODO proven
 			s = -float64(c.value)/float64(c.simulations) +
 				ai.cfg.C*math.Sqrt(math.Log(float64(t.simulations))/float64(c.simulations))
 		}
@@ -283,15 +282,38 @@ func (ai *MonteCarloAI) rollout(ctx context.Context, t *tree) int {
 
 func (mc *MonteCarloAI) update(t *tree, value int) {
 	for t != nil {
+		t.simulations++
 		if t.proven != 0 {
-			if t.proven < 0 && t.parent != nil {
+			if t.parent == nil {
+				return
+			}
+			// Minimax backup
+			if t.proven < 0 {
+				// My best move is a loss; therefore
+				// my parent should choose this branch
+				// and win
 				t.parent.proven = 1
+				value = -1
+			} else {
+				// This move is a win for me; My
+				// parent is a loss only if *all* of
+				// its children are wins
+				all := true
+				for _, ch := range t.parent.children {
+					if ch.proven <= 0 {
+						all = false
+						break
+					}
+				}
+				if all {
+					t.parent.proven = -1
+				}
+				value = 1
 			}
 		} else {
 			t.value += value
 		}
 		value = -value
-		t.simulations++
 		t = t.parent
 	}
 }
