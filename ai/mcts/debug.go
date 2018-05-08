@@ -28,8 +28,9 @@ func (mc *MonteCarloAI) dumpTreeNode(f io.Writer, t *tree) {
 	if t.parent != nil {
 		parent = t.parent.simulations
 	}
-	label := fmt.Sprintf("n=%d v=%.0f+%.0f",
+	label := fmt.Sprintf("n=%d p=%d v=%.0f+%.0f",
 		t.simulations,
+		t.proven,
 		float64(t.value)/float64(t.simulations),
 		mc.cfg.C*math.Sqrt(math.Log(float64(t.simulations))/float64(parent)))
 

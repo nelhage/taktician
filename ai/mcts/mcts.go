@@ -79,7 +79,12 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 		deadline = time.Now().Add(ai.cfg.Limit)
 	}
 
-	next := start.Add(10 * time.Second)
+	var tick <-chan time.Time
+	if ai.cfg.Debug > 2 {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		tick = ticker.C
+	}
 	for time.Now().Before(deadline) {
 		node := ai.descend(tree)
 		ai.populate(ctx, node)
@@ -101,9 +106,12 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 				strings.Join(s, "<-"), val)
 		}
 		ai.update(node, val)
-		if time.Now().After(next) && ai.cfg.Debug > 0 {
-			ai.printpv(tree)
-			next = time.Now().Add(10 * time.Second)
+		if tick != nil {
+			select {
+			case <-tick:
+				ai.printdbg(tree)
+			default:
+			}
 		}
 	}
 	if tree.proven != 0 {
@@ -112,6 +120,9 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	best := tree.children[0]
 	i := 0
 	sort.Sort(bySims(tree.children))
+	if ai.cfg.Debug > 2 {
+		log.Printf("=== mcts done ===")
+	}
 	for _, c := range tree.children {
 		if ai.cfg.Debug > 2 {
 			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f)",
@@ -138,35 +149,14 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	return best.move
 }
 
-func (mc *MonteCarloAI) printpv(t *tree) {
-	depth := 0
-	ts := []*tree{t}
-	for t.children != nil && t.simulations > mc.cfg.InitialVisits {
-		best := t.children[0]
-		for _, c := range t.children {
-			if c.simulations > best.simulations {
-				best = c
-			}
+func (mc *MonteCarloAI) printdbg(t *tree) {
+	log.Printf("===")
+	for _, c := range t.children {
+		if c.simulations*20 > t.simulations {
+			log.Printf("[mcts][%s]: n=%d v=%d:%d(%0.3f)",
+				ptn.FormatMove(c.move), c.simulations, c.proven, c.value,
+				float64(c.value)/float64(c.simulations))
 		}
-		t = best
-		ts = append(ts, best)
-		depth++
-	}
-	ms := make([]tak.Move, depth)
-	for t.parent != nil {
-		ms[depth-1] = t.move
-		t = t.parent
-		depth--
-	}
-	var ptns []string
-	for _, m := range ms {
-		ptns = append(ptns, ptn.FormatMove(m))
-	}
-	if len(ts) > 0 {
-		log.Printf("pv=[%s] n=%d v=%d",
-			strings.Join(ptns, " "),
-			ts[1].simulations, ts[1].value,
-		)
 	}
 }
 
