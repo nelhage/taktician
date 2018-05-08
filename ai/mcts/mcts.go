@@ -135,6 +135,9 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	}
 
 	if tree.proven != 0 {
+		if len(tree.children) == 0 {
+			return ai.mm.GetMove(ctx, p)
+		}
 		best := tree.children[0]
 		for _, c := range tree.children {
 			if c.proven < best.proven {
