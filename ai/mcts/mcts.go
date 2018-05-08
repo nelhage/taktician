@@ -207,20 +207,11 @@ func (ai *MonteCarloAI) descend(t *tree) *tree {
 		return t
 	}
 	var best *tree
-	var val float64
+	var val float64 = math.Inf(-1)
 	i := 0
 	for _, c := range t.children {
-		var s float64
-		if c.proven > 0 {
-			s = 0.01
-		} else if c.proven < 0 {
-			s = 100
-		} else if c.simulations == 0 {
-			s = 10
-		} else {
-			s = -float64(c.value)/float64(c.simulations) +
-				ai.cfg.C*math.Sqrt(math.Log(float64(t.simulations))/float64(c.simulations))
-		}
+		s := c.ucb(ai.cfg.C, t.simulations)
+
 		if s > val {
 			best = c
 			val = s
