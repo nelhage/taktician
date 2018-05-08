@@ -171,8 +171,8 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 			}
 		}
 	}
-	if ai.cfg.Debug > 1 {
-		log.Printf("[mcts] evaluated simulations=%d value=%d", tree.simulations, tree.value)
+	if ai.cfg.Debug > 0 {
+		log.Printf("[mcts] evaluated simulations=%d value=%d proven=%d", tree.simulations, tree.value, tree.proven)
 	}
 	return best.move
 }
