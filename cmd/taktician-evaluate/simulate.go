@@ -13,7 +13,10 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type AIFactory func() ai.TakPlayer
+type AIFactory interface {
+	GetPlayer() ai.TakPlayer
+	String() string
+}
 
 type Config struct {
 	Games int
@@ -73,9 +76,12 @@ func Simulate(c *Config) Stats {
 	for r := range rc {
 		d := r.Position.WinDetails()
 		if c.Verbose {
-			log.Printf("game n=%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
+			log.Printf("game n=%d plies=%d p1=%s white=%s black=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
 				r.spec.i, r.Position.MoveNumber(),
-				r.spec.p1color, d.Winner,
+				r.spec.p1color,
+				r.spec.white.String(),
+				r.spec.black.String(),
+				d.Winner,
 				d.WhiteFlats,
 				d.BlackFlats,
 				r.Position.WhiteStones(),
@@ -158,8 +164,8 @@ func startGames(c *Config, rc chan<- Result) {
 
 func worker(games <-chan gameSpec, out chan<- Result) {
 	for g := range games {
-		white := g.white()
-		black := g.black()
+		white := g.white.GetPlayer()
+		black := g.black.GetPlayer()
 		var ms []tak.Move
 		p := g.opening
 		for i := 0; i < g.c.Cutoff; i++ {

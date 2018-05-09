@@ -20,6 +20,18 @@ func buildFactory(cfg *Config, player string, conf string, ws string) AIFactory 
 	}
 }
 
+type MinimaxFactory struct {
+	cfg ai.MinimaxConfig
+}
+
+func (m *MinimaxFactory) GetPlayer() ai.TakPlayer {
+	return ai.NewMinimax(m.cfg)
+}
+
+func (m *MinimaxFactory) String() string {
+	return fmt.Sprintf("minimax@%d", m.cfg.Depth)
+}
+
 func buildMinimaxFactory(cfg *Config, player string, conf string, ws string) AIFactory {
 	weights := ai.DefaultWeights[cfg.Size]
 	if *zero {
@@ -40,9 +52,7 @@ func buildMinimaxFactory(cfg *Config, player string, conf string, ws string) AIF
 			log.Fatal("conf:", err)
 		}
 	}
-	return func() ai.TakPlayer {
-		return ai.NewMinimax(mmcfg)
-	}
+	return &MinimaxFactory{mmcfg}
 }
 
 func perturbWeights(p float64, w ai.Weights) ai.Weights {

@@ -2,11 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
 )
+
+type MCTSFactory struct {
+	cfg mcts.MCTSConfig
+}
+
+func (m *MCTSFactory) GetPlayer() ai.TakPlayer {
+	return mcts.NewMonteCarlo(m.cfg)
+}
+
+func (m *MCTSFactory) String() string {
+	return fmt.Sprintf("mcts@%s", m.cfg.Limit)
+}
 
 func buildMCTSFactory(cfg *Config, player string, conf string, ws string) AIFactory {
 	mctscfg := mcts.MCTSConfig{
@@ -19,7 +32,5 @@ func buildMCTSFactory(cfg *Config, player string, conf string, ws string) AIFact
 			log.Fatal("conf:", err)
 		}
 	}
-	return func() ai.TakPlayer {
-		return mcts.NewMonteCarlo(mctscfg)
-	}
+	return &MCTSFactory{mctscfg}
 }
