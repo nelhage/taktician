@@ -135,7 +135,7 @@ func startGames(c *Config, rc chan<- Result) {
 				white, black = c.F1, c.F2
 				p1color = tak.White
 			} else {
-				black, white = c.F2, c.F1
+				black, white = c.F1, c.F2
 				p1color = tak.Black
 			}
 
