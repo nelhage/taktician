@@ -27,6 +27,7 @@ type MCTSConfig struct {
 	MaxRollout    int
 	EvalThreshold int64
 	Policy        string
+	ForceCorners  bool
 
 	Size int
 
@@ -82,7 +83,26 @@ func (b bySims) Swap(i, j int) {
 	b[i], b[j] = b[j], b[i]
 }
 
+func (ai *MonteCarloAI) cornerMove(p *tak.Position) tak.Move {
+	for {
+		row := (p.Size() - 1) * ai.r.Intn(2)
+		col := (p.Size() - 1) * ai.r.Intn(2)
+		if len(p.At(row, col)) > 0 {
+			continue
+		}
+		return tak.Move{
+			X:    int8(row),
+			Y:    int8(row),
+			Type: tak.PlaceFlat,
+		}
+	}
+}
+
 func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
+	if ai.cfg.ForceCorners && p.MoveNumber() < 2 {
+		return ai.cornerMove(p)
+	}
+
 	tree := &tree{
 		position: p,
 	}
