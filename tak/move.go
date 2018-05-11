@@ -2,6 +2,7 @@ package tak
 
 import "errors"
 
+//go:generate stringer -type=MoveType
 type MoveType byte
 
 const (
