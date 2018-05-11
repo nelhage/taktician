@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -53,32 +53,74 @@ func (u *UniformRandom) Select(ctx context.Context, m *MonteCarloAI, p *tak.Posi
 	return next
 }
 
-func EvalWeightedPolicy(ctx context.Context,
-	mc *MonteCarloAI,
-	p *tak.Position, alloc *tak.Position) *tak.Position {
-	var buf [500]tak.Move
-	moves := p.AllMoves(buf[:])
-	var best tak.Move
-	var sum int64
-	base := mc.eval(&mc.c, p) - 500
-	for _, m := range moves {
-		child, e := p.MovePreallocated(m, alloc)
-		if e != nil {
-			continue
+type PlaceWins struct {
+	uniform UniformRandom
+}
+
+func findPlaceWins(mask uint64, empty uint64, gs []uint64, c *bitboard.Constants) uint64 {
+	l := mask & c.L
+	r := mask & c.R
+	b := mask & c.B
+	t := mask & c.T
+	for _, g := range gs {
+		if g&c.L != 0 {
+			l |= g
 		}
-		w := mc.eval(&mc.c, child)
-		if w > ai.WinThreshold {
-			return child
+		if g&c.R != 0 {
+			r |= g
 		}
-		w -= base
-		if w <= 0 {
-			w = 1
+		if g&c.B != 0 {
+			b |= g
 		}
-		sum += w
-		if mc.r.Int63n(sum) < w {
-			best = m
+		if g&c.T != 0 {
+			t |= g
 		}
 	}
-	next, _ := p.MovePreallocated(best, alloc)
-	return next
+	lf := bitboard.Grow(c, empty, l) | c.L&empty
+	rf := bitboard.Grow(c, empty, r) | c.R&empty
+	bf := bitboard.Grow(c, empty, b) | c.B&empty
+	tf := bitboard.Grow(c, empty, t) | c.T&empty
+	/*
+		log.Printf("l =%64s", strconv.FormatUint(l, 2))
+		log.Printf("lf=%64s", strconv.FormatUint(lf, 2))
+		log.Printf("r =%64s", strconv.FormatUint(r, 2))
+		log.Printf("rf=%64s", strconv.FormatUint(rf, 2))
+		log.Printf("t =%64s", strconv.FormatUint(t, 2))
+		log.Printf("tf=%64s", strconv.FormatUint(tf, 2))
+		log.Printf("b =%64s", strconv.FormatUint(b, 2))
+		log.Printf("bf=%64s", strconv.FormatUint(bf, 2))
+	*/
+	return (lf & rf) | (tf & bf)
+}
+
+func placeWinMove(c *bitboard.Constants, p *tak.Position) tak.Move {
+	var myroad uint64
+	var gs []uint64
+	if p.ToMove() == tak.White {
+		myroad = p.White &^ p.Standing
+		gs = p.Analysis().WhiteGroups
+	} else {
+		myroad = p.Black &^ p.Standing
+		gs = p.Analysis().BlackGroups
+	}
+	empty := c.Mask &^ (p.White | p.Black)
+	mask := findPlaceWins(myroad, empty, gs, c)
+	if mask != 0 {
+		bit := mask ^ (mask & (mask - 1))
+		x, y := bitboard.BitCoords(c, bit)
+		return tak.Move{X: int8(x), Y: int8(y), Type: tak.PlaceFlat}
+	}
+	return tak.Move{}
+}
+
+func (pw *PlaceWins) Select(ctx context.Context, m *MonteCarloAI, p *tak.Position) *tak.Position {
+	if move := placeWinMove(&m.c, p); move.Type != 0 {
+		out, e := p.MovePreallocated(move, pw.uniform.alloc)
+		if e != nil {
+			panic("placeWinMove: bad move")
+		}
+		pw.uniform.alloc = p
+		return out
+	}
+	return pw.uniform.Select(ctx, m, p)
 }
