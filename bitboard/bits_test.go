@@ -92,3 +92,27 @@ func TestDimensions(t *testing.T) {
 	}
 
 }
+
+func TestBitCoords(t *testing.T) {
+	cases := []struct {
+		size uint
+		x    uint
+		y    uint
+	}{
+		{5, 1, 1},
+		{3, 1, 1},
+		{3, 2, 2},
+		{5, 3, 1},
+		{5, 0, 1},
+	}
+	for _, tc := range cases {
+		c := Precompute(tc.size)
+		bit := uint64(1) << (c.Size*tc.y + tc.x)
+		x, y := BitCoords(&c, bit)
+		if x != tc.x || y != tc.y {
+			t.Errorf("BitCoords(Precompute(%d), (%d,%d)) = (%d, %d)",
+				c.Size, tc.x, tc.y, x, y,
+			)
+		}
+	}
+}

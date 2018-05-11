@@ -81,3 +81,13 @@ func Dimensions(c *Constants, bits uint64) (w, h int) {
 	}
 	return w, h
 }
+
+func BitCoords(c *Constants, bits uint64) (x, y uint) {
+	if bits == 0 || bits&(bits-1) != 0 {
+		panic("BitCoords: non-singular")
+	}
+	n := TrailingZeros(bits)
+	y = n / c.Size
+	x = n % c.Size
+	return x, y
+}

@@ -1,3 +1,5 @@
+// +build !go1.9
+
 package bitboard
 
 func Popcount(x uint64) int {
@@ -12,4 +14,13 @@ func Popcount(x uint64) int {
 	x &= 0x0f0f0f0f0f0f0f0f
 	x *= 0x0101010101010101
 	return int(x >> 56)
+}
+
+func TrailingZeros(x uint64) uint {
+	for i := uint(0); i < 64; i++ {
+		if x&1<<i != 0 {
+			return i
+		}
+	}
+	return 64
 }
