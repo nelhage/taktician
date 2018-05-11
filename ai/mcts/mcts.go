@@ -230,10 +230,19 @@ func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
 		if e != nil {
 			continue
 		}
+		proven := 0
+		if ok, winner := child.GameOver(); ok && winner != tak.NoColor {
+			if winner == child.ToMove() {
+				proven = 1
+			} else {
+				proven = -1
+			}
+		}
 		t.children = append(t.children, &tree{
 			position: child,
 			move:     m,
 			parent:   t,
+			proven:   proven,
 		})
 	}
 }
