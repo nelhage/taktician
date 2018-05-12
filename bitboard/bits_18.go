@@ -18,7 +18,7 @@ func Popcount(x uint64) int {
 
 func TrailingZeros(x uint64) uint {
 	for i := uint(0); i < 64; i++ {
-		if x&1<<i != 0 {
+		if x&(1<<i) != 0 {
 			return i
 		}
 	}
