@@ -116,3 +116,23 @@ func TestBitCoords(t *testing.T) {
 		}
 	}
 }
+
+func TestTrailingZeros(t *testing.T) {
+	cases := []struct {
+		in  uint64
+		out uint
+	}{
+		{0x00, 64},
+		{0x01, 0},
+		{0x02, 1},
+		{0x010, 4},
+	}
+	for _, tc := range cases {
+		got := TrailingZeros(tc.in)
+		if got != tc.out {
+			t.Errorf("TrailingZeros(%x)=%d != %d",
+				tc.in, got, tc.out,
+			)
+		}
+	}
+}
