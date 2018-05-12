@@ -1,4 +1,5 @@
 // +build go1.9
+// +build !test_18
 
 package bitboard
 
