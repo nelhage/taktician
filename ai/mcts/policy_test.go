@@ -5,19 +5,36 @@ import (
 	"testing"
 
 	"github.com/nelhage/taktician/bitboard"
-	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/taktest"
 )
 
 func TestFindPlaceWins(t *testing.T) {
 	cases := []struct {
-		tps  string
-		x, y int8
+		board string
+		x, y  int8
 	}{
-		{"x4/x2,1,2/x,2,1,1/2,x2,1 1 4", 2, 3},
+		{`
+. . . .
+. . W B
+. B W W
+B . . W
+`, 2, 0},
+		{`
+W B B .
+. W W B
+. B W W
+B . . W
+`, 0, 1},
+		{`
+W B B .
+W B B B
+W . W .
+B . W .
+`, 1, 2},
 	}
 	for n, tc := range cases {
-		board, err := ptn.ParseTPS(tc.tps)
+		board, err := taktest.Board(tc.board, tak.White)
 		if err != nil {
 			t.Errorf("%d: %v", n, err)
 			continue
