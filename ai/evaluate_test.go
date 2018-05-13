@@ -2,15 +2,14 @@ package ai
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/taktest"
 )
 
 func TestEvaluateWinner(t *testing.T) {
@@ -99,45 +98,6 @@ func BenchmarkEvalMidGame(b *testing.B) {
 	benchmarkEval(b, `x3,2,x/x4,12/1,1,x,1,21C/x,1,x,12111112C,2/2,x,22121,x,2 2 20`)
 }
 
-func board(tpl string, who tak.Color) (*tak.Position, error) {
-	lines := strings.Split(strings.Trim(tpl, " \n"), "\n")
-	var pieces [][]tak.Square
-	for _, l := range lines {
-		bits := strings.Split(l, " ")
-		var row []tak.Square
-		for _, p := range bits {
-			switch p {
-			case "W":
-				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Flat)})
-			case "B":
-				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Flat)})
-			case "WC":
-				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Capstone)})
-			case "BC":
-				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Capstone)})
-			case "WS":
-				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Standing)})
-			case "BS":
-				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Standing)})
-			case ".":
-				row = append(row, tak.Square{})
-			case "":
-			default:
-				return nil, fmt.Errorf("bad piece: %v", p)
-			}
-		}
-		if len(row) != len(lines) {
-			return nil, errors.New("size mismatch")
-		}
-		pieces = append(pieces, row)
-	}
-	ply := 2
-	if who == tak.Black {
-		ply = 3
-	}
-	return tak.FromSquares(tak.Config{Size: len(pieces)}, pieces, ply)
-}
-
 func TestHardTopCap(t *testing.T) {
 	cases := []struct {
 		tps string
@@ -218,7 +178,7 @@ BC . .  .  .
 	for i, tc := range cases {
 		tc := tc
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			p, e := board(tc.board, tak.White)
+			p, e := taktest.Board(tc.board, tak.White)
 			if e != nil {
 				t.Fatal(e)
 			}
@@ -329,7 +289,7 @@ W W . . B
 		},
 	}
 	for i, tc := range cases {
-		pos, e := board(tc.board, tc.color)
+		pos, e := taktest.Board(tc.board, tc.color)
 		if e != nil {
 			t.Errorf("parse %d: %v", i, e)
 			continue
@@ -343,7 +303,7 @@ W W . . B
 }
 
 func TestCalculateInfluence(t *testing.T) {
-	p, e := board(`
+	p, e := taktest.Board(`
 . W . . .
 W . W . .
 . W . . .
@@ -433,7 +393,7 @@ W . . . B`, 99},
 . .  .  . .`, 197},
 	}
 	for i, tc := range cases {
-		pos, e := board(tc.board, tak.White)
+		pos, e := taktest.Board(tc.board, tak.White)
 		if e != nil {
 			t.Errorf("parse %d: %v", i, e)
 			continue
@@ -451,7 +411,7 @@ func TestCenterControl(t *testing.T) {
 		CenterControl: 100,
 	}
 	c := bitboard.Precompute(5)
-	p, _ := board(`
+	p, _ := taktest.Board(`
 . . . . .
 . W . . .
 . . . . .

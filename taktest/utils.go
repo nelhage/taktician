@@ -1,6 +1,8 @@
 package taktest
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/nelhage/taktician/ptn"
@@ -50,4 +52,43 @@ func Position(size int, ms string) *tak.Position {
 		}
 	}
 	return p
+}
+
+func Board(tpl string, who tak.Color) (*tak.Position, error) {
+	lines := strings.Split(strings.Trim(tpl, " \n"), "\n")
+	var pieces [][]tak.Square
+	for _, l := range lines {
+		bits := strings.Split(l, " ")
+		var row []tak.Square
+		for _, p := range bits {
+			switch p {
+			case "W":
+				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Flat)})
+			case "B":
+				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Flat)})
+			case "WC":
+				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Capstone)})
+			case "BC":
+				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Capstone)})
+			case "WS":
+				row = append(row, tak.Square{tak.MakePiece(tak.White, tak.Standing)})
+			case "BS":
+				row = append(row, tak.Square{tak.MakePiece(tak.Black, tak.Standing)})
+			case ".":
+				row = append(row, tak.Square{})
+			case "":
+			default:
+				return nil, fmt.Errorf("bad piece: %v", p)
+			}
+		}
+		if len(row) != len(lines) {
+			return nil, errors.New("size mismatch")
+		}
+		pieces = append(pieces, row)
+	}
+	ply := 2
+	if who == tak.Black {
+		ply = 3
+	}
+	return tak.FromSquares(tak.Config{Size: len(pieces)}, pieces, ply)
 }
