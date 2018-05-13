@@ -18,17 +18,18 @@ type Analyzer interface {
 }
 
 type minimaxAnalysis struct {
-	ai *ai.MinimaxAI
+	cmd *Command
+	ai  *ai.MinimaxAI
 }
 
 func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
-	if !*quiet {
+	if !m.cmd.quiet {
 		cli.RenderBoard(nil, os.Stdout, p)
-		if *explain {
+		if m.cmd.explain {
 			ai.ExplainScore(m.ai, os.Stdout, p)
 		}
 	}
-	if *eval {
+	if m.cmd.eval {
 		val := m.ai.Evaluate(p)
 		if p.ToMove() == tak.Black {
 			val = -val
@@ -46,12 +47,12 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		fmt.Printf("\n")
 	}
 	fmt.Printf(" value=%d\n", val)
-	if *tps {
+	if m.cmd.tps {
 		fmt.Printf("[TPS \"%s\"]\n", ptn.FormatTPS(p))
 	}
 	fmt.Println()
 
-	if len(pvs) == 0 || *quiet {
+	if len(pvs) == 0 || m.cmd.quiet {
 		return
 	}
 
@@ -69,7 +70,7 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 
 	fmt.Println("Resulting position:")
 	cli.RenderBoard(nil, os.Stdout, p)
-	if *explain {
+	if m.cmd.explain {
 		ai.ExplainScore(m.ai, os.Stdout, p)
 	}
 	fmt.Println()
@@ -77,11 +78,12 @@ func (m *minimaxAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 }
 
 type monteCarloAnalysis struct {
-	ai *mcts.MonteCarloAI
+	cmd *Command
+	ai  *mcts.MonteCarloAI
 }
 
 func (m *monteCarloAnalysis) Analyze(ctx context.Context, p *tak.Position) {
-	if !*quiet {
+	if !m.cmd.quiet {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
 	pv := m.ai.GetMove(ctx, p)

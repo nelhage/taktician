@@ -12,99 +12,143 @@ import (
 
 	"context"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
-var (
+type Command struct {
 	/* Global options / output options */
-	tps        = flag.Bool("tps", false, "render position in tps")
-	quiet      = flag.Bool("quiet", false, "don't print board diagrams")
-	monteCarlo = flag.Bool("mcts", false, "Use the MCTS evaluator")
-	debug      = flag.Int("debug", 1, "debug level")
+	tps        bool
+	quiet      bool
+	monteCarlo bool
+	debug      int
+	cpuProfile string
 
 	/* Options to select which position(s) to analyze */
-	move      = flag.Int("move", 0, "PTN move number to analyze")
-	all       = flag.Bool("all", false, "show all possible moves")
-	black     = flag.Bool("black", false, "only analyze black's move")
-	white     = flag.Bool("white", false, "only analyze white's move")
-	variation = flag.String("variation", "", "apply the listed moves after the given position")
+	move      int
+	all       bool
+	black     bool
+	white     bool
+	variation string
 
 	/* Options which apply to both engines  */
-	timeLimit = flag.Duration("limit", time.Minute, "limit of how much time to use")
-	seed      = flag.Int64("seed", 0, "specify a seed")
+	timeLimit time.Duration
+	seed      int64
 
 	/* minimax options */
-	eval         = flag.Bool("evaluate", false, "only show static evaluation")
-	explain      = flag.Bool("explain", false, "explain scoring")
-	depth        = flag.Int("depth", 0, "minimax depth")
-	sort         = flag.Bool("sort", true, "sort moves via history heuristic")
-	tableMem     = flag.Int64("table-mem", 0, "set table size")
-	nullMove     = flag.Bool("null-move", true, "use null-move pruning")
-	extendForces = flag.Bool("extend-forces", true, "extend forced moves")
-	reduceSlides = flag.Bool("reduce-slides", true, "reduce trivial slides")
-	multiCut     = flag.Bool("multi-cut", false, "use multi-cut pruning")
-	precise      = flag.Bool("precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
-	weights      = flag.String("weights", "", "JSON-encoded evaluation weights")
-	logCuts      = flag.String("log-cuts", "", "log all cuts")
-	symmetry     = flag.Bool("symmetry", false, "ignore symmetries")
+	eval         bool
+	explain      bool
+	depth        int
+	sort         bool
+	tableMem     int64
+	nullMove     bool
+	extendForces bool
+	reduceSlides bool
+	multiCut     bool
+	precise      bool
+	weights      string
+	logCuts      string
+	symmetry     bool
 
 	/* MCTS options */
-	dumpTree = flag.String("dump-tree", "", "dump MCTS tree as a dot file to PATH")
+	dumpTree string
+}
 
-	cpuProfile = flag.String("cpuprofile", "", "write CPU profile")
-)
+func (*Command) Name() string     { return "analyze" }
+func (*Command) Synopsis() string { return "Evaluate a position from a PTN file" }
+func (*Command) Usage() string {
+	return `analyze [options] FILE.ptn
 
-func main() {
-	flag.Parse()
+Evaluate a position from a PTN file using a configurable engine.
 
+By default evaluates the final position in the file; Use -move and -white/-black
+to select a different position, and -variation to play additional moves prior
+to analysis.
+`
+}
+
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+	flag.BoolVar(&c.tps, "tps", false, "render position in tps")
+	flag.BoolVar(&c.quiet, "quiet", false, "don't print board diagrams")
+	flag.BoolVar(&c.monteCarlo, "mcts", false, "Use the MCTS evaluator")
+	flag.IntVar(&c.debug, "debug", 1, "debug level")
+	flag.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
+
+	flag.IntVar(&c.move, "move", 0, "PTN move number to analyze")
+	flag.BoolVar(&c.all, "all", false, "show all possible moves")
+	flag.BoolVar(&c.black, "black", false, "only analyze black's move")
+	flag.BoolVar(&c.white, "white", false, "only analyze white's move")
+	flag.StringVar(&c.variation, "variation", "", "apply the listed moves after the given position")
+
+	flag.DurationVar(&c.timeLimit, "limit", time.Minute, "limit of how much time to use")
+	flag.Int64Var(&c.seed, "seed", 0, "specify a seed")
+
+	flag.BoolVar(&c.eval, "evaluate", false, "only show static evaluation")
+	flag.BoolVar(&c.explain, "explain", false, "explain scoring")
+	flag.IntVar(&c.depth, "depth", 0, "minimax depth")
+	flag.BoolVar(&c.sort, "sort", true, "sort moves via history heuristic")
+	flag.Int64Var(&c.tableMem, "table-mem", 0, "set table size")
+	flag.BoolVar(&c.nullMove, "null-move", true, "use null-move pruning")
+	flag.BoolVar(&c.extendForces, "extend-forces", true, "extend forced moves")
+	flag.BoolVar(&c.reduceSlides, "reduce-slides", true, "reduce trivial slides")
+	flag.BoolVar(&c.multiCut, "multi-cut", false, "use multi-cut pruning")
+	flag.BoolVar(&c.precise, "precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
+	flag.StringVar(&c.weights, "weights", "", "JSON-encoded evaluation weights")
+	flag.StringVar(&c.logCuts, "log-cuts", "", "log all cuts")
+	flag.BoolVar(&c.symmetry, "symmetry", false, "ignore symmetries")
+
+	flag.StringVar(&c.dumpTree, "dump-tree", "", "dump MCTS tree as a dot file to PATH")
+}
+
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	parsed, e := ptn.ParseFile(flag.Arg(0))
 	if e != nil {
 		log.Fatal("parse:", e)
 	}
 	color := tak.NoColor
 	switch {
-	case *white && *black:
+	case c.white && c.black:
 		log.Fatal("-white and -black are exclusive")
-	case *white:
+	case c.white:
 		color = tak.White
-	case *black:
+	case c.black:
 		color = tak.Black
-	case *move != 0:
+	case c.move != 0:
 		color = tak.White
 	}
 
-	if *cpuProfile != "" {
-		f, e := os.OpenFile(*cpuProfile, os.O_WRONLY|os.O_CREATE, 0644)
+	if c.cpuProfile != "" {
+		f, e := os.OpenFile(c.cpuProfile, os.O_WRONLY|os.O_CREATE, 0644)
 		if e != nil {
-			log.Fatalf("open cpu-profile: %s: %v", *cpuProfile, e)
+			log.Fatalf("open cpu-profile: %s: %v", c.cpuProfile, e)
 		}
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
 
-	if !*all {
-		p, e := parsed.PositionAtMove(*move, color)
+	if !c.all {
+		p, e := parsed.PositionAtMove(c.move, color)
 		if e != nil {
 			log.Fatal("find move:", e)
 		}
 
-		if *variation != "" {
-			p, e = applyVariation(p, *variation)
+		if c.variation != "" {
+			p, e = applyVariation(p, c.variation)
 			if e != nil {
 				log.Fatal("-variation:", e)
 			}
 		}
 
-		analyze(p)
+		c.analyze(p)
 	} else {
 		p, e := parsed.InitialPosition()
 		if e != nil {
 			log.Fatal("initial:", e)
 		}
-		w, b := buildAnalysis(p), buildAnalysis(p)
+		w, b := c.buildAnalysis(p), c.buildAnalysis(p)
 		it := parsed.Iterator()
 		for it.Next() {
 			p := it.Position()
@@ -112,16 +156,17 @@ func main() {
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
 				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(m))
-				analyzeWith(w, p)
+				c.analyzeWith(w, p)
 			case p.ToMove() == tak.Black && color != tak.White:
 				fmt.Printf("%d. ... %s\n", p.MoveNumber()/2+1, ptn.FormatMove(m))
-				analyzeWith(b, p)
+				c.analyzeWith(b, p)
 			}
 		}
 		if e := it.Err(); e != nil {
 			log.Fatalf("%d: %v", it.PTNMove(), e)
 		}
 	}
+	return subcommands.ExitSuccess
 }
 
 func applyVariation(p *tak.Position, variant string) (*tak.Position, error) {
@@ -139,64 +184,65 @@ func applyVariation(p *tak.Position, variant string) (*tak.Position, error) {
 	return p, nil
 }
 
-func makeAI(p *tak.Position) *ai.MinimaxAI {
+func (c *Command) makeAI(p *tak.Position) *ai.MinimaxAI {
 	var w ai.Weights
-	if *weights == "" {
+	if c.weights == "" {
 		w = ai.DefaultWeights[p.Size()]
 	} else {
-		e := json.Unmarshal([]byte(*weights), &w)
+		e := json.Unmarshal([]byte(c.weights), &w)
 		if e != nil {
 			log.Fatalf("parse weights: %v", e)
 		}
 	}
 	cfg := ai.MinimaxConfig{
 		Size:  p.Size(),
-		Depth: *depth,
-		Seed:  *seed,
-		Debug: *debug,
+		Depth: c.depth,
+		Seed:  c.seed,
+		Debug: c.debug,
 
-		NoSort:         !*sort,
-		TableMem:       *tableMem,
-		NoNullMove:     !*nullMove,
-		NoExtendForces: !*extendForces,
-		NoReduceSlides: !*reduceSlides,
-		MultiCut:       *multiCut,
+		NoSort:         !c.sort,
+		TableMem:       c.tableMem,
+		NoNullMove:     !c.nullMove,
+		NoExtendForces: !c.extendForces,
+		NoReduceSlides: !c.reduceSlides,
+		MultiCut:       c.multiCut,
 
-		CutLog:        *logCuts,
-		DedupSymmetry: *symmetry,
+		CutLog:        c.logCuts,
+		DedupSymmetry: c.symmetry,
 
 		Evaluate: ai.MakeEvaluator(p.Size(), &w),
 	}
-	if *precise {
+	if c.precise {
 		cfg.MakePrecise()
 	}
 	return ai.NewMinimax(cfg)
 }
 
-func buildAnalysis(p *tak.Position) Analyzer {
-	if *monteCarlo {
+func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
+	if c.monteCarlo {
 		return &monteCarloAnalysis{
-			mcts.NewMonteCarlo(mcts.MCTSConfig{
-				Seed:     *seed,
-				Debug:    *debug,
+			cmd: c,
+			ai: mcts.NewMonteCarlo(mcts.MCTSConfig{
+				Seed:     c.seed,
+				Debug:    c.debug,
 				Size:     p.Size(),
-				Limit:    *timeLimit,
-				DumpTree: *dumpTree,
+				Limit:    c.timeLimit,
+				DumpTree: c.dumpTree,
 			}),
 		}
 	}
-	return &minimaxAnalysis{makeAI(p)}
+	return &minimaxAnalysis{cmd: c, ai: c.makeAI(p)}
 }
 
-func analyze(p *tak.Position) {
-	analyzeWith(buildAnalysis(p), p)
+func (c *Command) analyze(p *tak.Position) {
+	c.analyzeWith(c.buildAnalysis(p), p)
 }
 
-func analyzeWith(analysis Analyzer, p *tak.Position) {
+func (c *Command) analyzeWith(analysis Analyzer, p *tak.Position) {
 	ctx := context.Background()
-	if *timeLimit != 0 {
+	if c.timeLimit != 0 {
 		var cancel func()
-		ctx, cancel = context.WithTimeout(ctx, *timeLimit)
+		ctx, cancel = context.WithTimeout(ctx, c.timeLimit)
 		defer cancel()
 	}
 	analysis.Analyze(ctx, p)
