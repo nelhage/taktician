@@ -16,6 +16,7 @@ func init() {
 	policyMap = make(map[string]builder)
 	policyMap[""] = buildUniform
 	policyMap["uniform"] = buildUniform
+	policyMap["place_win"] = buildPlaceWin
 }
 
 func (mc *MonteCarloAI) buildPolicy() Policy {
@@ -34,6 +35,13 @@ func buildUniform(cfg *MCTSConfig) Policy {
 	return &UniformRandom{
 		alloc: tak.Alloc(cfg.Size),
 	}
+}
+
+func buildPlaceWin(cfg *MCTSConfig) Policy {
+	return &PlaceWins{
+		UniformRandom{
+			alloc: tak.Alloc(cfg.Size),
+		}}
 }
 
 func (u *UniformRandom) Select(ctx context.Context, m *MonteCarloAI, p *tak.Position) *tak.Position {
