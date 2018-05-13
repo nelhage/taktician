@@ -1,4 +1,4 @@
-package main
+package canonicalize
 
 import (
 	"flag"
