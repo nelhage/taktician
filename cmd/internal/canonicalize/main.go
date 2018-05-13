@@ -1,27 +1,36 @@
 package canonicalize
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
-func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s FILE.ptn\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-	flag.Parse()
+type Command struct{}
 
+func (*Command) Name() string     { return "canonicalize" }
+func (*Command) Synopsis() string { return "Canonicalize the symmetry of a PTN" }
+func (*Command) Usage() string {
+	return `canonicalize FILE.ptn
+
+Rewrite a PTN into a symmetric PTN in a canonical orientation.
+`
+}
+
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+}
+
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if len(flag.Args()) == 0 {
 		flag.Usage()
-		os.Exit(1)
+		return subcommands.ExitUsageError
 	}
 
 	g, e := ptn.ParseFile(flag.Arg(0))
@@ -54,4 +63,5 @@ func main() {
 	}
 
 	fmt.Printf(g.Render())
+	return subcommands.ExitSuccess
 }
