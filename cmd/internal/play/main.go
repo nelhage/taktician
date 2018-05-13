@@ -12,6 +12,7 @@ import (
 
 	"context"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/cli"
@@ -19,40 +20,85 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-var (
-	white = flag.String("white", "human", "white player")
-	black = flag.String("black", "human", "white player")
-	size  = flag.Int("size", 5, "game size")
-	debug = flag.Int("debug", 0, "debug level")
-	limit = flag.Duration("limit", time.Minute, "ai time limit")
-	out   = flag.String("out", "", "write ptn to file")
+type Command struct {
+	white string
+	black string
+	size  int
+	debug int
+	limit time.Duration
+	out   string
 
-	unicode = flag.Bool("unicode", false, "render board with utf8 glyphs")
-)
+	unicode bool
+}
 
-func glyphs() *cli.Glyphs {
-	if *unicode {
+func (*Command) Name() string     { return "play" }
+func (*Command) Synopsis() string { return "Play Tak from the command line" }
+func (*Command) Usage() string {
+	return `play
+
+Play Tak on the command-line, against a human or AI.
+`
+}
+
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+	flags.StringVar(&c.white, "white", "human", "white player")
+	flags.StringVar(&c.black, "black", "human", "white player")
+	flags.IntVar(&c.size, "size", 5, "game size")
+	flags.IntVar(&c.debug, "debug", 0, "debug level")
+	flags.DurationVar(&c.limit, "limit", time.Minute, "ai time limit")
+	flags.StringVar(&c.out, "out", "", "write ptn to file")
+
+	flags.BoolVar(&c.unicode, "unicode", false, "render board with utf8 glyphs")
+}
+
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	in := bufio.NewReader(os.Stdin)
+	st := &cli.CLI{
+		Config: tak.Config{Size: c.size},
+		Out:    os.Stdout,
+		White:  c.parsePlayer(in, c.white),
+		Black:  c.parsePlayer(in, c.black),
+		Glyphs: glyphs(c.unicode),
+	}
+	st.Play()
+	if c.out != "" {
+		p := &ptn.PTN{}
+		p.Tags = []ptn.Tag{
+			{Name: "Size", Value: strconv.Itoa(c.size)},
+			{Name: "Player1", Value: c.white},
+			{Name: "Player2", Value: c.black},
+		}
+		p.AddMoves(st.Moves())
+		ioutil.WriteFile(c.out, []byte(p.Render()), 0644)
+	}
+
+	return subcommands.ExitSuccess
+}
+
+func glyphs(unicode bool) *cli.Glyphs {
+	if unicode {
 		return &cli.UnicodeGlyphs
 	}
 	return &cli.DefaultGlyphs
 }
 
 type aiWrapper struct {
-	p ai.TakPlayer
+	limit time.Duration
+	p     ai.TakPlayer
 }
 
 func (a *aiWrapper) GetMove(p *tak.Position) tak.Move {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(*limit))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(a.limit))
 	defer cancel()
 	return a.p.GetMove(ctx, p)
 }
 
-func parsePlayer(in *bufio.Reader, s string) cli.Player {
+func (c *Command) parsePlayer(in *bufio.Reader, s string) cli.Player {
 	if s == "human" {
 		return cli.NewCLIPlayer(os.Stdout, in)
 	}
 	if s == "rand" {
-		return &aiWrapper{ai.NewRandom(0)}
+		return &aiWrapper{c.limit, ai.NewRandom(0)}
 	}
 	if strings.HasPrefix(s, "rand") {
 		var seed int64
@@ -63,7 +109,7 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 			}
 			seed = int64(i)
 		}
-		return &aiWrapper{ai.NewRandom(seed)}
+		return &aiWrapper{c.limit, ai.NewRandom(seed)}
 	}
 	if strings.HasPrefix(s, "minimax") {
 		var depth = 3
@@ -75,11 +121,11 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 			depth = i
 		}
 		p := ai.NewMinimax(ai.MinimaxConfig{
-			Size:  *size,
+			Size:  c.size,
 			Depth: depth,
-			Debug: *debug,
+			Debug: c.debug,
 		})
-		return &aiWrapper{p}
+		return &aiWrapper{c.limit, p}
 	}
 	if strings.HasPrefix(s, "mcts") {
 		var limit = 30 * time.Second
@@ -91,35 +137,12 @@ func parsePlayer(in *bufio.Reader, s string) cli.Player {
 			}
 		}
 		p := mcts.NewMonteCarlo(mcts.MCTSConfig{
-			Limit: limit,
-			Debug: *debug,
-			Size:  *size,
+			Limit: c.limit,
+			Debug: c.debug,
+			Size:  c.size,
 		})
-		return &aiWrapper{p}
+		return &aiWrapper{limit, p}
 	}
 	log.Fatalf("unparseable player: %s", s)
 	return nil
-}
-
-func main() {
-	flag.Parse()
-	in := bufio.NewReader(os.Stdin)
-	st := &cli.CLI{
-		Config: tak.Config{Size: *size},
-		Out:    os.Stdout,
-		White:  parsePlayer(in, *white),
-		Black:  parsePlayer(in, *black),
-		Glyphs: glyphs(),
-	}
-	st.Play()
-	if *out != "" {
-		p := &ptn.PTN{}
-		p.Tags = []ptn.Tag{
-			{Name: "Size", Value: strconv.Itoa(*size)},
-			{Name: "Player1", Value: *white},
-			{Name: "Player2", Value: *white},
-		}
-		p.AddMoves(st.Moves())
-		ioutil.WriteFile(*out, []byte(p.Render()), 0644)
-	}
 }
