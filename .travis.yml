@@ -25,6 +25,6 @@ script:
   - go test -v ./...
 
 go:
-  - 1.8
   - 1.9
+  - 1.10
   - tip
