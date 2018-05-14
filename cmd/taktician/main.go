@@ -8,6 +8,7 @@ import (
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/cmd/internal/analyze"
 	"github.com/nelhage/taktician/cmd/internal/canonicalize"
+	"github.com/nelhage/taktician/cmd/internal/logger"
 	"github.com/nelhage/taktician/cmd/internal/play"
 )
 
@@ -16,10 +17,13 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	// subcommands.Register(subcommands.CommandsCommand(), "")
 
+	subcommands.Register(&logger.Command{}, "")
+
 	subcommands.Register(&play.Command{}, "")
 
-	subcommands.Register(&analyze.Command{}, "analysis")
-	subcommands.Register(&canonicalize.Command{}, "analysis")
+	subcommands.Register(&analyze.Command{}, "")
+
+	subcommands.Register(&canonicalize.Command{}, "")
 
 	flag.Parse()
 	ctx := context.Background()
