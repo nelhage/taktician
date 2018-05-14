@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"google.golang.org/grpc"
 
