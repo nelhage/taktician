@@ -11,12 +11,27 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/pb/tak/proto"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
+
+type Command struct {
+	port int
+}
+
+func (*Command) Name() string     { return "serve" }
+func (*Command) Synopsis() string { return "Seve Taktician RPCs via GRPC" }
+func (*Command) Usage() string {
+	return `serve`
+}
+
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+	flags.IntVar(&c.port, "port", 55430, "bind port")
+}
 
 type server struct {
 	cache struct {
@@ -83,14 +98,9 @@ func (s *server) Canonicalize(ctx context.Context, req *pb.CanonicalizeRequest) 
 	}, nil
 }
 
-func main() {
-	var (
-		port = flag.Int("port", 55430, "bind port")
-	)
-
-	flag.Parse()
-	log.Printf("Listening on port %d", *port)
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	log.Printf("Listening on port %d", c.port)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -98,4 +108,5 @@ func main() {
 	pb.RegisterTakticianServer(grpcServer, &server{})
 
 	grpcServer.Serve(lis)
+	return subcommands.ExitSuccess
 }

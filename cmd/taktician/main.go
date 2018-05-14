@@ -12,6 +12,7 @@ import (
 	"github.com/nelhage/taktician/cmd/internal/openings"
 	"github.com/nelhage/taktician/cmd/internal/play"
 	"github.com/nelhage/taktician/cmd/internal/selfplay"
+	"github.com/nelhage/taktician/cmd/internal/serve"
 )
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 	subcommands.Register(&selfplay.Command{}, "")
 
 	subcommands.Register(&canonicalize.Command{}, "")
+	subcommands.Register(&serve.Command{}, "")
 
 	flag.Parse()
 	ctx := context.Background()
