@@ -1,6 +1,7 @@
 package openings
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,26 +11,37 @@ import (
 	"os"
 	"path"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/logs"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
-var (
-	logDir = flag.String("games", "games", "game log directory")
-)
+type Command struct {
+	logDir    string
+	size      int
+	minRating int
+	minCount  int
+	maxDepth  int
+}
 
-var (
-	size      = flag.Int("size", 5, "what size to analyze")
-	minRating = flag.Int("rating", 1600, "minimum rating to consider")
-	minCount  = flag.Int("count", 100, "render games with >= [this many] moves")
-	maxDepth  = flag.Int("depth", 8, "track tree to this many plies")
-)
+func (*Command) Name() string     { return "openings" }
+func (*Command) Synopsis() string { return "Analyze openings from the playtak DB" }
+func (*Command) Usage() string {
+	return `openings [flags]
+`
+}
 
-func main() {
-	flag.Parse()
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+	flags.StringVar(&c.logDir, "games", "games", "game log directory")
+	flags.IntVar(&c.size, "size", 5, "what size to analyze")
+	flags.IntVar(&c.minRating, "rating", 1600, "minimum rating to consider")
+	flags.IntVar(&c.minCount, "count", 100, "render games with >= [this many] moves")
+	flags.IntVar(&c.maxDepth, "depth", 8, "track tree to this many plies")
+}
 
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	repo, e := logs.Open(flag.Arg(0))
 	if e != nil {
 		log.Fatalf("parse %s: %v", flag.Arg(0), e)
@@ -47,7 +59,7 @@ WHERE r1.name = g.player1
  AND r1.rating >= ?
  AND r2.rating >= ?
  AND g.size = ?
-`, *minRating, *minRating, *size)
+`, c.minRating, c.minRating, c.size)
 	if e != nil {
 		log.Fatal("select: ", e)
 	}
@@ -63,7 +75,7 @@ WHERE r1.name = g.player1
 			panic(e)
 		}
 
-		ptnPath := path.Join(*logDir, day, fmt.Sprintf("%d.ptn", id))
+		ptnPath := path.Join(c.logDir, day, fmt.Sprintf("%d.ptn", id))
 		g, e := ptn.ParseFile(ptnPath)
 		if e != nil {
 			log.Printf("parse %s: %v", ptnPath, e)
@@ -90,8 +102,8 @@ WHERE r1.name = g.player1
 			continue
 		}
 
-		if len(ms) > *maxDepth {
-			ms = ms[:*maxDepth]
+		if len(ms) > c.maxDepth {
+			ms = ms[:c.maxDepth]
 		}
 
 		result := ptn.Result{Result: g.FindTag("Result")}
@@ -103,11 +115,11 @@ WHERE r1.name = g.player1
 	ioutil.WriteFile("gametree.json", bs, 0644)
 	f, e := os.Create("gametree.dot")
 	defer f.Close()
-	writeTree(f, tree)
+	c.writeTree(f, tree)
 	fmt.Printf("Common openings:\n")
-	printLines(tree)
+	c.printLines(tree)
 
-	line := minmax(tree)
+	line := c.minmax(tree)
 	fmt.Printf("Best line:\n")
 	for i, t := range line {
 		dots := ""
@@ -118,6 +130,8 @@ WHERE r1.name = g.player1
 			i/2+1, dots, t.Move, t.White, t.Black,
 			100*float64(t.White)/float64(t.Count))
 	}
+
+	return subcommands.ExitSuccess
 }
 
 type tree struct {
@@ -159,13 +173,13 @@ func insertTree(t *tree, ms []tak.Move, winner tak.Color) {
 	insertTree(child, ms[1:], winner)
 }
 
-func writeTree(f io.Writer, t *tree) {
+func (c *Command) writeTree(f io.Writer, t *tree) {
 	fmt.Fprintf(f, "digraph G {\n")
-	writeTreeNode(0, f, t)
+	c.writeTreeNode(0, f, t)
 	fmt.Fprintf(f, "}\n")
 }
 
-func writeTreeNode(ply int, f io.Writer, t *tree) {
+func (c *Command) writeTreeNode(ply int, f io.Writer, t *tree) {
 	var mno string
 	move := ply/2 + 1
 	if ply%2 == 0 {
@@ -178,26 +192,26 @@ func writeTreeNode(ply int, f io.Writer, t *tree) {
 		t.id, t.Move, t.White, t.Black, 100*float64(t.White)/float64(t.Count))
 	fmt.Fprintln(f)
 	for _, ch := range t.Children {
-		if ch.Count < *minCount {
+		if ch.Count < c.minCount {
 			continue
 		}
 		fmt.Fprintf(f, `  n%d -> n%d [label="%s%s %d/%0.0f%%"]`,
 			t.id, ch.id, mno, ch.Move,
 			ch.Count, 100*float64(ch.Count)/float64(t.Count))
 		fmt.Fprintln(f)
-		writeTreeNode(ply+1, f, ch)
+		c.writeTreeNode(ply+1, f, ch)
 	}
 }
 
-func printLines(t *tree) {
-	walkLines([]*tree{}, t)
+func (c *Command) printLines(t *tree) {
+	c.walkLines([]*tree{}, t)
 }
 
-func walkLines(line []*tree, t *tree) {
+func (c *Command) walkLines(line []*tree, t *tree) {
 	found := false
 	for _, ch := range t.Children {
-		if ch.Count >= *minCount && float64(ch.Count) >= 0.05*float64(t.Count) {
-			walkLines(append(line, t), ch)
+		if ch.Count >= c.minCount && float64(ch.Count) >= 0.05*float64(t.Count) {
+			c.walkLines(append(line, t), ch)
 			found = true
 		}
 	}
@@ -212,14 +226,14 @@ func walkLines(line []*tree, t *tree) {
 	}
 }
 
-func minmax(t *tree) []*tree {
+func (c *Command) minmax(t *tree) []*tree {
 	var line []*tree
 	who := tak.White
 	for t != nil {
 		var best *tree
 		var max float64 = -1
 		for _, ch := range t.Children {
-			if ch.Count < *minCount {
+			if ch.Count < c.minCount {
 				continue
 			}
 			var wins int

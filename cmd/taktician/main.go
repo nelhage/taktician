@@ -9,6 +9,7 @@ import (
 	"github.com/nelhage/taktician/cmd/internal/analyze"
 	"github.com/nelhage/taktician/cmd/internal/canonicalize"
 	"github.com/nelhage/taktician/cmd/internal/logger"
+	"github.com/nelhage/taktician/cmd/internal/openings"
 	"github.com/nelhage/taktician/cmd/internal/play"
 )
 
@@ -18,6 +19,7 @@ func main() {
 	// subcommands.Register(subcommands.CommandsCommand(), "")
 
 	subcommands.Register(&logger.Command{}, "")
+	subcommands.Register(&openings.Command{}, "")
 
 	subcommands.Register(&play.Command{}, "")
 
