@@ -36,7 +36,8 @@ func (m *mockClient) Shutdown() {
 func TestFPAResign(t *testing.T) {
 	mock := &mockClient{}
 	friendly := &Friendly{
-		client: &playtak.Commands{mock},
+		cmd:    &Command{},
+		client: &playtak.Commands{"", mock},
 		fpa:    &CenterBlack{},
 	}
 	game := &bot.Game{
