@@ -28,17 +28,22 @@ const (
 )
 
 type Friendly struct {
+	cmd *Command
+
 	client *playtak.Commands
 	ai     ai.TakPlayer
 	check  *ai.MinimaxAI
 	g      *bot.Game
+
+	size int
 
 	fpa FPARule
 
 	level    int
 	levelSet time.Time
 
-	log *os.File
+	logFile string
+	log     *os.File
 }
 
 func (f *Friendly) NewGame(g *bot.Game) {
@@ -46,7 +51,7 @@ func (f *Friendly) NewGame(g *bot.Game) {
 		f.level = defaultLevel
 	}
 	f.g = g
-	f.ai = wrapWithBook(g.Size, ai.NewMinimax(f.AIConfig()))
+	f.ai = f.cmd.wrapWithBook(g.Size, ai.NewMinimax(f.AIConfig()))
 	f.check = ai.NewMinimax(ai.MinimaxConfig{
 		Depth:    3,
 		Size:     g.Size,
@@ -56,7 +61,7 @@ func (f *Friendly) NewGame(g *bot.Game) {
 	})
 	f.client.Tell(g.Opponent,
 		fmt.Sprintf("%s@level %d: %s",
-			*user, f.level, docURL))
+			f.client.User, f.level, docURL))
 	if f.fpa != nil {
 		if gs := f.fpa.Greeting(g.Color); gs != nil {
 			for _, m := range gs {
@@ -74,11 +79,11 @@ func (f *Friendly) GameOver() {
 				fmt.Sprintf("Thanks for playing! Please share your feedback about this rule variation: %s", url))
 		}
 	}
-	if *logFile != "" {
-		l, e := os.OpenFile(*logFile,
+	if f.logFile != "" {
+		l, e := os.OpenFile(f.logFile,
 			os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if e != nil {
-			log.Printf("log: open(%s): %v", *logFile, e)
+			log.Printf("log: open(%s): %v", f.logFile, e)
 		} else {
 			defer l.Close()
 			var winner tak.Color
@@ -191,7 +196,7 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 		if f.g == nil || who != f.g.Opponent {
 			return fmt.Sprintf("OK! I'll play at level %d for future games.", l)
 		} else if f.g != nil {
-			f.ai = wrapWithBook(f.g.Size, ai.NewMinimax(f.AIConfig()))
+			f.ai = f.cmd.wrapWithBook(f.g.Size, ai.NewMinimax(f.AIConfig()))
 			return fmt.Sprintf("OK! I'll play at level %d, starting right now.", l)
 		}
 	case "size":
@@ -201,15 +206,15 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 			return ""
 		}
 		if sz >= 3 && sz <= 8 {
-			*size = sz
+			f.cmd.size = sz
 			f.client.SendCommand("Seek",
-				strconv.Itoa(*size),
-				strconv.Itoa(int(gameTime.Seconds())),
-				strconv.Itoa(int(increment.Seconds())))
+				strconv.Itoa(f.cmd.size),
+				strconv.Itoa(int(f.cmd.gameTime.Seconds())),
+				strconv.Itoa(int(f.cmd.increment.Seconds())))
 		}
 	case "help":
 		return fmt.Sprintf("[%s@level %d]: %s",
-			*user, f.level, docURL)
+			f.client.User, f.level, docURL)
 	}
 	return ""
 }
@@ -229,7 +234,7 @@ func (f *Friendly) HandleTell(who string, msg string) {
 
 func (f *Friendly) HandleChat(room string, who string, msg string) {
 	log.Printf("chat room=%q from=%q msg=%q", room, who, msg)
-	cmd, arg := parseCommand(msg)
+	cmd, arg := parseCommand(f.client.User, msg)
 	if cmd == "" {
 		return
 	}
@@ -241,11 +246,11 @@ func (f *Friendly) HandleChat(room string, who string, msg string) {
 func (f *Friendly) AIConfig() ai.MinimaxConfig {
 	cfg := ai.MinimaxConfig{
 		Size:  f.g.Size,
-		Debug: *debug,
+		Debug: f.cmd.debug,
 
-		NoSort:   !*sort,
-		TableMem: *tableMem,
-		MultiCut: *multicut,
+		NoSort:   !f.cmd.sort,
+		TableMem: f.cmd.tableMem,
+		MultiCut: f.cmd.multicut,
 	}
 	cfg.Depth, cfg.Evaluate = f.levelSettings(f.g.Size, f.level)
 

@@ -6,6 +6,7 @@ import (
 )
 
 type Commands struct {
+	User string
 	Client
 }
 
@@ -29,6 +30,7 @@ func (c *Commands) Login(user, pass string) error {
 			return errors.New("bad username or password")
 		}
 		if strings.HasPrefix(line, "Welcome ") {
+			c.User = user
 			return nil
 		}
 	}

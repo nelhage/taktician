@@ -7,13 +7,13 @@ import (
 
 var commandRE = regexp.MustCompile(`^([^ :]+):?\s*([^ :]+):?\s*(.*)$`)
 
-func parseCommand(msg string) (string, string) {
+func parseCommand(whoami string, msg string) (string, string) {
 	gs := commandRE.FindStringSubmatch(msg)
 	if gs == nil {
 		return "", ""
 	}
-	if !strings.EqualFold(gs[1], *user) &&
-		!strings.EqualFold(gs[1]+"bot", *user) {
+	if !strings.EqualFold(gs[1], whoami) &&
+		!strings.EqualFold(gs[1]+"bot", whoami) {
 		return "", ""
 	}
 	return gs[2], gs[3]

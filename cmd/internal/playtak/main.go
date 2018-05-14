@@ -1,6 +1,7 @@
 package playtak
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -10,61 +11,97 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/playtak/bot"
 )
 
-var (
-	server    = flag.String("server", "playtak.com:10000", "playtak.com server to connect to")
-	user      = flag.String("user", "", "username for login")
-	pass      = flag.String("pass", "", "password for login")
-	accept    = flag.String("accept", "", "accept a game from specified user")
-	observe   = flag.String("observe", "", "observe a game by a specified user")
-	gameTime  = flag.Duration("time", 20*time.Minute, "Length of game to offer")
-	increment = flag.Duration("increment", 0, "time increment to offer")
-	size      = flag.Int("size", 5, "size of game to offer")
-	once      = flag.Bool("once", false, "play a single game and exit")
-	takbot    = flag.String("takbot", "", "challenge TakBot AI")
+type Command struct {
+	server    string
+	user      string
+	pass      string
+	accept    string
+	observe   string
+	gameTime  time.Duration
+	increment time.Duration
+	size      int
+	once      bool
+	takbot    string
 
-	friendly = flag.Bool("friendly", false, "play as FriendlyBot")
-	fpa      = flag.String("fpa", "", "select an alternate FPA rule set")
-	logFile  = flag.String("log-file", "", "Log friendly/FPA games")
+	friendly bool
+	fpa      string
+	logFile  string
 
-	debug           = flag.Int("debug", 1, "debug level")
-	depth           = flag.Int("depth", 0, "minimax depth")
-	multicut        = flag.Bool("multi-cut", false, "use multi-cut")
-	limit           = flag.Duration("limit", time.Minute, "time limit per move")
-	sort            = flag.Bool("sort", true, "sort moves via history heuristic")
-	tableMem        = flag.Int64("table-mem", 0, "set table size")
-	useOpponentTime = flag.Bool("use-opponent-time", true, "think on opponent's time")
+	debug           int
+	depth           int
+	multicut        bool
+	limit           time.Duration
+	sort            bool
+	tableMem        int64
+	useOpponentTime bool
 
-	book = flag.Bool("book", true, "use built-in opening book")
+	book bool
 
-	debugClient = flag.Bool("debug-client", false, "log debug output for playtak connection")
-)
+	debugClient bool
+}
+
+func (*Command) Name() string     { return "playtak" }
+func (*Command) Synopsis() string { return "Play Tak on playtak.com using the Taktician AI" }
+func (*Command) Usage() string {
+	return `playtak [flags]
+`
+}
+
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+	flags.StringVar(&c.server, "server", "playtak.com:10000", "playtak.com server to connect to")
+	flags.StringVar(&c.user, "user", "", "username for login")
+	flags.StringVar(&c.pass, "pass", "", "password for login")
+	flags.StringVar(&c.accept, "accept", "", "accept a game from specified user")
+	flags.StringVar(&c.observe, "observe", "", "observe a game by a specified user")
+	flags.DurationVar(&c.gameTime, "time", 20*time.Minute, "Length of game to offer")
+	flags.DurationVar(&c.increment, "increment", 0, "time increment to offer")
+	flags.IntVar(&c.size, "size", 5, "size of game to offer")
+	flags.BoolVar(&c.once, "once", false, "play a single game and exit")
+	flags.StringVar(&c.takbot, "takbot", "", "challenge TakBot AI")
+
+	flags.BoolVar(&c.friendly, "friendly", false, "play as FriendlyBot")
+	flags.StringVar(&c.fpa, "fpa", "", "select an alternate FPA rule set")
+	flags.StringVar(&c.logFile, "log-file", "", "Log friendly/FPA games")
+
+	flags.IntVar(&c.debug, "debug", 1, "debug level")
+	flags.IntVar(&c.depth, "depth", 0, "minimax depth")
+	flags.BoolVar(&c.multicut, "multi-cut", false, "use multi-cut")
+	flags.DurationVar(&c.limit, "limit", time.Minute, "time limit per move")
+	flags.BoolVar(&c.sort, "sort", true, "sort moves via history heuristic")
+	flags.Int64Var(&c.tableMem, "table-mem", 0, "set table size")
+	flags.BoolVar(&c.useOpponentTime, "use-opponent-time", true, "think on opponent's time")
+
+	flags.BoolVar(&c.book, "book", true, "use built-in opening book")
+
+	flags.BoolVar(&c.debugClient, "debug-client", false, "log debug output for playtak connection")
+}
 
 const ClientName = "Taktician AI"
 
-func main() {
-	flag.Parse()
-	if *accept != "" || *takbot != "" || *observe != "" {
-		*once = true
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if c.accept != "" || c.takbot != "" || c.observe != "" {
+		c.once = true
 	}
 	var fpaRuleset FPARule
-	if *fpa != "" {
-		*friendly = true
-		switch *fpa {
+	if c.fpa != "" {
+		c.friendly = true
+		switch c.fpa {
 		case "true", "center":
 			fpaRuleset = &CenterBlack{}
 		case "doublestack":
 			fpaRuleset = &DoubleStack{}
 		default:
-			log.Fatalf("Unknown FPA ruleset: %s", *fpa)
+			log.Fatalf("Unknown FPA ruleset: %s", c.fpa)
 		}
 	}
 
 	sigs := make(chan os.Signal, 1)
-	if *observe == "" {
+	if c.observe == "" {
 		signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	}
 
@@ -72,15 +109,15 @@ func main() {
 	var b bot.Bot
 	for {
 		var client *playtak.Commands
-		cl, err := playtak.Dial(*debugClient, *server)
+		cl, err := playtak.Dial(c.debugClient, c.server)
 		if err != nil {
 			goto reconnect
 		}
 		backoff = time.Second
-		client = &playtak.Commands{cl}
+		client = &playtak.Commands{"", cl}
 		client.SendClient(ClientName)
-		if *user != "" {
-			err = client.Login(*user, *pass)
+		if c.user != "" {
+			err = client.Login(c.user, c.pass)
 		} else {
 			err = client.LoginGuest()
 		}
@@ -88,23 +125,25 @@ func main() {
 			log.Fatal("login: ", err)
 		}
 		log.Printf("login OK")
-		if *friendly {
+		if c.friendly {
 			b = &Friendly{
-				client: client,
-				fpa:    fpaRuleset,
+				cmd:     c,
+				logFile: c.logFile,
+				client:  client,
+				fpa:     fpaRuleset,
 			}
 		} else {
-			b = &Taktician{client: client}
+			b = &Taktician{cmd: c, client: client}
 		}
 		for {
-			if *accept == "" && *observe == "" {
+			if c.accept == "" && c.observe == "" {
 				client.SendCommand("Seek",
-					strconv.Itoa(*size),
-					strconv.Itoa(int(gameTime.Seconds())),
-					strconv.Itoa(int(increment.Seconds())))
+					strconv.Itoa(c.size),
+					strconv.Itoa(int(c.gameTime.Seconds())),
+					strconv.Itoa(int(c.increment.Seconds())))
 				log.Printf("Seek OK")
-				if *takbot != "" {
-					client.SendCommand("Shout", "takbot: play", *takbot)
+				if c.takbot != "" {
+					client.SendCommand("Shout", "takbot: play", c.takbot)
 				}
 			}
 
@@ -118,7 +157,7 @@ func main() {
 					switch {
 					case strings.HasPrefix(line, "Seek new"):
 						bits := strings.Split(line, " ")
-						if bits[3] == *accept {
+						if bits[3] == c.accept {
 							log.Printf("accepting game %s from %s", bits[2], bits[3])
 							client.SendCommand("Accept", bits[2])
 						}
@@ -135,7 +174,7 @@ func main() {
 						bits := strings.Split(line, " ")
 						white := bits[3]
 						black := strings.TrimRight(bits[5], ",")
-						if white == *observe || black == *observe {
+						if white == c.observe || black == c.observe {
 							client.SendCommand("Observe", bits[2][len("Game#"):])
 						}
 					case strings.HasPrefix(line, "Observe"):
@@ -143,11 +182,11 @@ func main() {
 						break recvLoop
 					}
 				case <-sigs:
-					return
+					return subcommands.ExitSuccess
 				}
 			}
-			if *once {
-				return
+			if c.once {
+				return subcommands.ExitSuccess
 			}
 			if client.Error() != nil {
 				log.Printf("Disconnected: %v", client.Error())
@@ -159,7 +198,7 @@ func main() {
 		select {
 		case <-time.After(backoff):
 		case <-sigs:
-			return
+			return subcommands.ExitSuccess
 		}
 		backoff = backoff * 2
 		if backoff > time.Minute {

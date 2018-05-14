@@ -14,6 +14,8 @@ import (
 )
 
 type Taktician struct {
+	cmd *Command
+
 	g      *bot.Game
 	client *playtak.Commands
 	ai     ai.TakPlayer
@@ -21,16 +23,16 @@ type Taktician struct {
 
 func (t *Taktician) NewGame(g *bot.Game) {
 	t.g = g
-	t.ai = wrapWithBook(
+	t.ai = t.cmd.wrapWithBook(
 		g.Size,
 		ai.NewMinimax(ai.MinimaxConfig{
 			Size:  g.Size,
-			Depth: *depth,
-			Debug: *debug,
+			Depth: t.cmd.depth,
+			Debug: t.cmd.debug,
 
-			NoSort:   !*sort,
-			TableMem: *tableMem,
-			MultiCut: *multicut,
+			NoSort:   !t.cmd.sort,
+			TableMem: t.cmd.tableMem,
+			MultiCut: t.cmd.multicut,
 		}))
 }
 
@@ -46,7 +48,7 @@ func (t *Taktician) GetMove(
 		}
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
-	} else if !*useOpponentTime {
+	} else if !t.cmd.useOpponentTime {
 		return tak.Move{}
 	}
 	return t.ai.GetMove(ctx, p)
@@ -54,9 +56,9 @@ func (t *Taktician) GetMove(
 
 func (t *Taktician) timeBound(remaining time.Duration) time.Duration {
 	if t.g.Size == 4 {
-		return *limit
+		return t.cmd.limit
 	}
-	return *limit
+	return t.cmd.limit
 }
 
 func (t *Taktician) GameOver() {
@@ -72,11 +74,11 @@ func (t *Taktician) handleCommand(cmd, arg string) {
 			return
 		}
 		if sz >= 4 && sz <= 6 {
-			*size = sz
+			t.cmd.size = sz
 			t.client.SendCommand("Seek",
-				strconv.Itoa(*size),
-				strconv.Itoa(int(gameTime.Seconds())),
-				strconv.Itoa(int(increment.Seconds())))
+				strconv.Itoa(t.cmd.size),
+				strconv.Itoa(int(t.cmd.gameTime.Seconds())),
+				strconv.Itoa(int(t.cmd.increment.Seconds())))
 		}
 	}
 }
@@ -92,7 +94,7 @@ func (t *Taktician) HandleTell(who string, msg string) {
 }
 
 func (t *Taktician) HandleChat(room string, who string, msg string) {
-	cmd, arg := parseCommand(msg)
+	cmd, arg := parseCommand(t.client.User, msg)
 	if cmd == "" {
 		return
 	}

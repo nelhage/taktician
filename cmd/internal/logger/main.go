@@ -87,7 +87,7 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := &playtak.Commands{cl}
+	client := &playtak.Commands{"", cl}
 	client.SendClient(ClientName)
 	err = client.LoginGuest()
 	if err != nil {

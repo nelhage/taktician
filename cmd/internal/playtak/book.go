@@ -52,8 +52,8 @@ func init() {
 	}
 }
 
-func wrapWithBook(size int, p ai.TakPlayer) ai.TakPlayer {
-	if !*book {
+func (c *Command) wrapWithBook(size int, p ai.TakPlayer) ai.TakPlayer {
+	if !c.book {
 		return p
 	}
 	if size != 5 && size != 6 {
