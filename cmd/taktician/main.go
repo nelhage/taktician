@@ -11,6 +11,7 @@ import (
 	"github.com/nelhage/taktician/cmd/internal/logger"
 	"github.com/nelhage/taktician/cmd/internal/openings"
 	"github.com/nelhage/taktician/cmd/internal/play"
+	"github.com/nelhage/taktician/cmd/internal/selfplay"
 )
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 	subcommands.Register(&play.Command{}, "")
 
 	subcommands.Register(&analyze.Command{}, "")
+	subcommands.Register(&selfplay.Command{}, "")
 
 	subcommands.Register(&canonicalize.Command{}, "")
 

@@ -1,6 +1,7 @@
 package selfplay
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,38 +12,70 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
-var (
-	size   = flag.Int("size", 5, "board size")
-	zero   = flag.Bool("zero", false, "start with zero weights, not defaults")
-	p1     = flag.String("p1", "minimax", "player1 AI engine")
-	p2     = flag.String("p2", "minimax", "player2 AI engine")
-	w1     = flag.String("w1", "", "first set of weights")
-	w2     = flag.String("w2", "", "second set of weights")
-	c1     = flag.String("c1", "", "custom config 1")
-	c2     = flag.String("c2", "", "custom config 2")
-	seed   = flag.Int64("seed", 0, "starting random seed")
-	games  = flag.Int("games", 10, "number of games to play per opening/color")
-	cutoff = flag.Int("cutoff", 80, "cut games off after how many plies")
-	swap   = flag.Bool("swap", true, "swap colors each game")
+type Command struct {
+	size   int
+	zero   bool
+	p1     string
+	p2     string
+	w1     string
+	w2     string
+	c1     string
+	c2     string
+	seed   int64
+	games  int
+	cutoff int
+	swap   bool
 
-	prefix = flag.String("prefix", "", "ptn file to start games at the end of")
-	seeds  = flag.String("seeds", "", "directory of seed positions")
+	prefix string
+	seeds  string
 
-	debug = flag.Int("debug", 0, "debug level")
-	depth = flag.Int("depth", 3, "depth to search each move")
-	limit = flag.Duration("limit", 0, "amount of time to search each move")
+	debug int
+	depth int
+	limit time.Duration
 
-	threads = flag.Int("threads", 4, "number of parallel threads")
+	threads int
 
-	out     = flag.String("out", "", "directory to write ptns to")
-	verbose = flag.Bool("v", false, "verbose output")
+	out     string
+	verbose bool
 
-	memProfile = flag.String("mem-profile", "", "write memory profile")
-)
+	memProfile string
+}
+
+func (*Command) Name() string     { return "selfplay" }
+func (*Command) Synopsis() string { return "Play two AIs against each other and report results" }
+func (*Command) Usage() string {
+	return `selfplay [flags]
+`
+}
+
+func (c *Command) SetFlags(flags *flag.FlagSet) {
+	flags.IntVar(&c.size, "size", 5, "board size")
+	flags.BoolVar(&c.zero, "zero", false, "start with zero weights, not defaults")
+	flags.StringVar(&c.p1, "p1", "minimax", "player1 AI engine")
+	flags.StringVar(&c.p2, "p2", "minimax", "player2 AI engine")
+	flags.StringVar(&c.w1, "w1", "", "first set of weights")
+	flags.StringVar(&c.w2, "w2", "", "second set of weights")
+	flags.StringVar(&c.c1, "c1", "", "custom config 1")
+	flags.StringVar(&c.c2, "c2", "", "custom config 2")
+	flags.Int64Var(&c.seed, "seed", 0, "starting random seed")
+	flags.IntVar(&c.games, "games", 10, "number of games to play per opening/color")
+	flags.IntVar(&c.cutoff, "cutoff", 80, "cut games off after how many plies")
+	flags.BoolVar(&c.swap, "swap", true, "swap colors each game")
+	flags.StringVar(&c.prefix, "prefix", "", "ptn file to start games at the end of")
+	flags.StringVar(&c.seeds, "seeds", "", "directory of seed positions")
+	flags.IntVar(&c.debug, "debug", 0, "debug level")
+	flags.IntVar(&c.depth, "depth", 3, "depth to search each move")
+	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
+	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
+	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
+	flags.BoolVar(&c.verbose, "v", false, "verbose output")
+	flags.StringVar(&c.memProfile, "mem-profile", "", "write memory profile")
+}
 
 func addSeeds(g *ptn.PTN, ps []*tak.Position) ([]*tak.Position, error) {
 	p, e := g.PositionAtMove(0, tak.NoColor)
@@ -74,11 +107,10 @@ func readSeeds(d string) ([]*tak.Position, error) {
 	return ps, nil
 }
 
-func main() {
-	flag.Parse()
-	if *memProfile != "" {
+func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if c.memProfile != "" {
 		defer func() {
-			f, e := os.OpenFile(*memProfile,
+			f, e := os.OpenFile(c.memProfile,
 				os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 			if e != nil {
 				log.Printf("open memory profile: %v", e)
@@ -88,13 +120,13 @@ func main() {
 		}()
 	}
 
-	if *seed == 0 {
-		*seed = time.Now().Unix()
+	if c.seed == 0 {
+		c.seed = time.Now().Unix()
 	}
 
 	var starts []*tak.Position
-	if *prefix != "" {
-		pt, e := ptn.ParseFile(*prefix)
+	if c.prefix != "" {
+		pt, e := ptn.ParseFile(c.prefix)
 		if e != nil {
 			log.Fatalf("Parse PTN: %v", e)
 		}
@@ -104,44 +136,44 @@ func main() {
 		}
 		starts = []*tak.Position{p}
 	}
-	if *seeds != "" {
+	if c.seeds != "" {
 		var e error
-		starts, e = readSeeds(*seeds)
+		starts, e = readSeeds(c.seeds)
 		if e != nil {
 			log.Fatalf("-seeds: %v", e)
 		}
 	}
 	if len(starts) == 0 {
-		starts = []*tak.Position{tak.New(tak.Config{Size: *size})}
+		starts = []*tak.Position{tak.New(tak.Config{Size: c.size})}
 	}
 
 	cfg := &Config{
-		Zero:    *zero,
-		Size:    *size,
-		Depth:   *depth,
-		Debug:   *debug,
-		Swap:    *swap,
-		Games:   *games,
-		Threads: *threads,
-		Seed:    *seed,
-		Cutoff:  *cutoff,
-		Limit:   *limit,
+		Zero:    c.zero,
+		Size:    c.size,
+		Depth:   c.depth,
+		Debug:   c.debug,
+		Swap:    c.swap,
+		Games:   c.games,
+		Threads: c.threads,
+		Seed:    c.seed,
+		Cutoff:  c.cutoff,
+		Limit:   c.limit,
 		Initial: starts,
-		Verbose: *verbose,
+		Verbose: c.verbose,
 	}
-	cfg.F1 = buildFactory(cfg, *p1, *c1, *w1)
-	cfg.F2 = buildFactory(cfg, *p2, *c2, *w2)
+	cfg.F1 = buildFactory(cfg, c.p1, c.c1, c.w1)
+	cfg.F2 = buildFactory(cfg, c.p2, c.c2, c.w2)
 
 	st := Simulate(cfg)
 
-	if *out != "" {
+	if c.out != "" {
 		for _, r := range st.Games {
-			writeGame(*out, &r)
+			writeGame(c.out, &r)
 		}
 	}
 
 	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d depth=%d limit=%s",
-		len(st.Games), *seed, st.Ties, st.Cutoff, st.White, st.Black, *depth, *limit)
+		len(st.Games), c.seed, st.Ties, st.Cutoff, st.White, st.Black, c.depth, c.limit)
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
@@ -150,6 +182,8 @@ func main() {
 		a, b = b, a
 	}
 	log.Printf("p[one-sided]=%f", binomTest(a, b, 0.5))
+
+	return subcommands.ExitSuccess
 }
 
 func writeGame(d string, r *Result) {

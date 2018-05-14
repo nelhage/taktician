@@ -34,7 +34,7 @@ func (m *MinimaxFactory) String() string {
 
 func buildMinimaxFactory(cfg *Config, player string, conf string, ws string) AIFactory {
 	weights := ai.DefaultWeights[cfg.Size]
-	if *zero {
+	if cfg.Zero {
 		weights = ai.Weights{}
 	}
 	if ws != "" {
