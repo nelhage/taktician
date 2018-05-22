@@ -105,7 +105,8 @@ func formatTags(g *gameRow) []ptn.Tag {
 	}
 	if g.TimerTime != 0 {
 		timer := time.Duration(g.TimerTime) * time.Second
-		timestr := fmt.Sprintf("%02d:%02d", timer.Minutes(), timer.Seconds())
+		secs := int64(timer.Seconds())
+		timestr := fmt.Sprintf("%02d:%02d", secs/60, secs%60)
 		if g.TimerInc != 0 {
 			timestr = fmt.Sprintf("%s +%d", timestr, g.TimerInc)
 		}
