@@ -16,4 +16,5 @@ delete from ratings;
 .mode csv
 .import /dev/fd/3 ratings
 create index ratings_by_rating ON ratings(rating);
+create index ratings_by_name ON ratings(name);
 EOF
