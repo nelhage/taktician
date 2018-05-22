@@ -1,5 +1,7 @@
 package tak
 
+import "fmt"
+
 // Slides is essentially a packed [8]uint4, used to represent the
 // slide counts in a Tak move in a space-efficient way. We store the
 // first drop count in (s&0xf), the next in (s&0xf0), and so on.
@@ -9,7 +11,7 @@ func MkSlides(drops ...int) Slides {
 	var out Slides
 	for i := len(drops) - 1; i >= 0; i-- {
 		if drops[i] > 8 {
-			panic("bad drop")
+			panic(fmt.Sprintf("bad drop: %#v", drops))
 		}
 		out = out.Prepend(drops[i])
 	}

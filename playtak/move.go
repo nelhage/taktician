@@ -81,7 +81,7 @@ func ParseServer(server string) (tak.Move, error) {
 		var slides []int
 		for _, drop := range words[3:] {
 			n, e := strconv.Atoi(drop)
-			if e != nil {
+			if e != nil || n < 0 || n > 8 {
 				return tak.Move{}, fmt.Errorf("bad drop: %s", server)
 			}
 			slides = append(slides, int(n))
