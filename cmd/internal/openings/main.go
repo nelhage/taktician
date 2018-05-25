@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"strings"
 
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/logs"
@@ -19,7 +19,6 @@ import (
 )
 
 type Command struct {
-	logDir    string
 	size      int
 	minRating int
 	minCount  int
@@ -29,12 +28,10 @@ type Command struct {
 func (*Command) Name() string     { return "openings" }
 func (*Command) Synopsis() string { return "Analyze openings from the playtak DB" }
 func (*Command) Usage() string {
-	return `openings [flags]
-`
+	return `openings [flags] GAMES.db`
 }
 
 func (c *Command) SetFlags(flags *flag.FlagSet) {
-	flags.StringVar(&c.logDir, "games", "games", "game log directory")
 	flags.IntVar(&c.size, "size", 5, "what size to analyze")
 	flags.IntVar(&c.minRating, "rating", 1600, "minimum rating to consider")
 	flags.IntVar(&c.minCount, "count", 100, "render games with >= [this many] moves")
@@ -44,21 +41,23 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	repo, e := logs.Open(flag.Arg(0))
 	if e != nil {
-		log.Fatalf("parse %s: %v", flag.Arg(0), e)
+		log.Fatalf("open %s: %v", flag.Arg(0), e)
 	}
 	defer repo.Close()
 	sql := repo.DB()
 
 	rows, e := sql.Query(
 		`
-SELECT day, id
-FROM games g, ratings r1, ratings r2
-WHERE r1.name = g.player1
- AND r2.name = g.player2
+SELECT g.id, p.ptn
+FROM games g, ratings r1, ratings r2, ptns p
+WHERE r1.name = g.player_white
+ AND r2.name = g.player_black
  AND NOT r1.bot AND NOT r2.bot
  AND r1.rating >= ?
  AND r2.rating >= ?
  AND g.size = ?
+ AND p.id = g.id
+ AND p.id IS NOT NULL
 `, c.minRating, c.minRating, c.size)
 	if e != nil {
 		log.Fatal("select: ", e)
@@ -68,22 +67,22 @@ WHERE r1.name = g.player1
 	tree := &tree{}
 
 	for rows.Next() {
-		var day string
 		var id int
-		e = rows.Scan(&day, &id)
+		var notation string
+		e = rows.Scan(&id, &notation)
 		if e != nil {
 			panic(e)
 		}
 
-		ptnPath := path.Join(c.logDir, day, fmt.Sprintf("%d.ptn", id))
-		g, e := ptn.ParseFile(ptnPath)
+		g, e := ptn.ParsePTN(strings.NewReader(notation))
 		if e != nil {
-			log.Printf("parse %s: %v", ptnPath, e)
+			log.Printf("parse %d: %v", id, e)
 			continue
 		}
+
 		p, e := g.PositionAtMove(0, tak.NoColor)
 		if e != nil {
-			log.Printf("parse %s: %v", ptnPath, e)
+			log.Printf("parse %d: %v", id, e)
 			continue
 		}
 
@@ -98,7 +97,7 @@ WHERE r1.name = g.player1
 		}
 		ms, e = symmetry.Canonical(p.Size(), ms)
 		if e != nil {
-			log.Printf("%s: %v", ptnPath, e)
+			log.Printf("%d: %v", id, e)
 			continue
 		}
 
