@@ -16,7 +16,6 @@ import subprocess
 import sys
 
 FLAGS = None
-GAMES_DIR = os.path.join(os.path.dirname(__file__), "../../games")
 
 def seeded_hash(data):
   data = data + (FLAGS.seed,)
@@ -24,18 +23,18 @@ def seeded_hash(data):
   v, = struct.unpack("Q", h[:8])
   return v
 
-def want_move(day, id, i):
+def want_move(id, i):
   if i < FLAGS.skip:
     return False
   if FLAGS.stride:
     return (i - FLAGS.skip) % FLAGS.stride == 0
-  v = seeded_hash((day, id, i))
+  v = seeded_hash((id, i))
   return v % FLAGS.sample == 0
 
-def in_test_set(day, id):
+def in_test_set(id):
   if FLAGS.test_fraction == 0:
     return False
-  v = seeded_hash((day, id))
+  v = seeded_hash((id,))
   return v < (FLAGS.test_fraction * (1 << 64))
 
 RESULT_MAP = {
@@ -57,18 +56,20 @@ def parse_result(s):
   return RESULT_MAP[s]
 
 def main(args):
-  db = sqlite3.connect(os.path.join(GAMES_DIR, "games.db"))
+  db = sqlite3.connect(FLAGS.db)
   cur = db.cursor()
   sql = '''
-SELECT day, id, result
-FROM games g, ratings r1, ratings r2
-WHERE r1.name = g.player1
- AND r2.name = g.player2
+SELECT g.id, ptn, result
+FROM games g, ratings r1, ratings r2, ptns p
+WHERE r1.name = g.player_white
+ AND r2.name = g.player_black
  AND NOT r1.bot AND NOT r2.bot
  AND r1.rating >= :rating
  AND r2.rating >= :rating
  AND size = :size
-ORDER BY day ASC,id ASC
+ AND p.id = g.id
+ AND p.ptn IS NOT NULL
+ORDER BY g.id ASC
   '''
   if FLAGS.limit:
     sql += ' LIMIT :limit'
@@ -81,9 +82,7 @@ ORDER BY day ASC,id ASC
   train = []
   test = []
 
-  for (day, id, result_s) in cur:
-    with open(os.path.join(GAMES_DIR, day, str(id) + ".ptn")) as f:
-      text = f.read()
+  for (id, text, result_s) in cur:
     ptn = tak.ptn.PTN.parse(text)
     if not ptn.moves: continue
 
@@ -92,17 +91,16 @@ ORDER BY day ASC,id ASC
 
     want = want_move
     if FLAGS.one:
-      want_ply = seeded_hash((day, id)) % len(ptn.moves)
-      want = lambda day, id, ply: ply == want_ply
+      want_ply = seeded_hash((id,)) % len(ptn.moves)
+      want = lambda id, ply: ply == want_ply
 
     for i, m in enumerate(ptn.moves):
-      if want(day, id, i):
-        if in_test_set(day, id):
+      if want(id, i):
+        if in_test_set(id):
           out = test
         else:
           out = train
         out.append(tak.proto.CorpusEntry(
-          day = day,
           id = int(id),
           ply = i,
 
@@ -147,6 +145,8 @@ def read_git_commit():
 
 def arg_parser():
   parser = argparse.ArgumentParser()
+  parser.add_argument('--db', required=True, type=str,
+                      help="path to playtak db")
   parser.add_argument('--rating', default=1600, type=int)
 
   group = parser.add_mutually_exclusive_group(required=True)
