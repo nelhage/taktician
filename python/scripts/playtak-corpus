@@ -170,7 +170,7 @@ def arg_parser():
   parser.add_argument('--size', default=5, type=int)
 
   parser.add_argument('--out', '-o', default='data/corpus')
-  parser.add_argument('--proto', default=False, action='store_true',
+  parser.add_argument('--proto', default=True, action='store_true',
                       help='Store positions as lists of protobuf')
   return parser
 
