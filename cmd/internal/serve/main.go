@@ -26,7 +26,8 @@ type Command struct {
 func (*Command) Name() string     { return "serve" }
 func (*Command) Synopsis() string { return "Seve Taktician RPCs via GRPC" }
 func (*Command) Usage() string {
-	return `serve`
+	return `serve
+`
 }
 
 func (c *Command) SetFlags(flags *flag.FlagSet) {

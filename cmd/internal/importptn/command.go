@@ -24,7 +24,8 @@ type Command struct{}
 func (*Command) Name() string     { return "import-ptn" }
 func (*Command) Synopsis() string { return "Import PTNs from playtak DB" }
 func (*Command) Usage() string {
-	return `import-ptn GAMES.db`
+	return `import-ptn GAMES.db
+`
 }
 
 func (c *Command) SetFlags(flags *flag.FlagSet) {

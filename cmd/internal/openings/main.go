@@ -28,7 +28,8 @@ type Command struct {
 func (*Command) Name() string     { return "openings" }
 func (*Command) Synopsis() string { return "Analyze openings from the playtak DB" }
 func (*Command) Usage() string {
-	return `openings [flags] GAMES.db`
+	return `openings [flags] GAMES.db
+`
 }
 
 func (c *Command) SetFlags(flags *flag.FlagSet) {
