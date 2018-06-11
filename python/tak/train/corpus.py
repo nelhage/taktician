@@ -8,31 +8,7 @@ import struct
 
 import numpy as np
 
-@attr.s(frozen=True)
-class Instance(object):
-  proto    = attr.ib(
-    validator = attr.validators.instance_of(tak.proto.CorpusEntry))
-
-  position = attr.ib(
-    validator = attr.validators.instance_of(tak.Position))
-  move = attr.ib(
-    validator = attr.validators.instance_of(tak.Move))
-
-
-@attr.s(frozen=True)
-class Dataset(object):
-  size = attr.ib()
-  instances = attr.ib()
-
-  def minibatches(self, batch_size):
-    perm = np.random.permutation(len(self.instances[0]))
-    i = 0
-    while i < len(self):
-      yield [o[perm[i:i+batch_size]] for o in self.instances]
-      i += batch_size
-
-  def __len__(self):
-    return len(self.instances[0])
+import tensorflow as tf
 
 def xread(fh, n):
   b = fh.read(n)
@@ -119,23 +95,32 @@ def to_features(positions, add_symmetries=False):
   size = p.size
   feat = tak.train.Featurizer(size)
 
-  count = len(positions)
-  if add_symmetries:
-    count *= 8
-  xs = np.zeros((count,) + feat.feature_shape())
-  ys = np.zeros((count, feat.move_count()))
+  def gen():
+    for pos in positions:
+      count = 8 if add_symmetries else 1
+      xs = np.zeros((count,) + feat.feature_shape())
+      ys = np.zeros((count, feat.move_count()))
 
-  for i, pos in enumerate(positions):
-    p = tak.ptn.parse_tps(pos.tps)
-    m = tak.ptn.parse_move(pos.move)
-    if add_symmetries:
-      feat.features_symmetries(p, out=xs[8*i:8*(i+1)])
-      for j,sym in enumerate(tak.symmetry.SYMMETRIES):
-        ys[8*i + j][feat.move2id(tak.symmetry.transform_move(sym, m, size))] = 1
-    else:
-      feat.features(p, out=xs[i])
-      ys[i][tak.train.move2id(m, size)] = 1
-  return Dataset(size, (xs, ys))
+      p = tak.ptn.parse_tps(pos.tps)
+      m = tak.ptn.parse_move(pos.move)
+      if add_symmetries:
+        feat.features_symmetries(p, out=xs)
+        for j,sym in enumerate(tak.symmetry.SYMMETRIES):
+          ys[j][feat.move2id(tak.symmetry.transform_move(sym, m, size))] = 1
+      else:
+        feat.features(p, out=xs[0])
+        ys[0][tak.train.move2id(m, size)] = 1
+      for (x, y) in zip(xs, ys):
+        yield {
+          'position': x,
+          'move': y,
+        }
+  return tf.data.Dataset.from_generator(
+    gen,
+    {
+      'position': tf.float64,
+      'move': tf.float64,
+    })
 
 def raw_load(dir):
   if os.path.isfile(os.path.join(dir, 'train.csv')):
@@ -161,7 +146,6 @@ def load_features(dir, add_symmetries=False):
     to_features(train, add_symmetries),
     to_features(test, add_symmetries))
 
-__all__ = ['Instance', 'Dataset',
-           'load_csv', 'load_proto',
+__all__ = ['load_csv', 'load_proto',
            'write_csv', 'write_proto',
            'load_corpus', 'load_features']
