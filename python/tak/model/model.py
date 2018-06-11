@@ -69,7 +69,7 @@ class PredictionModel(object):
 
     with tf.variable_scope('Train'):
       self.cross_entropy = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels))
+        tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.labels))
       self.regularization_loss = tf.contrib.layers.apply_regularization(
         tf.contrib.layers.l2_regularizer(regularize),
       )
