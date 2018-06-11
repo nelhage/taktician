@@ -5,7 +5,6 @@ import tak.train
 
 import attr
 
-import argparse
 import csv
 import hashlib
 import json
@@ -15,7 +14,33 @@ import struct
 import subprocess
 import sys
 
-FLAGS = None
+import absl.flags
+import absl.app
+
+FLAGS = absl.flags.FLAGS
+
+absl.flags.DEFINE_string('db', default=None, help="path to playtak db")
+absl.flags.DEFINE_integer('rating', default=1600, help='min rating to include')
+
+absl.flags.DEFINE_integer('stride', default=None, help='select every Nth move')
+absl.flags.DEFINE_integer('sample', default=None, help='select 1/N moves at random')
+absl.flags.DEFINE_boolean('one', default=False,
+                          help='select one position uniformly at random')
+
+absl.flags.DEFINE_integer('seed', default=1, help='random seed')
+
+absl.flags.DEFINE_integer('limit', default=None, help='Only look at N games')
+
+absl.flags.DEFINE_float('test_fraction', default=0.05,
+                        help='select fraction of games to use for training set')
+
+absl.flags.DEFINE_integer('skip', default=5, help='skip N opening positions')
+absl.flags.DEFINE_integer('size', default=5, help='size to build for')
+
+absl.flags.DEFINE_string('out', default='data/corpus', help='output directory')
+absl.flags.DEFINE_boolean('proto', default=True,
+                          help='Store positions as lists of protobuf')
+
 
 def seeded_hash(data):
   data = data + (FLAGS.seed,)
@@ -133,6 +158,7 @@ ORDER BY g.id ASC
       'argv': sys.argv,
       'opts': vars(FLAGS),
     }, fh, indent=2)
+  return 0
 
 def read_git_commit():
   sha1 = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
@@ -143,38 +169,5 @@ def read_git_commit():
     sha1 += "-dirty"
   return sha1
 
-def arg_parser():
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--db', required=True, type=str,
-                      help="path to playtak db")
-  parser.add_argument('--rating', default=1600, type=int)
-
-  group = parser.add_mutually_exclusive_group(required=True)
-  group.add_argument('--stride', default=None, type=int,
-                     help='select every Nth move')
-  group.add_argument('--sample', default=None, type=int,
-                     help='select 1/N moves at random')
-  group.add_argument('--one', default=False, action='store_true',
-                     help='select one position uniformly at random')
-
-  parser.add_argument('--seed', default=1, type=int,
-                      help='random seed')
-
-  parser.add_argument('--limit', default=None, type=int,
-                      help='Only look at N games')
-
-  parser.add_argument('--test-fraction', default=0.05, type=float,
-                      help='select fraction of games to use for training set')
-
-  parser.add_argument('--skip', default=5, type=int)
-  parser.add_argument('--size', default=5, type=int)
-
-  parser.add_argument('--out', '-o', default='data/corpus')
-  parser.add_argument('--proto', default=True, action='store_true',
-                      help='Store positions as lists of protobuf')
-  return parser
-
 if __name__ == '__main__':
-  parser = arg_parser()
-  FLAGS, args = parser.parse_known_args()
-  main(args)
+  absl.app.run(main)
