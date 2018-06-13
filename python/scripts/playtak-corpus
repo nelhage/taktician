@@ -156,9 +156,8 @@ ORDER BY g.id ASC
     json.dump({
       'sha1': read_git_commit(),
       'argv': sys.argv,
-      'opts': vars(FLAGS),
+      'opts': FLAGS.flag_values_dict(),
     }, fh, indent=2)
-  return 0
 
 def read_git_commit():
   sha1 = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
