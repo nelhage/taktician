@@ -53,10 +53,18 @@ def main(args):
     filters = FLAGS.filters,
     hidden  = FLAGS.hidden,
   )
-  model = tak.model.PredictionModel(model_def)
+  test_batch = test.batch(int(1e5))
+  iterator = tf.data.Iterator.from_structure(
+    test_batch.output_types,
+    test_batch.output_shapes)
+  init_test = iterator.make_initializer(test_batch)
+  init_train = iterator.make_initializer(train.shuffle(int(1e5)).batch(FLAGS.batch))
+  next_batch = iterator.get_next()
+  model = tak.model.PredictionModel(model_def, next_batch['position'])
   learning_rate = tf.placeholder(tf.float32)
   optimizer = getattr(tf.train, FLAGS.optimizer)(learning_rate)
-  model.add_train_ops(optimizer=optimizer, regularize=FLAGS.regularize)
+  model.add_train_ops(next_batch['move'],
+                      optimizer=optimizer, regularize=FLAGS.regularize)
 
   if FLAGS.checkpoint:
     with open(FLAGS.checkpoint + ".model", 'wb') as fh:
@@ -72,47 +80,38 @@ def main(args):
 
   t_end = 0
   t_start = 0
-  n_instances = 0
   lr = FLAGS.eta
-  test_batch = session.run(test.batch(int(1e5)).make_one_shot_iterator().get_next())
-  test_x = test_batch['position']
-  test_y = test_batch['move']
-  iterator = train.shuffle(int(1e5)).batch(FLAGS.batch).make_initializable_iterator()
-  next_batch = iterator.get_next()
+
+  n_instances = tf.Variable(0)
+  init_n = tf.assign(n_instances, 0)
+  inc_n = tf.assign_add(n_instances, tf.shape(next_batch['position'])[0])
 
   for epoch in range(FLAGS.epochs):
-
+    session.run(init_test)
     loss, prec1, prec5 = session.run(
       [model.loss, model.prec1, model.prec5],
       feed_dict={
-        model.x: test_x,
-        model.labels: test_y,
         model.keep_prob: 1.0,
       })
     print("epoch={0} test loss={1:0.4f} acc={2:0.2f}%/{3:0.2f}% pos/s={4:.2f}".format(
       epoch, loss,
       100*prec1, 100*prec5,
-      n_instances/(t_end-t_start) if t_start else 0))
+      session.run(n_instances)/(t_end-t_start) if t_start else 0))
     if FLAGS.checkpoint:
       saver.save(session, FLAGS.checkpoint, global_step=epoch)
 
-    session.run(iterator.initializer)
-
-    n_instances = 0
     t_start = time.time()
+    session.run((init_train, init_n))
     while True:
       try:
-        batch = session.run(next_batch)
+        session.run(
+          (model.train_step, inc_n),
+          feed_dict={
+            learning_rate: lr,
+            model.keep_prob: FLAGS.dropout,
+          })
       except tf.errors.OutOfRangeError:
         break
-
-      session.run(model.train_step, feed_dict={
-        model.x: batch['position'],
-        model.labels: batch['move'],
-        learning_rate: lr,
-        model.keep_prob: FLAGS.dropout,
-      })
-      n_instances += len(batch['position'])
     t_end = time.time()
     if FLAGS.lr_interval and ((epoch+1) % FLAGS.lr_interval) == 0:
       lr /= FLAGS.lr_scale

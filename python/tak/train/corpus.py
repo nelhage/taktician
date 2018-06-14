@@ -118,8 +118,12 @@ def to_features(positions, add_symmetries=False):
   return tf.data.Dataset.from_generator(
     gen,
     {
-      'position': tf.float64,
-      'move': tf.float64,
+      'position': tf.float32,
+      'move': tf.float32,
+    },
+    {
+      'position': feat.feature_shape(),
+      'move': (feat.move_count(),),
     })
 
 def raw_load(dir):

@@ -39,33 +39,25 @@ class PerceptionModel(object):
     self.output = tf.nn.dropout(activations, keep_prob=self.keep_prob)
 
 class PredictionModel(object):
-  def __init__(self, model_def, perception=None):
+  def __init__(self, model_def, x):
     self.size = model_def.size
 
-    if perception is None:
-      fshape = tak.train.feature_shape(self.size)
-      with tf.variable_scope('Input'):
-        self.x = tf.placeholder(tf.float32, (None,) + fshape)
-      perception = PerceptionModel(model_def, self.x)
-    else:
-      self.x = perception.x
-
-    self.perception = perception
+    fshape = tak.train.feature_shape(self.size)
+    self.perception = PerceptionModel(model_def, x)
 
     self.move_count = tak.train.move_count(self.size)
-    self.keep_prob = perception.keep_prob
+    self.keep_prob = self.perception.keep_prob
 
     self.logits = tf.contrib.layers.fully_connected(
-      tf.contrib.layers.flatten(perception.output),
+      tf.contrib.layers.flatten(self.perception.output),
       scope = 'Output',
       num_outputs = self.move_count,
       activation_fn = None,
     )
     tf.add_to_collection('logits', self.logits)
 
-  def add_train_ops(self, optimizer, regularize=0):
-    with tf.variable_scope('Input'):
-      self.labels = tf.placeholder(tf.float32, (None, self.move_count))
+  def add_train_ops(self, labels, optimizer, regularize=0):
+    self.labels = labels
 
     with tf.variable_scope('Train'):
       self.cross_entropy = tf.reduce_mean(
