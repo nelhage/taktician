@@ -6,3 +6,4 @@ __pycache__
 htmlcov/
 data/train
 *.pyc
+_feat
