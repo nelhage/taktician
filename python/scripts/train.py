@@ -11,6 +11,7 @@ import numpy as np
 import tensorflow as tf
 
 tf.flags.DEFINE_string('corpus', default=None, help='corpus to train')
+tf.flags.DEFINE_string('features', default=None, help='saved features to train')
 tf.flags.DEFINE_integer('size', default=5, help='board size')
 
 tf.flags.DEFINE_integer('kernel', default=3, help='convolutional kernel size')
@@ -38,11 +39,13 @@ tf.flags.DEFINE_boolean('symmetries', default=True, help='Add symmetries to corp
 FLAGS = tf.flags.FLAGS
 
 def main(args):
-  print("Loading data...")
-  t = time.time()
-  train, test = tak.train.load_features(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
-  e = time.time()
-  print("Loaded cases in {:.3f}s...".format(e-t))
+  if FLAGS.corpus:
+    train, test = tak.train.load_corpus(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
+  elif FLAGS.features:
+    train, test = tak.train.load_features(FLAGS.features, FLAGS.size)
+  else:
+    print("You must specify --corpus or --features", out=sys.stderr)
+    return 1
 
   model_def = tak.proto.ModelDef(
     size    = 5,

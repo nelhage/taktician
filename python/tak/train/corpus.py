@@ -79,11 +79,32 @@ def raw_load(dir):
     load_proto(os.path.join(dir, 'test.dat')),
   )
 
+def load_dataset(path, size):
+  feat = tak.train.Featurizer(size)
+  features = {
+    'position': tf.FixedLenFeature(shape=feat.feature_shape(), dtype=tf.float32),
+    'move': tf.FixedLenFeature(shape=(feat.move_count()), dtype=tf.float32)
+  }
+  def _parse(examples):
+    return tf.parse_single_example(examples, features)
 
-def load_features(dir, add_symmetries=False):
+  return (
+    tf.data.TFRecordDataset([path])
+    .map(_parse)
+  )
+
+def load_corpus(dir, add_symmetries=False):
   train, test = raw_load(dir)
   return (
     to_features(train, add_symmetries),
     to_features(test, add_symmetries))
 
-__all__ = ['load_proto', 'write_proto', 'load_features']
+def load_features(dir, size):
+  return (
+    load_dataset(os.path.join(dir, "train.tfrecord"), size),
+    load_dataset(os.path.join(dir, "test.tfrecord"), size),
+  )
+
+__all__ = ['load_proto', 'write_proto',
+           'load_dataset',
+           'load_corpus', 'load_features']
