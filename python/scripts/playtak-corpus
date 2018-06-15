@@ -5,7 +5,6 @@ import tak.train
 
 import attr
 
-import csv
 import hashlib
 import json
 import os.path
@@ -38,8 +37,6 @@ absl.flags.DEFINE_integer('skip', default=5, help='skip N opening positions')
 absl.flags.DEFINE_integer('size', default=5, help='size to build for')
 
 absl.flags.DEFINE_string('out', default='data/corpus', help='output directory')
-absl.flags.DEFINE_boolean('proto', default=True,
-                          help='Store positions as lists of protobuf')
 
 
 def seeded_hash(data):
@@ -147,10 +144,7 @@ ORDER BY g.id ASC
     pass
 
   for (positions, path) in [(train, "train"), (test, "test")]:
-    if FLAGS.proto:
-      tak.train.write_proto(os.path.join(FLAGS.out, path+".dat"), positions)
-    else:
-      tak.train.write_csv(os.path.join(FLAGS.out, path+".csv"), positions)
+    tak.train.write_proto(os.path.join(FLAGS.out, path+".dat"), positions)
 
   with open(os.path.join(FLAGS.out, 'meta.json'), 'w') as fh:
     json.dump({

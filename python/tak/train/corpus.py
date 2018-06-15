@@ -2,7 +2,6 @@ import tak.ptn
 import tak.proto
 
 import attr
-import csv
 import os
 import struct
 
@@ -31,64 +30,12 @@ def load_proto(path):
         break
   return positions
 
-def load_csv(path):
-  positions = []
-
-  with open(path) as f:
-    reader = csv.reader(f)
-    for row in reader:
-      p = tak.proto.CorpusEntry()
-      p.tps = row[0]
-      p.move = row[1]
-      if len(row) > 2 and row[2]:
-        p.value = float(row[2])
-      if len(row) > 3:
-        p.day = row[3]
-      if len(row) > 4:
-        p.id = int(row[4])
-      if len(row) > 5:
-        p.ply = int(row[5])
-      if len(row) > 6:
-        p.plies = int(row[6])
-
-      positions.append(p)
-    return positions
-
-def write_csv(path, positions):
-  with open(path, 'w') as f:
-    w = csv.writer(f)
-    for rec in positions:
-      w.writerow((rec.tps, rec.move, rec.value,
-                  rec.day, rec.id, rec.ply, rec.plies,
-      ))
-
 def write_proto(path, positions):
   with open(path, 'wb') as f:
     for rec in positions:
       data = rec.SerializeToString()
       f.write(struct.pack(">L", len(data)))
       f.write(data)
-
-def parse(positions, add_symmetries=False):
-  out = []
-  for p in positions:
-    position = tak.ptn.parse_tps(p.tps)
-    move = tak.ptn.parse_move(p.move)
-
-    if add_symmetries:
-      for sym in tak.symmetry.SYMMETRIES:
-        sp = tak.symmetry.transform_position(sym, position)
-        sm = tak.symmetry.transform_move(sym, move, position.size)
-        out.append(Instance(
-          proto = p,
-          position = sp,
-          move = sm))
-    else:
-      out.append(Instance(
-        proto = p,
-        position = position,
-        move = move))
-  return out
 
 def to_features(positions, add_symmetries=False):
   p = tak.ptn.parse_tps(positions[0].tps)
@@ -127,22 +74,11 @@ def to_features(positions, add_symmetries=False):
     })
 
 def raw_load(dir):
-  if os.path.isfile(os.path.join(dir, 'train.csv')):
-    return (
-      load_csv(os.path.join(dir, 'train.csv')),
-      load_csv(os.path.join(dir, 'test.csv')),
-    )
-  else:
-    return (
-      load_proto(os.path.join(dir, 'train.dat')),
-      load_proto(os.path.join(dir, 'test.dat')),
-    )
-
-def load_corpus(dir, add_symmetries=False):
-  train, test = raw_load(dir)
   return (
-    parse(train, add_symmetries = add_symmetries),
-    parse(test, add_symmetries = add_symmetries))
+    load_proto(os.path.join(dir, 'train.dat')),
+    load_proto(os.path.join(dir, 'test.dat')),
+  )
+
 
 def load_features(dir, add_symmetries=False):
   train, test = raw_load(dir)
@@ -150,6 +86,4 @@ def load_features(dir, add_symmetries=False):
     to_features(train, add_symmetries),
     to_features(test, add_symmetries))
 
-__all__ = ['load_csv', 'load_proto',
-           'write_csv', 'write_proto',
-           'load_corpus', 'load_features']
+__all__ = ['load_proto', 'write_proto', 'load_features']

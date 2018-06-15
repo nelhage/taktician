@@ -3,7 +3,6 @@ import tak.train
 import tak.proto
 import tak.model
 
-import csv
 import os
 import sys
 import time
