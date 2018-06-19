@@ -6,6 +6,7 @@ option go_package="pb";
 service Taktician {
     rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse) {}
     rpc Canonicalize(CanonicalizeRequest) returns (CanonicalizeResponse) {}
+    rpc IsPositionInTak(IsPositionInTakRequest) returns (IsPositionInTakResponse) {}
 }
 
 message AnalyzeRequest {
@@ -27,4 +28,13 @@ message CanonicalizeRequest {
 
 message CanonicalizeResponse {
     repeated string moves = 1;
+}
+
+message IsPositionInTakRequest {
+    string position = 1;
+}
+
+message IsPositionInTakResponse {
+    bool inTak = 1;
+    string takMove = 2;
 }

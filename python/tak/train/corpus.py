@@ -4,6 +4,7 @@ import tak.proto
 import attr
 import os
 import struct
+import grpc
 
 import numpy as np
 
@@ -37,40 +38,47 @@ def write_proto(path, positions):
       f.write(struct.pack(">L", len(data)))
       f.write(data)
 
-def to_features(positions, add_symmetries=False):
+def to_features(positions, add_symmetries=False, stub=None):
   p = tak.ptn.parse_tps(positions[0].tps)
   size = p.size
   feat = tak.train.Featurizer(size)
+  if stub is None:
+    channel = grpc.insecure_channel('localhost:55430')
+    stub = tak.proto.TakticianStub(channel)
 
   def gen():
     for pos in positions:
-      count = 8 if add_symmetries else 1
-      xs = np.zeros((count,) + feat.feature_shape())
-      ys = np.zeros((count, feat.move_count()))
-
       p = tak.ptn.parse_tps(pos.tps)
       m = tak.ptn.parse_move(pos.move)
       if add_symmetries:
-        feat.features_symmetries(p, out=xs)
-        for j,sym in enumerate(tak.symmetry.SYMMETRIES):
-          ys[j][feat.move2id(tak.symmetry.transform_move(sym, m, size))] = 1
+        ps = [tak.symmetry.transform_position(sym, p)
+                     for sym in tak.symmetry.SYMMETRIES]
+        ms = [tak.symmetry.transform_move(sym, m)
+                     for sym in tak.symmetry.SYMMETRIES]
       else:
-        feat.features(p, out=xs[0])
-        ys[0][tak.train.move2id(m, size)] = 1
-      for (x, y) in zip(xs, ys):
+        ps = [p]
+        ms = [m]
+      for (p, m) in zip(ps, ms):
+        onehot = np.zeros((feat.move_count(),))
+        onehot[feat.move2id(m)] = 1.0
         yield {
-          'position': x,
-          'move': y,
+          'position': feat.features(p),
+          'move': onehot,
+          'is_tak': stub.IsPositionInTak(
+            tak.proto.IsPositionInTakRequest(position=pos.tps)).inTak,
         }
+
   return tf.data.Dataset.from_generator(
     gen,
     {
       'position': tf.float32,
       'move': tf.float32,
+      'is_tak': tf.float32,
     },
     {
       'position': feat.feature_shape(),
       'move': (feat.move_count(),),
+      'is_tak': (),
     })
 
 def raw_load(dir):
@@ -83,7 +91,8 @@ def load_dataset(path, size):
   feat = tak.train.Featurizer(size)
   features = {
     'position': tf.FixedLenFeature(shape=feat.feature_shape(), dtype=tf.float32),
-    'move': tf.FixedLenFeature(shape=(feat.move_count()), dtype=tf.float32)
+    'move': tf.FixedLenFeature(shape=(feat.move_count()), dtype=tf.float32),
+    'is_tak': tf.FixedLenFeature(shape=(), dtype=tf.float32),
   }
   def _parse(examples):
     return tf.parse_single_example(examples, features)

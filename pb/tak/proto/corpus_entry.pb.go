@@ -12,21 +12,49 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
 type CorpusEntry struct {
-	Day      string  `protobuf:"bytes,1,opt,name=day" json:"day,omitempty"`
-	Id       int32   `protobuf:"varint,2,opt,name=id" json:"id,omitempty"`
-	Ply      int32   `protobuf:"varint,3,opt,name=ply" json:"ply,omitempty"`
-	Tps      string  `protobuf:"bytes,4,opt,name=tps" json:"tps,omitempty"`
-	Move     string  `protobuf:"bytes,5,opt,name=move" json:"move,omitempty"`
-	Value    float32 `protobuf:"fixed32,6,opt,name=value" json:"value,omitempty"`
-	Plies    int32   `protobuf:"varint,7,opt,name=plies" json:"plies,omitempty"`
-	Features []int64 `protobuf:"varint,8,rep,packed,name=features" json:"features,omitempty"`
+	Day                  string   `protobuf:"bytes,1,opt,name=day" json:"day,omitempty"`
+	Id                   int32    `protobuf:"varint,2,opt,name=id" json:"id,omitempty"`
+	Ply                  int32    `protobuf:"varint,3,opt,name=ply" json:"ply,omitempty"`
+	Tps                  string   `protobuf:"bytes,4,opt,name=tps" json:"tps,omitempty"`
+	Move                 string   `protobuf:"bytes,5,opt,name=move" json:"move,omitempty"`
+	Value                float32  `protobuf:"fixed32,6,opt,name=value" json:"value,omitempty"`
+	Plies                int32    `protobuf:"varint,7,opt,name=plies" json:"plies,omitempty"`
+	Features             []int64  `protobuf:"varint,8,rep,packed,name=features" json:"features,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CorpusEntry) Reset()                    { *m = CorpusEntry{} }
-func (m *CorpusEntry) String() string            { return proto.CompactTextString(m) }
-func (*CorpusEntry) ProtoMessage()               {}
-func (*CorpusEntry) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
+func (m *CorpusEntry) Reset()         { *m = CorpusEntry{} }
+func (m *CorpusEntry) String() string { return proto.CompactTextString(m) }
+func (*CorpusEntry) ProtoMessage()    {}
+func (*CorpusEntry) Descriptor() ([]byte, []int) {
+	return fileDescriptor_corpus_entry_252366702f1d31fd, []int{0}
+}
+func (m *CorpusEntry) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CorpusEntry.Unmarshal(m, b)
+}
+func (m *CorpusEntry) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CorpusEntry.Marshal(b, m, deterministic)
+}
+func (dst *CorpusEntry) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CorpusEntry.Merge(dst, src)
+}
+func (m *CorpusEntry) XXX_Size() int {
+	return xxx_messageInfo_CorpusEntry.Size(m)
+}
+func (m *CorpusEntry) XXX_DiscardUnknown() {
+	xxx_messageInfo_CorpusEntry.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CorpusEntry proto.InternalMessageInfo
 
 func (m *CorpusEntry) GetDay() string {
 	if m != nil {
@@ -88,9 +116,11 @@ func init() {
 	proto.RegisterType((*CorpusEntry)(nil), "tak.proto.CorpusEntry")
 }
 
-func init() { proto.RegisterFile("tak/proto/corpus_entry.proto", fileDescriptor2) }
+func init() {
+	proto.RegisterFile("tak/proto/corpus_entry.proto", fileDescriptor_corpus_entry_252366702f1d31fd)
+}
 
-var fileDescriptor2 = []byte{
+var fileDescriptor_corpus_entry_252366702f1d31fd = []byte{
 	// 194 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x3c, 0x8e, 0xb1, 0xaa, 0xc3, 0x20,
 	0x18, 0x46, 0x51, 0x93, 0xdc, 0xc4, 0x0b, 0x97, 0x8b, 0x74, 0xf8, 0x29, 0x1d, 0xa4, 0x93, 0x53,

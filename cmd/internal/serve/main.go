@@ -44,13 +44,13 @@ type server struct {
 }
 
 func (s *server) Analyze(ctx context.Context, req *pb.AnalyzeRequest) (*pb.AnalyzeResponse, error) {
-	s.cache.Lock()
-	defer s.cache.Unlock()
-
 	p, e := ptn.ParseTPS(req.Position)
 	if e != nil {
 		return nil, e
 	}
+
+	s.cache.Lock()
+	defer s.cache.Unlock()
 
 	if s.cache.cfg.Size != p.Size() || s.cache.cfg.Depth != int(req.Depth) || s.cache.precise != req.Precise {
 		s.cache.cfg = ai.MinimaxConfig{
@@ -97,6 +97,33 @@ func (s *server) Canonicalize(ctx context.Context, req *pb.CanonicalizeRequest) 
 	return &pb.CanonicalizeResponse{
 		Moves: outms,
 	}, nil
+}
+
+func (s *server) IsPositionInTak(ctx context.Context, req *pb.IsPositionInTakRequest) (*pb.IsPositionInTakResponse, error) {
+	p, e := ptn.ParseTPS(req.Position)
+	if e != nil {
+		return nil, e
+	}
+
+	var cfg = ai.MinimaxConfig{
+		Size:  p.Size(),
+		Depth: 1,
+	}
+
+	cfg.MakePrecise()
+
+	player := ai.NewMinimax(cfg)
+
+	pass, e := p.Move(tak.Move{Type: tak.Pass})
+	pv, value, _ := player.Analyze(ctx, pass)
+
+	var resp pb.IsPositionInTakResponse
+	resp.InTak = value > ai.WinThreshold
+	if resp.InTak {
+		resp.TakMove = ptn.FormatMove(pv[0])
+	}
+	return &resp, nil
+
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
