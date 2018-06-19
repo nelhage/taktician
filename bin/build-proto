@@ -5,7 +5,7 @@ protoc \
     -I proto/ \
     --go_out=plugins=grpc:pb \
     $(find proto/ -name '*.proto')
-python/venv/bin/python \
+python \
     -m grpc_tools.protoc \
     -I proto \
     --python_out=python/ \
