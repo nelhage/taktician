@@ -38,6 +38,32 @@ tf.flags.DEFINE_boolean('symmetries', default=True, help='Add symmetries to corp
 
 FLAGS = tf.flags.FLAGS
 
+
+def model_loss(model, labels, regularize=0):
+    labels = labels
+
+    with tf.variable_scope('Train'):
+      cross_entropy = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits_v2(logits=model.logits, labels=labels))
+      regularization_loss = tf.contrib.layers.apply_regularization(
+        tf.contrib.layers.l2_regularizer(regularize),
+      )
+
+      loss = cross_entropy + regularization_loss
+
+      labels = tf.argmax(labels, 1)
+      prec1 = 100*tf.reduce_mean(tf.cast(
+        tf.nn.in_top_k(model.logits, labels, 1), tf.float32))
+      prec5 = 100*tf.reduce_mean(tf.cast(
+        tf.nn.in_top_k(model.logits, labels, 5), tf.float32))
+      summaries = [
+        tf.summary.scalar('loss', loss),
+        tf.summary.scalar('prec1', prec1),
+        tf.summary.scalar('prec5', prec5),
+      ]
+    return (loss, summaries)
+
+
 def main(args):
   if FLAGS.corpus:
     train, test = tak.train.load_corpus(FLAGS.corpus, add_symmetries=FLAGS.symmetries)
@@ -65,8 +91,10 @@ def main(args):
   model = tak.model.PredictionModel(model_def, next_batch['position'])
   learning_rate = tf.placeholder(tf.float32)
   optimizer = getattr(tf.train, FLAGS.optimizer)(learning_rate)
-  model.add_train_ops(next_batch['move'],
-                      optimizer=optimizer, regularize=FLAGS.regularize)
+  loss, train_summaries = model_loss(model, next_batch['move'], regularize=FLAGS.regularize)
+  global_step = tf.Variable(0, name='global_step', trainable=False)
+  with tf.control_dependencies([tf.assign_add(global_step, 1)]):
+    train_op = optimizer.minimize(loss, global_step=global_step)
 
   if FLAGS.checkpoint:
     with open(FLAGS.checkpoint + ".model", 'wb') as fh:
@@ -90,14 +118,17 @@ def main(args):
 
   for epoch in range(FLAGS.epochs):
     session.run(init_test)
-    loss, prec1, prec5 = session.run(
-      [model.loss, model.prec1, model.prec5],
+    summaries = session.run(
+      train_summaries,
       feed_dict={
         model.keep_prob: 1.0,
       })
-    print("epoch={0} test loss={1:0.4f} acc={2:0.2f}%/{3:0.2f}% pos/s={4:.2f}".format(
-      epoch, loss,
-      100*prec1, 100*prec5,
+    stats=[]
+    for summary in summaries:
+      summ = tf.summary.Summary.FromString(summary)
+      stats.append("{}={:.2f}".format(summ.value[0].tag.split("/")[-1], summ.value[0].simple_value))
+    print("epoch={0} test {1} pos/s={2:.2f}".format(
+      epoch, " ".join(stats),
       session.run(n_instances)/(t_end-t_start) if t_start else 0))
     if FLAGS.checkpoint:
       saver.save(session, FLAGS.checkpoint, global_step=epoch)
@@ -107,7 +138,7 @@ def main(args):
     while True:
       try:
         session.run(
-          (model.train_step, inc_n),
+          (train_op, inc_n),
           feed_dict={
             learning_rate: lr,
             model.keep_prob: FLAGS.dropout,
