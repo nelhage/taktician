@@ -103,11 +103,6 @@ def main(args):
   session = tf.InteractiveSession()
   saver = tf.train.Saver(max_to_keep=10)
 
-  if FLAGS.restore:
-    saver.restore(session, FLAGS.restore)
-  else:
-    tf.global_variables_initializer().run()
-
   t_end = 0
   t_start = 0
   lr = FLAGS.eta
@@ -115,6 +110,11 @@ def main(args):
   n_instances = tf.Variable(0)
   init_n = tf.assign(n_instances, 0)
   inc_n = tf.assign_add(n_instances, tf.shape(next_batch['position'])[0])
+
+  if FLAGS.restore:
+    saver.restore(session, FLAGS.restore)
+  else:
+    tf.global_variables_initializer().run()
 
   for epoch in range(FLAGS.epochs):
     session.run(init_test)
@@ -127,9 +127,10 @@ def main(args):
     for summary in summaries:
       summ = tf.summary.Summary.FromString(summary)
       stats.append("{}={:.2f}".format(summ.value[0].tag.split("/")[-1], summ.value[0].simple_value))
-    print("epoch={0} test {1} pos/s={2:.2f}".format(
-      epoch, " ".join(stats),
-      session.run(n_instances)/(t_end-t_start) if t_start else 0))
+    n = session.run(n_instances)
+    print("epoch={0} test {1} pos={2} pos/s={3:.2f}".format(
+        epoch, " ".join(stats),
+        n, n/(t_end-t_start) if t_start else 0))
     if FLAGS.checkpoint:
       saver.save(session, FLAGS.checkpoint, global_step=epoch)
 
