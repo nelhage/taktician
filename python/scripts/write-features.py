@@ -24,7 +24,7 @@ def main(args):
 
   corpus, features = args[1:]
 
-  train, test = tak.train.load_corpus(corpus)
+  train, test = tak.train.load_corpus(corpus, add_symmetries=True)
 
   try:
     os.makedirs(features)
@@ -36,7 +36,9 @@ def main(args):
   write_dataset(session, test, os.path.join(features, "test.tfrecord"))
 
 def write_dataset(session, dataset, path):
+  print("Writing {}...".format(path))
   next_row = dataset.make_one_shot_iterator().get_next()
+  i = 0
   with tf.python_io.TFRecordWriter(path) as writer:
     try:
       while True:
@@ -47,6 +49,9 @@ def write_dataset(session, dataset, path):
           )
         )
         writer.write(example.SerializeToString())
+        i = i + 1
+        if i % 10000 == 0:
+          print("{}...".format(i))
     except tf.errors.OutOfRangeError:
       pass
 

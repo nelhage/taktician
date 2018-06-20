@@ -53,7 +53,7 @@ def to_features(positions, add_symmetries=False, stub=None):
       if add_symmetries:
         ps = [tak.symmetry.transform_position(sym, p)
                      for sym in tak.symmetry.SYMMETRIES]
-        ms = [tak.symmetry.transform_move(sym, m)
+        ms = [tak.symmetry.transform_move(sym, m, size)
                      for sym in tak.symmetry.SYMMETRIES]
       else:
         ps = [p]
