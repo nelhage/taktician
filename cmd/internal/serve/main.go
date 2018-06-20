@@ -34,13 +34,32 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.port, "port", 55430, "bind port")
 }
 
+type cache struct {
+	sync.Mutex
+	player  *ai.MinimaxAI
+	cfg     ai.MinimaxConfig
+	precise bool
+}
+
 type server struct {
-	cache struct {
-		sync.Mutex
-		player  *ai.MinimaxAI
-		cfg     ai.MinimaxConfig
-		precise bool
+	analyzeCache cache
+	istakCache   cache
+}
+
+func (c *cache) getPlayer(size int, depth int, precise bool) *ai.MinimaxAI {
+	if c.cfg.Size != size || c.cfg.Depth != int(depth) || c.precise != precise {
+		c.cfg = ai.MinimaxConfig{
+			Size:  size,
+			Depth: depth,
+			Debug: 1,
+		}
+		if precise {
+			c.cfg.MakePrecise()
+		}
+		c.player = ai.NewMinimax(c.cfg)
+		c.precise = precise
 	}
+	return c.player
 }
 
 func (s *server) Analyze(ctx context.Context, req *pb.AnalyzeRequest) (*pb.AnalyzeResponse, error) {
@@ -49,24 +68,12 @@ func (s *server) Analyze(ctx context.Context, req *pb.AnalyzeRequest) (*pb.Analy
 		return nil, e
 	}
 
-	s.cache.Lock()
-	defer s.cache.Unlock()
-
-	if s.cache.cfg.Size != p.Size() || s.cache.cfg.Depth != int(req.Depth) || s.cache.precise != req.Precise {
-		s.cache.cfg = ai.MinimaxConfig{
-			Size:  p.Size(),
-			Depth: int(req.Depth),
-			Debug: 1,
-		}
-		if req.Precise {
-			s.cache.cfg.MakePrecise()
-		}
-		s.cache.player = ai.NewMinimax(s.cache.cfg)
-		s.cache.precise = req.Precise
-	}
+	s.analyzeCache.Lock()
+	defer s.analyzeCache.Unlock()
+	player := s.analyzeCache.getPlayer(p.Size(), int(req.Depth), req.Precise)
 
 	var resp pb.AnalyzeResponse
-	pv, value, _ := s.cache.player.Analyze(ctx, p)
+	pv, value, _ := player.Analyze(ctx, p)
 	for _, m := range pv {
 		resp.Pv = append(resp.Pv, ptn.FormatMove(m))
 	}
@@ -105,14 +112,9 @@ func (s *server) IsPositionInTak(ctx context.Context, req *pb.IsPositionInTakReq
 		return nil, e
 	}
 
-	var cfg = ai.MinimaxConfig{
-		Size:  p.Size(),
-		Depth: 1,
-	}
-
-	cfg.MakePrecise()
-
-	player := ai.NewMinimax(cfg)
+	s.istakCache.Lock()
+	defer s.istakCache.Unlock()
+	player := s.istakCache.getPlayer(p.Size(), 1, true)
 
 	pass, e := p.Move(tak.Move{Type: tak.Pass})
 	pv, value, _ := player.Analyze(ctx, pass)
