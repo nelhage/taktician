@@ -50,6 +50,8 @@ def to_features(positions, add_symmetries=False, stub=None):
     for pos in positions:
       p = tak.ptn.parse_tps(pos.tps)
       m = tak.ptn.parse_move(pos.move)
+      is_tak = stub.IsPositionInTak(
+        tak.proto.IsPositionInTakRequest(position=pos.tps)).inTak
       if add_symmetries:
         ps = [tak.symmetry.transform_position(sym, p)
                      for sym in tak.symmetry.SYMMETRIES]
@@ -64,8 +66,7 @@ def to_features(positions, add_symmetries=False, stub=None):
         yield {
           'position': feat.features(p),
           'move': onehot,
-          'is_tak': stub.IsPositionInTak(
-            tak.proto.IsPositionInTakRequest(position=pos.tps)).inTak,
+          'is_tak': is_tak,
         }
 
   return tf.data.Dataset.from_generator(
