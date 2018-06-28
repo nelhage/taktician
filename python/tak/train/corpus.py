@@ -50,8 +50,11 @@ def to_features(positions, add_symmetries=False, stub=None):
     for pos in positions:
       p = tak.ptn.parse_tps(pos.tps)
       m = tak.ptn.parse_move(pos.move)
-      is_tak = stub.IsPositionInTak(
-        tak.proto.IsPositionInTakRequest(position=pos.tps)).inTak
+      if pos.in_tak != pos.UNSET:
+        is_tak = pos.in_tak == pos.IN_TAK
+      else:
+        is_tak = stub.IsPositionInTak(
+          tak.proto.IsPositionInTakRequest(position=pos.tps)).inTak
       if add_symmetries:
         ps = [tak.symmetry.transform_position(sym, p)
                      for sym in tak.symmetry.SYMMETRIES]

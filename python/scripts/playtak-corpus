@@ -16,6 +16,8 @@ import sys
 import absl.flags
 import absl.app
 
+import grpc
+
 FLAGS = absl.flags.FLAGS
 
 absl.flags.DEFINE_string('db', default=None, help="path to playtak db")
@@ -37,6 +39,7 @@ absl.flags.DEFINE_integer('skip', default=5, help='skip N opening positions')
 absl.flags.DEFINE_integer('size', default=5, help='size to build for')
 
 absl.flags.DEFINE_string('out', default='data/corpus', help='output directory')
+absl.flags.DEFINE_string('server', default='localhost:55430', help='taktician server')
 
 
 def seeded_hash(data):
@@ -101,6 +104,9 @@ ORDER BY g.id ASC
     'limit': FLAGS.limit
   })
 
+  channel = grpc.insecure_channel(FLAGS.server)
+  stub = tak.proto.TakticianStub(channel)
+
   train = []
   test = []
 
@@ -122,16 +128,22 @@ ORDER BY g.id ASC
           out = test
         else:
           out = train
+
+        tps = tak.ptn.format_tps(g)
+        in_tak = stub.IsPositionInTak(
+          tak.proto.IsPositionInTakRequest(position=tps)).inTak
+
         out.append(tak.proto.CorpusEntry(
           id = int(id),
           ply = i,
 
-          tps = tak.ptn.format_tps(g),
+          tps = tps,
 
           move = tak.ptn.format_move(m),
 
           value = result,
-          plies = len(ptn.moves)
+          plies = len(ptn.moves),
+          in_tak = tak.proto.CorpusEntry.IN_TAK if in_tak else tak.proto.CorpusEntry.NOT_IN_TAK,
         ))
 
       g = g.move(m)

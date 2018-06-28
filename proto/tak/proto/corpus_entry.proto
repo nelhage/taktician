@@ -14,4 +14,11 @@ message CorpusEntry {
     float value = 6;
     int32 plies = 7;
     repeated int64 features = 8;
+
+    enum InTak {
+        UNSET = 0;
+        NOT_IN_TAK = 1;
+        IN_TAK = 2;
+    };
+    InTak in_tak = 9;
 }
