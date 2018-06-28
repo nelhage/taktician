@@ -86,16 +86,3 @@ class TestFeatures(object):
     computed = feat.features_symmetries(pos)
     for i in range(len(manual)):
       assert np.all(manual[i] == computed[i])
-
-  def test_extra_planes(self):
-    f = tak.train.features(
-      tak.ptn.parse_tps(
-        '1,1,1,1,1/1,1,1,1,1/x5/x5/x4,2 2 2'))
-    ext = self.extra_planes(f)
-    assert ext[0,0,tak.train.FeaturePlane.EDGE] == 1.0
-    assert ext[0,4,tak.train.FeaturePlane.EDGE] == 1.0
-    assert ext[4,0,tak.train.FeaturePlane.EDGE] == 1.0
-    assert ext[4,2,tak.train.FeaturePlane.EDGE] == 1.0
-    assert ext[1,4,tak.train.FeaturePlane.EDGE] == 1.0
-    assert ext[2,2,tak.train.FeaturePlane.EDGE] == 0.0
-    assert ext[3,3,tak.train.FeaturePlane.EDGE] == 0.0

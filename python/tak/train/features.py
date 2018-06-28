@@ -30,8 +30,7 @@ class FeaturePlane(object):
   THEIR_CAPS     = THEIR_RESERVES_MAX
   FLATS          = THEIR_CAPS + 1
   FLATS_MAX      = FLATS + FLATS_PLANES
-  EDGE           = FLATS_MAX
-  MAX            = EDGE + 1
+  MAX            = FLATS_MAX
 
 EXTRA_PLANES = FeaturePlane.MAX
 
@@ -132,12 +131,6 @@ class Featurizer(object):
     ] = 1
     if pos.stones[me.flip().value].caps > 0 :
       extra[:,:, FeaturePlane.THEIR_CAPS] = 1
-
-    extra[0,:,FeaturePlane.EDGE] = 1
-    extra[:,0,FeaturePlane.EDGE] = 1
-    extra[pos.size-1,:,FeaturePlane.EDGE] = 1
-    extra[:,pos.size-1,FeaturePlane.EDGE] = 1
-
     return buf
 
   def features_symmetries(self, pos, out=None):
