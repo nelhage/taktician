@@ -445,7 +445,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		if m.cfg.Debug > 1 {
 			log.Printf("[minimax]  stats: visited=%d m/ms=%f cut=%d all=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f",
 				m.st.Visited,
-				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
+				float64(m.st.Visited)/float64(timeMove.Seconds()*1000),
 				m.st.CutNodes,
 				m.st.AllNodes,
 				m.st.Cut0,
@@ -610,13 +610,15 @@ func (ai *MinimaxAI) quiesce(
 	ply, depth int,
 	α, β int64) int64 {
 
+	ai.st.Visited++
 	ai.st.VisitQuiesce++
-
 	over, _ := p.GameOver()
 	eval := ai.evaluate(&ai.c, p)
 	if over || depth <= 0 || eval >= β {
+		ai.st.Evaluated++
 		return eval
 	}
+
 	if α < eval {
 		α = eval
 	}
@@ -673,6 +675,7 @@ func (ai *MinimaxAI) pvSearch(
 	if depth <= 0 {
 		return nil, ai.quiesce(p, ply, depth+ai.cfg.Quiesce, α, β)
 	}
+	ai.st.Visited++
 	over, _ := p.GameOver()
 	if over {
 		ai.st.Evaluated++
@@ -680,7 +683,6 @@ func (ai *MinimaxAI) pvSearch(
 		return nil, ai.evaluate(&ai.c, p)
 	}
 
-	ai.st.Visited++
 	if β == α+1 {
 		ai.st.Scout++
 	}
@@ -804,19 +806,18 @@ func (ai *MinimaxAI) zwSearch(
 	ply, depth int,
 	pv []tak.Move,
 	α int64, cut bool) ([]tak.Move, int64) {
+	ai.st.Scout++
+
 	if depth <= 0 {
-		ai.st.Evaluated++
 		return nil, ai.quiesce(p, ply, depth+ai.cfg.Quiesce, α, α+1)
 	}
+	ai.st.Visited++
 	over, _ := p.GameOver()
 	if over {
 		ai.st.Evaluated++
 		ai.st.Terminal++
 		return nil, ai.evaluate(&ai.c, p)
 	}
-
-	ai.st.Visited++
-	ai.st.Scout++
 
 	te := ai.ttGet(p.Hash())
 	if te != nil {
