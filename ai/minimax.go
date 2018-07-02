@@ -36,6 +36,8 @@ const (
 
 	multiCutSearch    = 6
 	multiCutThreshold = 3
+
+	QuiesceHeight = 3
 )
 
 type EvaluationFunc func(c *bitboard.Constants, p *tak.Position) int64
@@ -98,11 +100,12 @@ type Stats struct {
 	Canceled bool
 	Elapsed  time.Duration
 
-	Generated uint64
-	Evaluated uint64
-	Scout     uint64
-	Terminal  uint64
-	Visited   uint64
+	Generated    uint64
+	Evaluated    uint64
+	Scout        uint64
+	Terminal     uint64
+	Visited      uint64
+	VisitQuiesce uint64
 
 	CutNodes   uint64
 	NullSearch uint64
@@ -153,6 +156,8 @@ type MinimaxConfig struct {
 	Depth int
 	Debug int
 	Seed  int64
+
+	Quiesce int
 
 	// How much memory to allocate to the transposition
 	// table. Negative means don't use a table.
@@ -449,7 +454,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				float64(m.st.Cut0+m.st.Cut1)/float64(m.st.CutNodes+1),
 				float64(m.st.CutSearch)/float64(m.st.CutNodes-m.st.Cut0-m.st.Cut1+1),
 			)
-			log.Printf("[minimax]         scout=%d null=%d/%d mc=%d/%d research=%d extend=%d rslide=%d",
+			log.Printf("[minimax]         scout=%d null=%d/%d mc=%d/%d research=%d extend=%d rslide=%d quiesce=%d",
 				m.st.Scout,
 				m.st.NullCut,
 				m.st.NullSearch,
@@ -458,6 +463,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				m.st.ReSearch,
 				m.st.Extensions,
 				m.st.ReducedSlides,
+				m.st.VisitQuiesce,
 			)
 		}
 		if i > 1 {
@@ -572,17 +578,105 @@ func (ai *MinimaxAI) recordCut(p *tak.Position, m tak.Move, move, depth, ply int
 	ai.cuts.Encode(&cut)
 }
 
+func (ai *MinimaxAI) influences(m tak.Move, poss uint64) bool {
+	bit := uint64(1) << uint(m.X+m.Y*int8(ai.c.Size))
+	if poss&bit != 0 {
+		return true
+	}
+
+	switch m.Type {
+	case tak.SlideLeft:
+		for i := 0; i < m.Slides.Len(); i++ {
+			bit = bit | bit<<1
+		}
+	case tak.SlideRight:
+		for i := 0; i < m.Slides.Len(); i++ {
+			bit = bit | (bit >> 1)
+		}
+	case tak.SlideUp:
+		for i := 0; i < m.Slides.Len(); i++ {
+			bit = bit | (bit << uint(ai.cfg.Size))
+		}
+	case tak.SlideDown:
+		for i := 0; i < m.Slides.Len(); i++ {
+			bit = bit | (bit >> uint(ai.cfg.Size))
+		}
+	}
+	return poss&bit != 0
+}
+
+func (ai *MinimaxAI) quiesce(
+	p *tak.Position,
+	ply, depth int,
+	α, β int64) int64 {
+
+	ai.st.VisitQuiesce++
+
+	over, _ := p.GameOver()
+	eval := ai.evaluate(&ai.c, p)
+	if over || depth <= 0 || eval >= β {
+		return eval
+	}
+	if α < eval {
+		α = eval
+	}
+	var stacks uint64
+	top := p.White | p.Black
+	for top != 0 {
+		next := top & (top - 1)
+		bit := top &^ next
+		i := bitboard.TrailingZeros(bit)
+		if p.Height[i] >= QuiesceHeight {
+			stacks |= bit
+		}
+		top = next
+	}
+
+	if stacks == 0 {
+		return ai.evaluate(&ai.c, p)
+	}
+
+	frame := &ai.stack[ply]
+	ms := frame.moves.slice
+	if ms == nil {
+		ms = frame.moves.alloc[:]
+	}
+	ms = p.AllMoves(ms[:0])
+	for _, m := range ms {
+		if !m.IsSlide() {
+			continue
+		}
+		if !ai.influences(m, stacks) {
+			continue
+		}
+		child, e := p.MovePreallocated(m, frame.p)
+		if e != nil {
+			continue
+		}
+		v := ai.quiesce(child, ply+1, depth-1, -β, -α)
+		if v > α {
+			α = v
+			if v >= β {
+				return α
+			}
+		}
+	}
+	return α
+}
+
 func (ai *MinimaxAI) pvSearch(
 	p *tak.Position,
 	ply, depth int,
 	pv []tak.Move,
 	α, β int64) ([]tak.Move, int64) {
+
+	if depth <= 0 {
+		return nil, ai.quiesce(p, ply, depth+ai.cfg.Quiesce, α, β)
+	}
 	over, _ := p.GameOver()
-	if depth <= 0 || over {
+	if over {
 		ai.st.Evaluated++
-		if over {
-			ai.st.Terminal++
-		}
+		ai.st.Terminal++
 		return nil, ai.evaluate(&ai.c, p)
 	}
 
@@ -710,12 +804,14 @@ func (ai *MinimaxAI) zwSearch(
 	ply, depth int,
 	pv []tak.Move,
 	α int64, cut bool) ([]tak.Move, int64) {
-	over, _ := p.GameOver()
-	if depth <= 0 || over {
+	if depth <= 0 {
 		ai.st.Evaluated++
-		if over {
-			ai.st.Terminal++
-		}
+		return nil, ai.quiesce(p, ply, depth+ai.cfg.Quiesce, α, α+1)
+	}
+	over, _ := p.GameOver()
+	if over {
+		ai.st.Evaluated++
+		ai.st.Terminal++
 		return nil, ai.evaluate(&ai.c, p)
 	}
 

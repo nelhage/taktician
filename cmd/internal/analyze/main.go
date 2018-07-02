@@ -52,6 +52,7 @@ type Command struct {
 	weights      string
 	logCuts      string
 	symmetry     bool
+	quiesce      int
 
 	/* MCTS options */
 	dumpTree string
@@ -95,7 +96,9 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.extendForces, "extend-forces", true, "extend forced moves")
 	flags.BoolVar(&c.reduceSlides, "reduce-slides", true, "reduce trivial slides")
 	flags.BoolVar(&c.multiCut, "multi-cut", false, "use multi-cut pruning")
+	flags.IntVar(&c.quiesce, "quiesce", 0, "quiescence search depth")
 	flags.BoolVar(&c.precise, "precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
+
 	flags.StringVar(&c.weights, "weights", "", "JSON-encoded evaluation weights")
 	flags.StringVar(&c.logCuts, "log-cuts", "", "log all cuts")
 	flags.BoolVar(&c.symmetry, "symmetry", false, "ignore symmetries")
@@ -199,6 +202,8 @@ func (c *Command) makeAI(p *tak.Position) *ai.MinimaxAI {
 		Depth: c.depth,
 		Seed:  c.seed,
 		Debug: c.debug,
+
+		Quiesce: c.quiesce,
 
 		NoSort:         !c.sort,
 		TableMem:       c.tableMem,
