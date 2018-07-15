@@ -5,3 +5,5 @@ __pycache__
 .coverage
 htmlcov/
 data/train
+.pytest_cache
+*.pyc
