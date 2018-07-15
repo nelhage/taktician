@@ -29,7 +29,7 @@ func (c *CenterBlack) LegalMove(p *tak.Position, m tak.Move) error {
 	if p.MoveNumber() > 0 {
 		return nil
 	}
-	if c.isCentered(p, m) {
+	if isCentered(p, m) {
 		return nil
 	}
 	return errors.New("I'm testing rules to balance white's advantage. " +
@@ -51,7 +51,7 @@ func (c *CenterBlack) SurveyURL() string {
 	return "https://goo.gl/forms/k9SPmrxj11GZf7ak1"
 }
 
-func (c *CenterBlack) isCentered(p *tak.Position, m tak.Move) bool {
+func isCentered(p *tak.Position, m tak.Move) bool {
 	mid := int8(p.Size() / 2)
 	if p.Size()%2 == 1 {
 		// Must be in exact center
@@ -238,4 +238,195 @@ func (d *DoubleStack) GetMove(p *tak.Position) (tak.Move, bool) {
 
 func (d *DoubleStack) SurveyURL() string {
 	return "https://goo.gl/forms/31clzCPiDAi9r59x1"
+}
+
+type Cairn struct {
+	whitePlace tak.Move
+	blackPlace tak.Move
+}
+
+func (c *Cairn) Greeting(tak.Color) []string {
+	return []string{
+		"The US Tak Association uses a cairn (black on white stone) " +
+			"for tiebreaker games.",
+		"To create a cairn online, play the very first black " +
+			"and white stones normally. Then, white must place " +
+			"a stone adjacent to a center square, and black places " +
+			"adjacent to a matching center square.",
+		"Then, white moves so black can capture in the center, then " +
+			"black captures, making the cairn. Then, the game continues normally.",
+	}
+}
+
+var cairnErrors = []string{
+	"",
+	"",
+
+	"As white, you must place your stone adjacent to a center " +
+		"square, so you can make a cairn with black.",
+
+	"As black, you must place your stone adjacent to a center " +
+		"square, so you can make a cairn with white.",
+
+	"As white, you must move your stone to the center, so black " +
+		"can capture it and make a cairn.",
+
+	"As black, you must move your stone to capture white in the " +
+		"center, making a cairn.",
+}
+
+func isCenterAdjacent(p *tak.Position, m tak.Move) bool {
+	mid := int8(p.Size() / 2)
+	if p.Size()%2 == 1 {
+		return ((m.X == mid-1 || m.X == mid+1) && m.Y == mid) ||
+			((m.Y == mid-1 || m.Y == mid+1) && m.X == mid)
+	}
+	if (m.X >= mid-1 && m.X <= mid) &&
+		(m.Y >= mid-2 || m.Y <= mid+1) {
+		return true
+	}
+	if (m.X >= mid-2 && m.X <= mid+1) &&
+		(m.Y >= mid-1 || m.Y <= mid) {
+		return true
+	}
+	return false
+}
+
+func distance(x1, y1, x2, y2 int8) int8 {
+	dx := x1 - x2
+	if dx < 0 {
+		dx = -dx
+	}
+	dy := y1 - y2
+	if dy < 0 {
+		dy = -dy
+	}
+	return dx + dy
+}
+
+func (c *Cairn) LegalMove(p *tak.Position, m tak.Move) error {
+	ok := true
+	switch p.MoveNumber() {
+	case 0, 1:
+		break
+	case 2:
+		// white places adjacent to center
+		if m.Type != tak.PlaceFlat {
+			ok = false
+			break
+		}
+		if !isCenterAdjacent(p, m) {
+			ok = false
+		}
+		c.whitePlace = m
+		break
+	case 3:
+		// black places adjacent to center
+		if m.Type != tak.PlaceFlat {
+			ok = false
+			break
+		}
+		if !isCenterAdjacent(p, m) {
+			ok = false
+		}
+		if distance(m.X, m.Y, c.whitePlace.X, c.whitePlace.Y) != 2 {
+			ok = false
+		}
+		c.blackPlace = m
+	case 4:
+		// white slides to center, adjacent to black
+		if !m.IsSlide() {
+			ok = false
+			break
+		}
+		dx, dy := m.Dest()
+		dst := tak.Move{Type: tak.PlaceFlat, X: dx, Y: dy}
+		if !isCentered(p, dst) {
+			ok = false
+			break
+		}
+		if distance(dx, dy, c.blackPlace.X, c.blackPlace.Y) != 1 {
+			ok = false
+		}
+		c.whitePlace = dst
+	case 5:
+		// black captures
+		if !m.IsSlide() {
+			ok = false
+			break
+		}
+		dx, dy := m.Dest()
+		if m.X != c.blackPlace.X || m.Y != c.blackPlace.Y || dx != c.whitePlace.X || dy != c.whitePlace.Y {
+			ok = false
+		}
+	default:
+	}
+	if ok {
+		return nil
+	}
+	return errors.New(cairnErrors[p.MoveNumber()])
+}
+
+func (c *Cairn) GetMove(p *tak.Position) (tak.Move, bool) {
+	switch p.MoveNumber() {
+	case 0, 1:
+		return tak.Move{}, false
+	case 2:
+		// white places adjacent to center
+		cx := int(p.Size()) / 2
+		cy := int(p.Size()) / 2
+		x, y := adjacent(p, cx, cy)
+		m := tak.Move{
+			Type: tak.PlaceFlat, X: int8(x), Y: int8(y),
+		}
+		return m, true
+	case 3:
+		// black places adjacent to center
+		wx := c.whitePlace.X
+		wy := c.whitePlace.Y
+		var x, y int8
+		if wx < int8(p.Size())/2 {
+			x = wx + 1
+		} else {
+			x = wx - 1
+		}
+		if wy < int8(p.Size())/2 {
+			y = wy + 1
+		} else {
+			y = wy - 1
+		}
+		return tak.Move{
+			Type: tak.PlaceFlat, X: x, Y: y,
+		}, true
+	case 4:
+		// white slides to center
+		wx := int(c.whitePlace.X)
+		wy := int(c.whitePlace.Y)
+		mid := int(p.Size() / 2)
+		var ty tak.MoveType
+		if p.Size()%2 == 1 {
+			ty = dir(wx, wy, mid, mid)
+		} else {
+			if wx == mid || wy == mid {
+				ty = dir(wx, wy, mid, mid)
+			} else {
+				ty = dir(wx, wy, mid-1, mid-1)
+			}
+		}
+		return tak.Move{Type: ty, X: int8(wx), Y: int8(wy),
+			Slides: tak.MkSlides(1)}, true
+	case 5:
+		return tak.Move{
+			Type: dir(int(c.blackPlace.X), int(c.blackPlace.Y),
+				int(c.whitePlace.X), int(c.whitePlace.Y)),
+			X:      c.blackPlace.X,
+			Y:      c.blackPlace.Y,
+			Slides: tak.MkSlides(1),
+		}, true
+	}
+	return tak.Move{}, false
+}
+
+func (c *Cairn) SurveyURL() string {
+	return ""
 }

@@ -131,11 +131,11 @@ func TestFPAOK(t *testing.T) {
 	}
 }
 
-func TestDoubleStackSelfCheck(t *testing.T) {
+func selfCheck(t *testing.T, rule func() FPARule) {
 	sizes := []int{4, 5, 6}
 	for _, s := range sizes {
 		t.Run(fmt.Sprintf("size-%d", s), func(t *testing.T) {
-			ds := &DoubleStack{}
+			ds := rule()
 			p := tak.New(tak.Config{Size: s})
 
 		loop:
@@ -159,8 +159,8 @@ func TestDoubleStackSelfCheck(t *testing.T) {
 				}
 				err := ds.LegalMove(p, m)
 				if err != nil {
-					t.Fatalf("[%d] returned bad move: %v",
-						p.MoveNumber(), err)
+					t.Fatalf("[%d] returned bad move %s: %v",
+						p.MoveNumber(), ptn.FormatMove(m), err)
 				}
 				t.Logf("[%d] m=%s", p.MoveNumber(), ptn.FormatMove(m))
 				np, err := p.Move(m)
@@ -177,33 +177,28 @@ func TestDoubleStackSelfCheck(t *testing.T) {
 	}
 }
 
-func TestDoubleStackLegal(t *testing.T) {
-	cases := []struct {
-		size  int
-		moves string
-		ok    bool
-	}{
-		{5, "a1 e1 e1+ a2 e2- a2-", true},
-		{5, "a1 e5 e5- b1 e4+ b1<", true},
-		{5, "a1 e5 e4", false},
-		{5, "a1 e5 c3", false},
-		{5, "a1 e5 e5- b2", false},
-		{5, "a1 e5 e5< c3", false},
-		{5, "a1 e1 e1+ a2 e2<", false},
-		{5, "a1 e1 e1+ a2 e3", false},
-		{5, "a1 e5 e5- b1 e4+ a1+", false},
-		{5, "a1 e5 e5- b1 e4+ b1+", false},
-		{5, "a1 e5 e5- b1 e4+ c1", false},
+func TestDoubleStackSelfCheck(t *testing.T) {
+	selfCheck(t, func() FPARule { return &DoubleStack{} })
+}
 
-		{6, "a1 f1 f1+ a2 f2- a2-", true},
-	}
+func TestCairnSelfCheck(t *testing.T) {
+	selfCheck(t, func() FPARule { return &Cairn{} })
+}
+
+type legalityCase struct {
+	size  int
+	moves string
+	ok    bool
+}
+
+func testLegal(t *testing.T, cases []legalityCase, rule func() FPARule) {
 	for _, tc := range cases {
 		t.Run(tc.moves, func(t *testing.T) {
-			ds := &DoubleStack{}
+			fpa := rule()
 			moves := taktest.Moves(tc.moves)
 			p := tak.New(tak.Config{Size: tc.size})
 			for i, m := range moves {
-				err := ds.LegalMove(p, m)
+				err := fpa.LegalMove(p, m)
 
 				if err != nil {
 					if i != len(moves)-1 {
@@ -227,6 +222,45 @@ func TestDoubleStackLegal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDoubleStackLegal(t *testing.T) {
+	cases := []legalityCase{
+		{5, "a1 e1 e1+ a2 e2- a2-", true},
+		{5, "a1 e5 e5- b1 e4+ b1<", true},
+		{5, "a1 e5 e4", false},
+		{5, "a1 e5 c3", false},
+		{5, "a1 e5 e5- b2", false},
+		{5, "a1 e5 e5< c3", false},
+		{5, "a1 e1 e1+ a2 e2<", false},
+		{5, "a1 e1 e1+ a2 e3", false},
+		{5, "a1 e5 e5- b1 e4+ a1+", false},
+		{5, "a1 e5 e5- b1 e4+ b1+", false},
+		{5, "a1 e5 e5- b1 e4+ c1", false},
+
+		{6, "a1 f1 f1+ a2 f2- a2-", true},
+	}
+	testLegal(t, cases, func() FPARule { return &DoubleStack{} })
+}
+
+func TestCairnLegal(t *testing.T) {
+	cases := []legalityCase{
+		{5, "a1 e1 b3 d3 b3> d3<", true},
+		{5, "a1 e1 c3", false},
+		{5, "a1 e1 b3 c3", false},
+		{5, "a1 e1 b3 c4 b3+", false},
+		{5, "a1 e1 b3 c4 b4", false},
+
+		{6, "a1 f1 b3 d3 b3> d3<", true},
+		{6, "a1 f1 b4 c5 b4> c5-", true},
+		{6, "a1 f1 b3 e3", false},
+		{6, "a1 f1 c3 d4 c3> d4-", true},
+		{6, "a1 f1 c3 d4 c3+ d4<", true},
+		{6, "a1 f1 c3 d4 c3-", false},
+		{6, "a1 f1 c3 d2", true},
+		{6, "a1 f1 b2", false},
+	}
+	testLegal(t, cases, func() FPARule { return &Cairn{} })
 }
 
 func TestAdjacent(t *testing.T) {
