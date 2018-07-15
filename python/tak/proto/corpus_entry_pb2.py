@@ -19,10 +19,36 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='tak/proto/corpus_entry.proto',
   package='tak.proto',
   syntax='proto3',
-  serialized_pb=_b('\n\x1ctak/proto/corpus_entry.proto\x12\ttak.proto\"~\n\x0b\x43orpusEntry\x12\x0b\n\x03\x64\x61y\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\x05\x12\x0b\n\x03ply\x18\x03 \x01(\x05\x12\x0b\n\x03tps\x18\x04 \x01(\t\x12\x0c\n\x04move\x18\x05 \x01(\t\x12\r\n\x05value\x18\x06 \x01(\x02\x12\r\n\x05plies\x18\x07 \x01(\x05\x12\x10\n\x08\x66\x65\x61tures\x18\x08 \x03(\x03\x42\x04Z\x02pbb\x06proto3')
+  serialized_pb=_b('\n\x1ctak/proto/corpus_entry.proto\x12\ttak.proto\"\xdc\x01\n\x0b\x43orpusEntry\x12\x0b\n\x03\x64\x61y\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\x05\x12\x0b\n\x03ply\x18\x03 \x01(\x05\x12\x0b\n\x03tps\x18\x04 \x01(\t\x12\x0c\n\x04move\x18\x05 \x01(\t\x12\r\n\x05value\x18\x06 \x01(\x02\x12\r\n\x05plies\x18\x07 \x01(\x05\x12\x10\n\x08\x66\x65\x61tures\x18\x08 \x03(\x03\x12,\n\x06in_tak\x18\t \x01(\x0e\x32\x1c.tak.proto.CorpusEntry.InTak\".\n\x05InTak\x12\t\n\x05UNSET\x10\x00\x12\x0e\n\nNOT_IN_TAK\x10\x01\x12\n\n\x06IN_TAK\x10\x02\x42\x04Z\x02pbb\x06proto3')
 )
 
 
+
+_CORPUSENTRY_INTAK = _descriptor.EnumDescriptor(
+  name='InTak',
+  full_name='tak.proto.CorpusEntry.InTak',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='UNSET', index=0, number=0,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NOT_IN_TAK', index=1, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='IN_TAK', index=2, number=2,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=218,
+  serialized_end=264,
+)
+_sym_db.RegisterEnumDescriptor(_CORPUSENTRY_INTAK)
 
 
 _CORPUSENTRY = _descriptor.Descriptor(
@@ -88,11 +114,19 @@ _CORPUSENTRY = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='in_tak', full_name='tak.proto.CorpusEntry.in_tak', index=8,
+      number=9, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
   nested_types=[],
   enum_types=[
+    _CORPUSENTRY_INTAK,
   ],
   options=None,
   is_extendable=False,
@@ -100,10 +134,12 @@ _CORPUSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=43,
-  serialized_end=169,
+  serialized_start=44,
+  serialized_end=264,
 )
 
+_CORPUSENTRY.fields_by_name['in_tak'].enum_type = _CORPUSENTRY_INTAK
+_CORPUSENTRY_INTAK.containing_type = _CORPUSENTRY
 DESCRIPTOR.message_types_by_name['CorpusEntry'] = _CORPUSENTRY
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 

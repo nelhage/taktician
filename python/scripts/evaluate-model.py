@@ -3,7 +3,6 @@ import tak.ptn
 
 import argparse
 import sys
-import csv
 
 import numpy as np
 

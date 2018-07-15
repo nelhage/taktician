@@ -7,3 +7,4 @@ htmlcov/
 data/train
 .pytest_cache
 *.pyc
+_feat
