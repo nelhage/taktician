@@ -95,6 +95,8 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			fpaRuleset = &CenterBlack{}
 		case "doublestack":
 			fpaRuleset = &DoubleStack{}
+		case "cairn":
+			fpaRuleset = &Cairn{}
 		default:
 			log.Fatalf("Unknown FPA ruleset: %s", c.fpa)
 		}
