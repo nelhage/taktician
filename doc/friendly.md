@@ -20,7 +20,7 @@ To change the difficulty level, just say
 
 e.g.
 
-    FriendlyBoy: level 6
+    FriendlyBot: level 6
 
 in chat. It supports a number of levels, from 1 up through 13, at the
 moment.
