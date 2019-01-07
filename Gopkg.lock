@@ -2,40 +2,49 @@
 
 
 [[projects]]
+  digest = "1:4c0989ca0bcd10799064318923b9bc2db6b4d6338dd75f3f2d86c3511aaaf5cf"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp"
+    "ptypes/timestamp",
   ]
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  pruneopts = "UT"
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:df265b7f54410945dad5cf5979d91461b9fa7ff9b397ab58d2d577002a8a0e24"
   name = "github.com/google/subcommands"
   packages = ["."]
-  revision = "a3682377147edf596d303faabd89f81977b3f678"
+  pruneopts = "UT"
+  revision = "46f0354f63152e8801bb460d26f5b6c4c878efbb"
 
 [[projects]]
-  branch = "master"
+  digest = "1:6c41d4f998a03b6604227ccad36edaed6126c397e5d78709ef4814a1145a6757"
   name = "github.com/jmoiron/sqlx"
   packages = [
     ".",
-    "reflectx"
+    "reflectx",
   ]
-  revision = "2aeb6a910c2b94f2d5eb53d9895d80e27264ec41"
+  pruneopts = "UT"
+  revision = "d161d7a76b5661016ad0b085869f77fd410f3e6a"
+  version = "v1.2.0"
 
 [[projects]]
+  digest = "1:4a49346ca45376a2bba679ca0e83bec949d780d4e927931317904bad482943ec"
   name = "github.com/mattn/go-sqlite3"
   packages = ["."]
-  revision = "6c771bb9887719704b210e87e934f08be014bdb1"
-  version = "v1.6.0"
+  pruneopts = "UT"
+  revision = "c7c4067b79cc51e6dfdcef5c702e74b1e0fa7c75"
+  version = "v1.10.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:89a0cb976397aa9157a45bb2b896d0bcd07ee095ac975e0f03c53250c402265e"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -44,11 +53,21 @@
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "trace"
+    "trace",
   ]
-  revision = "2491c5de3490fced2f6cff376127c667efeed857"
+  pruneopts = "UT"
+  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ab01052262e2ef935fdec4632b4029e56e7efbc96a569feebdcdc67fd84a9b5b"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  pruneopts = "UT"
+  revision = "1775db3f06b568179d273425900dd09125831dd5"
+
+[[projects]]
+  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -64,33 +83,45 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
   ]
+  pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:077c1c599507b3b3e9156d17d36e1e61928ee9b53a5b420f10f28ebd4a0b275c"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "86e600f69ee4704c6efbf6a2a40a5c10700e76c2"
+  pruneopts = "UT"
+  revision = "bd9b4fb69e2ffd37621a6caa54dcbead29b546f2"
 
 [[projects]]
+  digest = "1:9edd250a3c46675d0679d87540b30c9ed253b19bd1fd1af08f4f5fb3c79fc487"
   name = "google.golang.org/grpc"
   packages = [
     ".",
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
-    "channelz",
+    "binarylog/grpc_binarylog_v1",
     "codes",
     "connectivity",
     "credentials",
+    "credentials/internal",
     "encoding",
     "encoding/proto",
-    "grpclb/grpc_lb_v1/messages",
     "grpclog",
     "internal",
+    "internal/backoff",
+    "internal/binarylog",
+    "internal/channelz",
+    "internal/envconfig",
+    "internal/grpcrand",
+    "internal/grpcsync",
+    "internal/syscall",
+    "internal/transport",
     "keepalive",
     "metadata",
     "naming",
@@ -101,14 +132,21 @@
     "stats",
     "status",
     "tap",
-    "transport"
   ]
-  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
-  version = "v1.12.0"
+  pruneopts = "UT"
+  revision = "df014850f6dee74ba2fc94874043a9f3f75fbfd8"
+  version = "v1.17.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f6288665d50c7384ea66812e742d7696e464868c55d4e3af6c08156b1cf5fd7e"
+  input-imports = [
+    "github.com/golang/protobuf/proto",
+    "github.com/google/subcommands",
+    "github.com/jmoiron/sqlx",
+    "github.com/mattn/go-sqlite3",
+    "golang.org/x/net/context",
+    "google.golang.org/grpc",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
