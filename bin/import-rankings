@@ -17,4 +17,23 @@ delete from ratings;
 .import /dev/fd/3 ratings
 create index if not exists ratings_by_rating ON ratings(rating);
 create index if not exists ratings_by_name ON ratings(name);
+
+CREATE VIEW IF NOT EXISTS rated_ptn_games (
+  id, date, size,
+  player_white, rating_white, bot_white,
+  player_black, rating_black, bot_black,
+  result, timertime, timerinc,
+  ptn
+) AS
+SELECT games.id, date, size,
+       player_white, r1.rating, r1.bot,
+       player_black, r2.rating, r2.bot,
+       result, timertime, timerinc,
+       ptn
+FROM games, ratings r1, ratings r2, ptns
+WHERE player_white = r1.name
+  AND player_black = r2.name
+  AND ptns.id = games.id
+;
+
 EOF
