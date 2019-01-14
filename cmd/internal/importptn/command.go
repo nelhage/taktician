@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/nelhage/taktician/playtak"
 	"github.com/nelhage/taktician/ptn"
@@ -31,7 +33,10 @@ func (*Command) Usage() string {
 func (c *Command) SetFlags(flags *flag.FlagSet) {
 }
 
-const ReportInterval = 1000
+const (
+	ReportInterval = 1000
+	Workers        = 4
+)
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if len(flag.Args()) != 1 {
@@ -49,28 +54,63 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		log.Fatal("create schema: ", err)
 	}
 
-	var game gameRow
 	tx := sql.MustBegin()
 	defer tx.Commit()
 	cur, err := tx.Queryx(selectTODO)
 	if err != nil {
 		log.Fatal("query: ", err)
 	}
+
+	type result struct {
+		game gameRow
+		ptn  string
+	}
+
+	todo := make(chan gameRow)
+	results := make(chan result)
+
+	go func() {
+		for cur.Next() {
+			var game gameRow
+			err := cur.StructScan(&game)
+			if err != nil {
+				log.Fatal("scan:", err)
+			}
+			todo <- game
+		}
+		close(todo)
+	}()
+
+	var grp errgroup.Group
+
+	for j := 0; j < Workers; j++ {
+		grp.Go(
+			func() error {
+				for game := range todo {
+					ptn, err := importOne(&game)
+					if err != nil {
+						log.Printf("could not import: id=%d err=%v", game.Id, err)
+						continue
+					}
+					results <- result{game, ptn}
+				}
+				return nil
+			})
+	}
+
+	go func() {
+		if err := grp.Wait(); err != nil {
+			log.Fatalf("import: %v", err)
+		}
+		close(results)
+	}()
+
 	i := 0
-	for cur.Next() {
-		err := cur.StructScan(&game)
-		if err != nil {
-			log.Fatal("scan:", err)
-		}
-		ptn, err := importOne(&game)
-		if err != nil {
-			log.Printf("could not import: id=%d err=%v", game.Id, err)
-			continue
-		}
+	for result := range results {
 		_, err = tx.NamedExec(
-			insertPTN, &ptnRow{Id: game.Id, PTN: ptn})
+			insertPTN, &ptnRow{Id: result.game.Id, PTN: result.ptn})
 		if err != nil {
-			log.Fatalf("insert id=%d err=%v ", game.Id, err)
+			log.Fatalf("insert id=%d err=%v ", result.game.Id, err)
 		}
 		i = i + 1
 		if i%ReportInterval == 0 {

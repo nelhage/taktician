@@ -11,7 +11,7 @@ require (
 	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
+	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
 	golang.org/x/sys v0.0.0-20190106192425-1775db3f06b5 // indirect
 	golang.org/x/text v0.3.0
 	golang.org/x/tools v0.0.0-20190106171756-3ef68632349c // indirect
