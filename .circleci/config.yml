@@ -1,0 +1,22 @@
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version
+      - image: debian:buster
+    steps:
+      - checkout
+      - run: |
+          apt-get update
+          apt-get -y install python3.7 python-virtualenv curl git gcc
+          virtualenv --python=python3.7 venv
+      - run: |
+          curl -Lo /tmp/go.tar.tgz https://dl.google.com/go/go1.12.1.linux-amd64.tar.gz
+          tar -xzf /tmp/go.tar.tgz -C /usr/local/
+      - run: |
+          venv/bin/pip install -r python/requirements.txt
+          venv/bin/pip install -e python
+
+      - run: venv/bin/py.test python/test
+      - run: /usr/local/go/bin/go get -v -t -d ./...
+      - run: /usr/local/go/bin/go test -v ./...
