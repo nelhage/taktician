@@ -73,7 +73,7 @@ holding height, and one holding the stack contents:
 
 
 ```
-	Height []uint8
+    Height []uint8
     Stacks []uint64
 ```
 
