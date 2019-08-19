@@ -72,4 +72,4 @@ The AI driver for playtak.com. Can be used via
 taktician -user USERNAME -pass PASSWORD
 ```
 
-[tak]: http://cheapass.com/node/215
+[tak]: https://cheapass.com/tak/
