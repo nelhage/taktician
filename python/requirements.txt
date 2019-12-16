@@ -4,4 +4,4 @@ pytest-cov
 numpy
 grpcio
 grpcio-tools
-tensorflow==1.13.1
+tensorflow==1.15.0
