@@ -251,7 +251,7 @@ func TestAllMovesBasicSlides(t *testing.T) {
 	}
 }
 
-func TestEqual(t *testing.T) {
+func TestMoveEqual(t *testing.T) {
 	a := Move{
 		X: 3, Y: 4, Type: SlideDown, Slides: MkSlides(3),
 	}

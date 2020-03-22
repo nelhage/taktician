@@ -45,3 +45,21 @@ func (p *Position) Hash() uint64 {
 	h = hash8(h, byte(p.ToMove()))
 	return h
 }
+
+func (p *Position) Equal(rhs *Position) bool {
+	if p.cfg.Size != rhs.cfg.Size || p.hash != rhs.hash ||
+		p.White != rhs.White ||
+		p.Black != rhs.Black ||
+		p.Standing != rhs.Standing ||
+		p.Caps != rhs.Caps ||
+		p.ToMove() != rhs.ToMove() {
+		return false
+	}
+	for i := range p.Height {
+		if p.Height[i] != rhs.Height[i] ||
+			p.Stacks[i] != rhs.Stacks[i] {
+			return false
+		}
+	}
+	return true
+}
