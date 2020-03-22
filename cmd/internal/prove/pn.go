@@ -53,6 +53,7 @@ type prover struct {
 		nodes     uint64
 		proved    uint64
 		disproved uint64
+		dropped   uint64
 	}
 	player tak.Color
 	root   *node
@@ -86,11 +87,13 @@ func (p *prover) prove(pos *tak.Position) {
 		if i%kProgressFrequency == 0 {
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
-			log.Printf("time=%s nodes=%d proved=%d/%d root=(%d, %d) heap=%d",
-				time.Now().Sub(start),
+			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%d",
+				time.Since(start),
 				p.stats.nodes,
+				p.stats.nodes-(p.stats.proved+p.stats.disproved+p.stats.dropped),
 				p.stats.proved,
 				p.stats.disproved,
+				p.stats.dropped,
 				p.root.proof,
 				p.root.disproof,
 				stats.HeapAlloc,
@@ -258,12 +261,18 @@ func (p *prover) updateAncestors(node *node) *node {
 			return node
 		}
 		if node.proof == 0 || node.disproof == 0 {
-			node.children = nil
 			if node.proof == 0 {
 				p.stats.proved += 1
+				if !p.andNode(node) {
+					p.stats.dropped += uint64(len(node.children) - 1)
+				}
 			} else {
 				p.stats.disproved += 1
+				if p.andNode(node) {
+					p.stats.dropped += uint64(len(node.children) - 1)
+				}
 			}
+			node.children = nil
 		}
 		if node.parent == nil {
 			return node
