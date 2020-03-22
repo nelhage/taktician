@@ -282,9 +282,6 @@ func (p *prover) updateAncestors(node *node) *node {
 		oldproof := node.proof
 		olddisproof := node.disproof
 		p.setNumbers(node)
-		if node.proof == oldproof && node.disproof == olddisproof {
-			return node
-		}
 		if node.proof == 0 || node.disproof == 0 {
 			if node.proof == 0 {
 				p.stats.proved += 1
@@ -298,7 +295,10 @@ func (p *prover) updateAncestors(node *node) *node {
 				}
 			}
 			node.children = nil
+		} else if node.proof == oldproof && node.disproof == olddisproof {
+			return node
 		}
+
 		if node.parent == nil {
 			return node
 		}
