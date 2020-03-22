@@ -270,10 +270,10 @@ func (p *prover) expand(n *node) {
 		}
 		p.evaluate(child)
 		p.setNumbers(child)
+		n.children = append(n.children, child)
 		if (p.andNode(n) && child.proof == 0) || (!p.andNode(n) && child.disproof == 0) {
 			break
 		}
-		n.children = append(n.children, child)
 	}
 }
 
