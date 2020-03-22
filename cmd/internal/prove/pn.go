@@ -10,12 +10,16 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type evaluation int
+type evaluation int8
 
 const (
 	evalUnknown evaluation = iota
 	evalTrue
 	evalFalse
+)
+
+const (
+	flagIrreversible = 1 << iota
 )
 
 const inf = ^uint64(0)
@@ -26,6 +30,7 @@ type node struct {
 	proof, disproof uint64
 
 	value evaluation
+	flags int32
 
 	children []*node
 }
@@ -100,6 +105,21 @@ func (p *prover) prove(pos *tak.Position) {
 	)
 }
 
+func (p *prover) checkRepetition(n *node) bool {
+	if (n.flags & flagIrreversible) != 0 {
+		return false
+	}
+	count := 1
+	walk := n.parent
+	for walk != nil && (walk.flags&flagIrreversible) == 0 && count < 3 {
+		if walk.position.Equal(n.position) {
+			count += 1
+		}
+		walk = walk.parent
+	}
+	return count == 3
+}
+
 func (p *prover) evaluate(node *node) {
 	if over, who := node.position.GameOver(); over {
 		if who == p.player {
@@ -108,7 +128,12 @@ func (p *prover) evaluate(node *node) {
 			node.value = evalFalse
 		}
 	} else {
-		node.value = evalUnknown
+		if p.checkRepetition(node) {
+			node.value = evalFalse
+		} else {
+			node.value = evalUnknown
+		}
+
 	}
 }
 
@@ -207,6 +232,13 @@ func (p *prover) expand(n *node) {
 		child := &node{
 			position: cn,
 			parent:   n,
+			move:     m,
+		}
+
+		dx, dy := m.Dest()
+		reversible := m.IsSlide() && n.position.Top(int(dx), int(dy)).Kind() != tak.Standing
+		if !reversible {
+			child.flags |= flagIrreversible
 		}
 		p.evaluate(child)
 		p.setNumbers(child)
