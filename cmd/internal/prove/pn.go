@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -28,6 +30,7 @@ type node struct {
 	parent          *node
 	position        *tak.Position
 	proof, disproof uint64
+	move            tak.Move
 
 	value evaluation
 	flags int32
@@ -82,8 +85,7 @@ func (p *prover) prove(pos *tak.Position) {
 	for p.root.proof != 0 && p.root.disproof != 0 {
 		i++
 		next := p.selectMostProving(current)
-		p.expand(next)
-		current = p.updateAncestors(next)
+
 		if i%kProgressFrequency == 0 {
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
@@ -98,10 +100,16 @@ func (p *prover) prove(pos *tak.Position) {
 				p.root.disproof,
 				stats.HeapAlloc,
 			)
+			log.Printf("  children=%s", formatChildren(p.root.children))
+			log.Printf("  line=%s", formatLine(next))
+
 		}
+
+		p.expand(next)
+		current = p.updateAncestors(next)
 	}
 	log.Printf("Done in %s, nodes=%d proof=%d disproof=%d",
-		time.Now().Sub(start),
+		time.Since(start),
 		p.stats.nodes,
 		p.root.proof,
 		p.root.disproof,
@@ -176,6 +184,27 @@ func (p *prover) setNumbers(node *node) {
 	}
 }
 
+func formatChildren(children []*node) string {
+	var buf bytes.Buffer
+	for _, c := range children {
+		fmt.Fprintf(&buf, "(%d, %d) ", c.proof, c.disproof)
+	}
+	return buf.String()
+}
+
+func formatLine(node *node) string {
+	var bits []string
+	for node != nil && node.parent != nil {
+		bits = append(bits, fmt.Sprintf("%s@(%d, %d)",
+			ptn.FormatMove(node.move), node.proof, node.disproof))
+		node = node.parent
+	}
+	for i := 0; i < len(bits)/2; i += 1 {
+		bits[i], bits[len(bits)-1-i] = bits[len(bits)-1-i], bits[i]
+	}
+	return strings.Join(bits, " ")
+}
+
 func (p *prover) selectMostProving(current *node) *node {
 	for current.expanded() {
 		var child *node
@@ -207,11 +236,7 @@ func (p *prover) selectMostProving(current *node) *node {
 				current.proof,
 				current.disproof,
 			)
-			var buf bytes.Buffer
-			for _, c := range current.children {
-				fmt.Fprintf(&buf, "(%d, %d) ", c.proof, c.disproof)
-			}
-			log.Printf("children: %s", buf.String())
+			log.Printf("children: %s", formatChildren(current.children))
 			panic("consistency error")
 		}
 		current = child
