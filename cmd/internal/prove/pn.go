@@ -25,6 +25,13 @@ const (
 
 const inf = ^uint32(0)
 
+func saturatingAdd(l uint32, r uint32) uint32 {
+	if (l + r) < l {
+		return inf
+	}
+	return l + r
+}
+
 type node struct {
 	parent          *node
 	position        *tak.Position
@@ -153,25 +160,19 @@ func (p *prover) setNumbers(node *node) {
 			node.proof = 0
 			node.disproof = inf
 			for _, c := range node.children {
-				node.proof += c.proof
+				node.proof = saturatingAdd(node.proof, c.proof)
 				if c.disproof < node.disproof {
 					node.disproof = c.disproof
 				}
-			}
-			if node.disproof == 0 {
-				node.proof = inf
 			}
 		} else {
 			node.proof = inf
 			node.disproof = 0
 			for _, c := range node.children {
-				node.disproof += c.disproof
+				node.disproof = saturatingAdd(node.disproof, c.disproof)
 				if c.proof < node.proof {
 					node.proof = c.proof
 				}
-			}
-			if node.proof == 0 {
-				node.disproof = inf
 			}
 		}
 	} else {
