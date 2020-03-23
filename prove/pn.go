@@ -64,10 +64,21 @@ type Stats struct {
 	Dropped   uint64
 }
 
-type prover struct {
+type Config struct {
+	Debug int
+}
+
+type Prover struct {
+	cfg    *Config
 	stats  Stats
 	player tak.Color
 	root   *node
+}
+
+func New(cfg Config) *Prover {
+	return &Prover{
+		cfg: &cfg,
+	}
 }
 
 type ProofResult struct {
@@ -76,10 +87,8 @@ type ProofResult struct {
 	Stats    Stats
 }
 
-func Prove(ctx context.Context, pos *tak.Position) ProofResult {
-	p := prover{
-		player: pos.ToMove(),
-	}
+func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
+	p.player = pos.ToMove()
 	start := time.Now()
 	p.prove(ctx, pos)
 	if p.root.proof == 0 {
@@ -97,7 +106,7 @@ func Prove(ctx context.Context, pos *tak.Position) ProofResult {
 const kProgressFrequency = 10000
 const kCheckDoneFrequency = 1000
 
-func (p *prover) prove(ctx context.Context, pos *tak.Position) {
+func (p *Prover) prove(ctx context.Context, pos *tak.Position) {
 	start := time.Now()
 	p.stats.Nodes += 1
 	p.root = &node{
@@ -113,7 +122,7 @@ Outer:
 		i++
 		next := p.selectMostProving(current)
 
-		if i%kProgressFrequency == 0 {
+		if i%kProgressFrequency == 0 && p.cfg.Debug > 0 {
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
 			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%d",
@@ -127,10 +136,9 @@ Outer:
 				p.root.disproof,
 				stats.HeapAlloc,
 			)
-			/*
+			if p.cfg.Debug > 1 {
 				log.Printf("  children=%s", formatChildren(p.root.children))
-			*/
-
+			}
 		}
 		if i%kCheckDoneFrequency == 0 {
 			select {
@@ -145,7 +153,7 @@ Outer:
 	}
 }
 
-func (p *prover) checkRepetition(n *node) bool {
+func (p *Prover) checkRepetition(n *node) bool {
 	if (n.flags & flagIrreversible) != 0 {
 		return false
 	}
@@ -160,7 +168,7 @@ func (p *prover) checkRepetition(n *node) bool {
 	return count == 3
 }
 
-func (p *prover) evaluate(node *node) {
+func (p *Prover) evaluate(node *node) {
 	if over, who := node.position.GameOver(); over {
 		if who == p.player {
 			node.value = EvalTrue
@@ -177,7 +185,7 @@ func (p *prover) evaluate(node *node) {
 	}
 }
 
-func (p *prover) setNumbers(node *node) {
+func (p *Prover) setNumbers(node *node) {
 	if node.expanded() {
 		if p.andNode(node) {
 			node.proof = 0
@@ -221,7 +229,7 @@ func formatChildren(children []*node) string {
 	return buf.String()
 }
 
-func (p *prover) selectMostProving(current *node) *node {
+func (p *Prover) selectMostProving(current *node) *node {
 	for current.expanded() {
 		var child *node
 		if p.andNode(current) {
@@ -261,11 +269,11 @@ func (p *prover) selectMostProving(current *node) *node {
 	return current
 }
 
-func (p *prover) andNode(n *node) bool {
+func (p *Prover) andNode(n *node) bool {
 	return n.position.ToMove() != p.player
 }
 
-func (p *prover) expand(n *node) {
+func (p *Prover) expand(n *node) {
 	var buffer [30]tak.Move
 	allMoves := n.position.AllMoves(buffer[:])
 	for _, m := range allMoves {
@@ -294,7 +302,7 @@ func (p *prover) expand(n *node) {
 	n.flags |= flagExpanded
 }
 
-func (p *prover) updateAncestors(node *node) *node {
+func (p *Prover) updateAncestors(node *node) *node {
 	for true {
 		oldproof := node.proof
 		olddisproof := node.disproof

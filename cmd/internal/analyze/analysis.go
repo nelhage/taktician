@@ -93,14 +93,15 @@ func (m *monteCarloAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 }
 
 type pnAnalysis struct {
-	cmd *Command
+	cmd    *Command
+	prover *prove.Prover
 }
 
-func (m *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
-	if !m.cmd.quiet {
+func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	if !a.cmd.quiet {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
-	out := prove.Prove(ctx, p)
+	out := a.prover.Prove(ctx, p)
 	var result string
 	switch out.Result {
 	case prove.EvalTrue:

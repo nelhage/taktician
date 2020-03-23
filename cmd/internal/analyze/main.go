@@ -15,6 +15,7 @@ import (
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
+	"github.com/nelhage/taktician/prove"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -225,7 +226,11 @@ func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
 		log.Fatal("-mcts and -prove are incompatible!")
 	}
 	if c.prove {
-		return &pnAnalysis{cmd: c}
+		return &pnAnalysis{
+			cmd: c,
+			prover: prove.New(prove.Config{
+				Debug: c.debug,
+			})}
 	}
 	if c.monteCarlo {
 		return &monteCarloAnalysis{
