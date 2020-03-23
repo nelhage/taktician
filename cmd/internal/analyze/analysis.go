@@ -9,6 +9,7 @@ import (
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
 	"github.com/nelhage/taktician/cli"
+	"github.com/nelhage/taktician/prove"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -89,4 +90,30 @@ func (m *monteCarloAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	pv := m.ai.GetMove(ctx, p)
 	fmt.Printf("AI analysis:\n")
 	fmt.Printf("  PV=%s\n", ptn.FormatMove(pv))
+}
+
+type pnAnalysis struct {
+	cmd *Command
+}
+
+func (m *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	if !m.cmd.quiet {
+		cli.RenderBoard(nil, os.Stdout, p)
+	}
+	out := prove.Prove(ctx, p)
+	var result string
+	switch out.Result {
+	case prove.EvalTrue:
+		result = "WIN"
+	case prove.EvalFalse:
+		result = "DRAW|LOSE"
+	case prove.EvalUnknown:
+		result = "UNKNOWN"
+	}
+	fmt.Printf("PN search analysis:\n")
+	fmt.Printf(" value=%s duration=%s searched=%d \n",
+		result,
+		out.Duration,
+		out.Stats.Nodes,
+	)
 }

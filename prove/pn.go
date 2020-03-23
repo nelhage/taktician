@@ -2,6 +2,7 @@ package prove
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"runtime"
@@ -10,12 +11,12 @@ import (
 	"github.com/nelhage/taktician/tak"
 )
 
-type evaluation int8
+type Evaluation int8
 
 const (
-	evalUnknown evaluation = iota
-	evalTrue
-	evalFalse
+	EvalUnknown Evaluation = iota
+	EvalTrue
+	EvalFalse
 )
 
 const (
@@ -37,7 +38,7 @@ type node struct {
 	position        *tak.Position
 	proof, disproof uint32
 
-	value evaluation
+	value Evaluation
 	flags int32
 
 	children []*node
@@ -56,29 +57,49 @@ func (n *node) depth() int {
 	return d
 }
 
+type Stats struct {
+	Nodes     uint64
+	Proved    uint64
+	Disproved uint64
+	Dropped   uint64
+}
+
 type prover struct {
-	stats struct {
-		nodes     uint64
-		proved    uint64
-		disproved uint64
-		dropped   uint64
-	}
+	stats  Stats
 	player tak.Color
 	root   *node
 }
 
-func prove(pos *tak.Position) {
+type ProofResult struct {
+	Duration time.Duration
+	Result   Evaluation
+	Stats    Stats
+}
+
+func Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	p := prover{
 		player: pos.ToMove(),
 	}
-	p.prove(pos)
+	start := time.Now()
+	p.prove(ctx, pos)
+	if p.root.proof == 0 {
+		p.root.value = EvalTrue
+	} else if p.root.disproof == 0 {
+		p.root.value = EvalFalse
+	}
+	return ProofResult{
+		Result:   p.root.value,
+		Stats:    p.stats,
+		Duration: time.Since(start),
+	}
 }
 
 const kProgressFrequency = 10000
+const kCheckDoneFrequency = 1000
 
-func (p *prover) prove(pos *tak.Position) {
+func (p *prover) prove(ctx context.Context, pos *tak.Position) {
 	start := time.Now()
-	p.stats.nodes += 1
+	p.stats.Nodes += 1
 	p.root = &node{
 		position: pos,
 		parent:   nil,
@@ -87,6 +108,7 @@ func (p *prover) prove(pos *tak.Position) {
 	p.setNumbers(p.root)
 	var i uint64
 	current := p.root
+Outer:
 	for p.root.proof != 0 && p.root.disproof != 0 {
 		i++
 		next := p.selectMostProving(current)
@@ -96,11 +118,11 @@ func (p *prover) prove(pos *tak.Position) {
 			runtime.ReadMemStats(&stats)
 			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%d",
 				time.Since(start),
-				p.stats.nodes,
-				p.stats.nodes-(p.stats.proved+p.stats.disproved+p.stats.dropped),
-				p.stats.proved,
-				p.stats.disproved,
-				p.stats.dropped,
+				p.stats.Nodes,
+				p.stats.Nodes-(p.stats.Proved+p.stats.Disproved+p.stats.Dropped),
+				p.stats.Proved,
+				p.stats.Disproved,
+				p.stats.Dropped,
 				p.root.proof,
 				p.root.disproof,
 				stats.HeapAlloc,
@@ -110,16 +132,17 @@ func (p *prover) prove(pos *tak.Position) {
 			*/
 
 		}
+		if i%kCheckDoneFrequency == 0 {
+			select {
+			case <-ctx.Done():
+				break Outer
+			default:
+			}
+		}
 
 		p.expand(next)
 		current = p.updateAncestors(next)
 	}
-	log.Printf("Done in %s, nodes=%d proof=%d disproof=%d",
-		time.Since(start),
-		p.stats.nodes,
-		p.root.proof,
-		p.root.disproof,
-	)
 }
 
 func (p *prover) checkRepetition(n *node) bool {
@@ -140,15 +163,15 @@ func (p *prover) checkRepetition(n *node) bool {
 func (p *prover) evaluate(node *node) {
 	if over, who := node.position.GameOver(); over {
 		if who == p.player {
-			node.value = evalTrue
+			node.value = EvalTrue
 		} else {
-			node.value = evalFalse
+			node.value = EvalFalse
 		}
 	} else {
 		if p.checkRepetition(node) {
-			node.value = evalFalse
+			node.value = EvalFalse
 		} else {
-			node.value = evalUnknown
+			node.value = EvalUnknown
 		}
 
 	}
@@ -177,13 +200,13 @@ func (p *prover) setNumbers(node *node) {
 		}
 	} else {
 		switch node.value {
-		case evalTrue:
+		case EvalTrue:
 			node.proof = 0
 			node.disproof = inf
-		case evalFalse:
+		case EvalFalse:
 			node.proof = inf
 			node.disproof = 0
-		case evalUnknown:
+		case EvalUnknown:
 			node.proof = 1
 			node.disproof = 1
 		}
@@ -250,7 +273,7 @@ func (p *prover) expand(n *node) {
 		if e != nil {
 			continue
 		}
-		p.stats.nodes += 1
+		p.stats.Nodes += 1
 		child := &node{
 			position: cn,
 			parent:   n,
@@ -278,14 +301,14 @@ func (p *prover) updateAncestors(node *node) *node {
 		p.setNumbers(node)
 		if node.proof == 0 || node.disproof == 0 {
 			if node.proof == 0 {
-				p.stats.proved += 1
+				p.stats.Proved += 1
 				if !p.andNode(node) {
-					p.stats.dropped += uint64(len(node.children) - 1)
+					p.stats.Dropped += uint64(len(node.children) - 1)
 				}
 			} else {
-				p.stats.disproved += 1
+				p.stats.Disproved += 1
 				if p.andNode(node) {
-					p.stats.dropped += uint64(len(node.children) - 1)
+					p.stats.Dropped += uint64(len(node.children) - 1)
 				}
 			}
 			node.children = nil

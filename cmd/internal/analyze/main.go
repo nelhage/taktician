@@ -24,6 +24,7 @@ type Command struct {
 	tps        bool
 	quiet      bool
 	monteCarlo bool
+	prove      bool
 	debug      int
 	cpuProfile string
 
@@ -74,6 +75,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.tps, "tps", false, "render position in tps")
 	flags.BoolVar(&c.quiet, "quiet", false, "don't print board diagrams")
 	flags.BoolVar(&c.monteCarlo, "mcts", false, "Use the MCTS evaluator")
+	flags.BoolVar(&c.prove, "prove", false, "Use the PN prover")
 	flags.IntVar(&c.debug, "debug", 1, "debug level")
 	flags.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
 
@@ -219,6 +221,12 @@ func (c *Command) makeAI(p *tak.Position) *ai.MinimaxAI {
 }
 
 func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
+	if c.monteCarlo && c.prove {
+		log.Fatal("-mcts and -prove are incompatible!")
+	}
+	if c.prove {
+		return &pnAnalysis{cmd: c}
+	}
 	if c.monteCarlo {
 		return &monteCarloAnalysis{
 			cmd: c,
