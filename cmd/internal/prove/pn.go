@@ -23,12 +23,12 @@ const (
 	flagExpanded     = 1 << iota
 )
 
-const inf = ^uint64(0)
+const inf = ^uint32(0)
 
 type node struct {
 	parent          *node
 	position        *tak.Position
-	proof, disproof uint64
+	proof, disproof uint32
 
 	value evaluation
 	flags int32
