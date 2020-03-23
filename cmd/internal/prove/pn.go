@@ -22,6 +22,7 @@ const (
 
 const (
 	flagIrreversible = 1 << iota
+	flagExpanded     = 1 << iota
 )
 
 const inf = ^uint64(0)
@@ -39,7 +40,7 @@ type node struct {
 }
 
 func (n *node) expanded() bool {
-	return n.children != nil
+	return n.flags&flagExpanded != 0
 }
 
 func (n *node) depth() int {
@@ -221,6 +222,7 @@ func (p *prover) selectMostProving(current *node) *node {
 					break
 				}
 			}
+
 		} else {
 			for _, c := range current.children {
 				if c.proof == current.proof {
@@ -281,6 +283,7 @@ func (p *prover) expand(n *node) {
 			break
 		}
 	}
+	n.flags |= flagExpanded
 }
 
 func (p *prover) updateAncestors(node *node) *node {
