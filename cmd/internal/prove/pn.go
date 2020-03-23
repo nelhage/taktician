@@ -101,8 +101,10 @@ func (p *prover) prove(pos *tak.Position) {
 				p.root.disproof,
 				stats.HeapAlloc,
 			)
-			log.Printf("  children=%s", formatChildren(p.root.children))
-			log.Printf("  line=%s", formatLine(next))
+			/*
+				log.Printf("  children=%s", formatChildren(p.root.children))
+				log.Printf("  line=%s", formatLine(next))
+			*/
 
 		}
 
