@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -31,7 +29,6 @@ type node struct {
 	parent          *node
 	position        *tak.Position
 	proof, disproof uint64
-	move            tak.Move
 
 	value evaluation
 	flags int32
@@ -103,7 +100,6 @@ func (p *prover) prove(pos *tak.Position) {
 			)
 			/*
 				log.Printf("  children=%s", formatChildren(p.root.children))
-				log.Printf("  line=%s", formatLine(next))
 			*/
 
 		}
@@ -201,19 +197,6 @@ func formatChildren(children []*node) string {
 	return buf.String()
 }
 
-func formatLine(node *node) string {
-	var bits []string
-	for node != nil && node.parent != nil {
-		bits = append(bits, fmt.Sprintf("%s@(%d, %d)",
-			ptn.FormatMove(node.move), node.proof, node.disproof))
-		node = node.parent
-	}
-	for i := 0; i < len(bits)/2; i += 1 {
-		bits[i], bits[len(bits)-1-i] = bits[len(bits)-1-i], bits[i]
-	}
-	return strings.Join(bits, " ")
-}
-
 func (p *prover) selectMostProving(current *node) *node {
 	for current.expanded() {
 		var child *node
@@ -270,7 +253,6 @@ func (p *prover) expand(n *node) {
 		child := &node{
 			position: cn,
 			parent:   n,
-			move:     m,
 		}
 
 		dx, dy := m.Dest()
