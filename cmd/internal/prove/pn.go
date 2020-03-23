@@ -159,6 +159,9 @@ func (p *prover) setNumbers(node *node) {
 					node.disproof = c.disproof
 				}
 			}
+			if node.disproof == 0 {
+				node.proof = inf
+			}
 		} else {
 			node.proof = inf
 			node.disproof = 0
@@ -167,6 +170,9 @@ func (p *prover) setNumbers(node *node) {
 				if c.proof < node.proof {
 					node.proof = c.proof
 				}
+			}
+			if node.proof == 0 {
+				node.disproof = inf
 			}
 		}
 	} else {
