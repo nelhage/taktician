@@ -87,6 +87,8 @@ type Prover struct {
 	checkNode *node
 	stack     []*tak.Position
 	alloc     []*tak.Position
+
+	moveBuffer [100]tak.Move
 }
 
 func New(cfg Config) *Prover {
@@ -334,9 +336,8 @@ func (p *Prover) andNode(n *node) bool {
 }
 
 func (p *Prover) expand(n *node) {
-	var buffer [30]tak.Move
 	current := p.currentPosition(n)
-	allMoves := current.AllMoves(buffer[:])
+	allMoves := current.AllMoves(p.moveBuffer[:0])
 	for _, m := range allMoves {
 		child := &node{
 			parent: n,
