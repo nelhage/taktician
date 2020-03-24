@@ -82,9 +82,10 @@ func New(cfg Config) *Prover {
 }
 
 type ProofResult struct {
-	Duration time.Duration
-	Result   Evaluation
-	Stats    Stats
+	Duration        time.Duration
+	Result          Evaluation
+	Stats           Stats
+	Proof, Disproof uint32
 }
 
 func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
@@ -101,6 +102,8 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		Result:   p.root.value,
 		Stats:    p.stats,
 		Duration: time.Since(start),
+		Proof:    p.root.proof,
+		Disproof: p.root.disproof,
 	}
 }
 
