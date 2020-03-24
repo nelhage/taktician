@@ -28,6 +28,7 @@ type Command struct {
 	prove      bool
 	debug      int
 	cpuProfile string
+	memProfile string
 
 	/* Options to select which position(s) to analyze */
 	move      int
@@ -79,6 +80,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.prove, "prove", false, "Use the PN prover")
 	flags.IntVar(&c.debug, "debug", 1, "debug level")
 	flags.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
+	flags.StringVar(&c.memProfile, "memprofile", "", "write memory profile")
 
 	flags.IntVar(&c.move, "move", 0, "PTN move number to analyze")
 	flags.BoolVar(&c.all, "all", false, "show all possible moves")
@@ -129,7 +131,18 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			log.Fatalf("open cpu-profile: %s: %v", c.cpuProfile, e)
 		}
 		pprof.StartCPUProfile(f)
+		defer f.Close()
 		defer pprof.StopCPUProfile()
+	}
+	if c.memProfile != "" {
+		f, e := os.OpenFile(c.memProfile, os.O_WRONLY|os.O_CREATE, 0644)
+		if e != nil {
+			log.Fatalf("open memory profile: %s: %v", c.cpuProfile, e)
+		}
+		defer func() {
+			pprof.Lookup("allocs").WriteTo(f, 0)
+			f.Close()
+		}()
 	}
 
 	if !c.all {
