@@ -96,6 +96,7 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	} else if p.root.disproof == 0 {
 		p.root.value = EvalFalse
 	}
+
 	return ProofResult{
 		Result:   p.root.value,
 		Stats:    p.stats,
@@ -125,7 +126,7 @@ Outer:
 		if i%kProgressFrequency == 0 && p.cfg.Debug > 0 {
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
-			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%d",
+			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%s",
 				time.Since(start),
 				p.stats.Nodes,
 				p.stats.Nodes-(p.stats.Proved+p.stats.Disproved+p.stats.Dropped),
@@ -134,7 +135,7 @@ Outer:
 				p.stats.Dropped,
 				p.root.proof,
 				p.root.disproof,
-				stats.HeapAlloc,
+				formatBytes(stats.HeapAlloc),
 			)
 			if p.cfg.Debug > 1 {
 				log.Printf("  children=%s", formatChildren(p.root.children))
@@ -227,6 +228,26 @@ func formatChildren(children []*node) string {
 		fmt.Fprintf(&buf, "(%d, %d) ", c.proof, c.disproof)
 	}
 	return buf.String()
+}
+
+var sizeTables = []struct {
+	order  int
+	suffix string
+}{
+	{40, "T"},
+	{30, "G"},
+	{20, "M"},
+	{10, "K"},
+	{0, "B"},
+}
+
+func formatBytes(bytes uint64) string {
+	for _, e := range sizeTables {
+		if bytes > 10*(1<<e.order) {
+			return fmt.Sprintf("%d%s", bytes>>e.order, e.suffix)
+		}
+	}
+	return fmt.Sprintf("%dB", bytes)
 }
 
 func (p *Prover) selectMostProving(current *node) *node {
