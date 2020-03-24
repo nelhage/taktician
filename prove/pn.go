@@ -71,8 +71,9 @@ func (st *Stats) Live() uint64 {
 }
 
 type Config struct {
-	Debug    int
-	MaxNodes uint64
+	Debug     int
+	MaxNodes  uint64
+	LogPrefix string
 }
 
 type Prover struct {
@@ -153,7 +154,8 @@ Outer:
 		if i%kProgressFrequency == 0 && p.cfg.Debug > 0 {
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
-			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d expanded=%d root=(%d, %d) heap=%s",
+			log.Printf("%stime=%s nodes=%d live=%d done=%d/%d/%d expanded=%d root=(%d, %d) heap=%s",
+				p.cfg.LogPrefix,
 				time.Since(start),
 				p.stats.Nodes,
 				p.stats.Live(),
@@ -166,7 +168,7 @@ Outer:
 				formatBytes(stats.HeapAlloc),
 			)
 			if p.cfg.Debug > 1 {
-				log.Printf("  children=%s", formatChildren(p.root.children))
+				log.Printf("%s  children=%s", p.cfg.LogPrefix, formatChildren(p.root.children))
 			}
 		}
 		if i%kCheckDoneFrequency == 0 {
