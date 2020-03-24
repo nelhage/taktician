@@ -35,6 +35,7 @@ func saturatingAdd(l uint32, r uint32) uint32 {
 
 type node struct {
 	parent          *node
+	move            tak.Move
 	position        *tak.Position
 	proof, disproof uint32
 
@@ -86,14 +87,21 @@ type ProofResult struct {
 	Result          Evaluation
 	Stats           Stats
 	Proof, Disproof uint32
+	Move            tak.Move
 }
 
 func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	p.player = pos.ToMove()
 	start := time.Now()
 	p.prove(ctx, pos)
+	var pv tak.Move
 	if p.root.proof == 0 {
 		p.root.value = EvalTrue
+		for _, c := range p.root.children {
+			if c.proof == 0 {
+				pv = c.move
+			}
+		}
 	} else if p.root.disproof == 0 {
 		p.root.value = EvalFalse
 	}
@@ -104,6 +112,7 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		Duration: time.Since(start),
 		Proof:    p.root.proof,
 		Disproof: p.root.disproof,
+		Move:     pv,
 	}
 }
 
@@ -309,6 +318,7 @@ func (p *Prover) expand(n *node) {
 		child := &node{
 			position: cn,
 			parent:   n,
+			move:     m,
 		}
 
 		dx, dy := m.Dest()
@@ -331,7 +341,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 		oldproof := node.proof
 		olddisproof := node.disproof
 		p.setNumbers(node)
-		if node.proof == 0 || node.disproof == 0 {
+		if (node.proof == 0 || node.disproof == 0) && node != p.root {
 			if node.proof == 0 {
 				p.stats.Proved += 1
 				if !p.andNode(node) {

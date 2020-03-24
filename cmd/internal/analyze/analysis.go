@@ -112,8 +112,15 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		result = "UNKNOWN"
 	}
 	fmt.Printf("PN search analysis:\n")
-	fmt.Printf(" value=%s duration=%s searched=%d proof=%d disproof=%d\n",
+	var move string
+	if out.Move.Type != 0 {
+		move = ptn.FormatMove(out.Move)
+	} else {
+		move = "(none)"
+	}
+	fmt.Printf(" value=%s move=%s duration=%s searched=%d proof=%d disproof=%d\n",
 		result,
+		move,
 		out.Duration,
 		out.Stats.Nodes,
 		out.Proof,
