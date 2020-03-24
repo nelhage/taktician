@@ -21,7 +21,8 @@ const (
 
 const (
 	flagIrreversible = 1 << iota
-	flagExpanded     = 1 << iota
+	flagExpanded
+	flagAnd
 )
 
 const inf = ^uint32(0)
@@ -36,7 +37,6 @@ func saturatingAdd(l uint32, r uint32) uint32 {
 type node struct {
 	parent          *node
 	move            tak.Move
-	position        *tak.Position
 	proof, disproof uint32
 
 	value Evaluation
@@ -80,6 +80,12 @@ type Prover struct {
 	stats  Stats
 	player tak.Color
 	root   *node
+
+	position *tak.Position
+
+	checkNode *node
+	stack     []*tak.Position
+	alloc     []*tak.Position
 }
 
 func New(cfg Config) *Prover {
@@ -98,6 +104,7 @@ type ProofResult struct {
 
 func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	p.player = pos.ToMove()
+	p.position = pos
 	start := time.Now()
 	p.prove(ctx, pos)
 	var pv tak.Move
@@ -129,9 +136,11 @@ func (p *Prover) prove(ctx context.Context, pos *tak.Position) {
 	start := time.Now()
 	p.stats.Nodes += 1
 	p.root = &node{
-		position: pos,
-		parent:   nil,
+		parent: nil,
 	}
+	p.alloc = []*tak.Position{pos}
+	p.stack = p.alloc
+	p.checkNode = p.root
 	p.evaluate(p.root)
 	p.setNumbers(p.root)
 	var i uint64
@@ -181,18 +190,21 @@ func (p *Prover) checkRepetition(n *node) bool {
 		return false
 	}
 	count := 1
+	current := p.currentPosition(n)
 	walk := n.parent
+	i := len(p.stack) - 2
 	for walk != nil && (walk.flags&flagIrreversible) == 0 && count < 3 {
-		if walk.position.Equal(n.position) {
+		if p.stack[i].Equal(current) {
 			count += 1
 		}
 		walk = walk.parent
+		i -= 1
 	}
 	return count == 3
 }
 
 func (p *Prover) evaluate(node *node) {
-	if over, who := node.position.GameOver(); over {
+	if over, who := p.currentPosition(node).GameOver(); over {
 		if who == p.player {
 			node.value = EvalTrue
 		} else {
@@ -307,37 +319,44 @@ func (p *Prover) selectMostProving(current *node) *node {
 			log.Printf("children: %s", formatChildren(current.children))
 			panic("consistency error")
 		}
+		if !p.tryDescend(child) {
+			panic("failed to descend")
+		}
 		current = child
 	}
 	return current
 }
 
 func (p *Prover) andNode(n *node) bool {
-	return n.position.ToMove() != p.player
+	return (n.flags & flagAnd) != 0
 }
 
 func (p *Prover) expand(n *node) {
 	var buffer [30]tak.Move
-	allMoves := n.position.AllMoves(buffer[:])
+	current := p.currentPosition(n)
+	allMoves := current.AllMoves(buffer[:])
 	for _, m := range allMoves {
-		cn, e := n.position.Move(m)
-		if e != nil {
+		child := &node{
+			parent: n,
+			move:   m,
+		}
+
+		if !p.tryDescend(child) {
 			continue
 		}
 		p.stats.Nodes += 1
-		child := &node{
-			position: cn,
-			parent:   n,
-			move:     m,
-		}
 
 		dx, dy := m.Dest()
-		reversible := m.IsSlide() && n.position.Top(int(dx), int(dy)).Kind() != tak.Standing
+		reversible := m.IsSlide() && current.Top(int(dx), int(dy)).Kind() != tak.Standing
 		if !reversible {
 			child.flags |= flagIrreversible
 		}
+		if !p.andNode(n) {
+			child.flags |= flagAnd
+		}
 		p.evaluate(child)
 		p.setNumbers(child)
+		p.ascend()
 		n.children = append(n.children, child)
 		if (p.andNode(n) && child.proof == 0) || (!p.andNode(n) && child.disproof == 0) {
 			break
@@ -373,6 +392,35 @@ func (p *Prover) updateAncestors(node *node) *node {
 			return node
 		}
 		node = node.parent
+		p.ascend()
 	}
 	return node
+}
+
+func (p *Prover) tryDescend(n *node) bool {
+	current := p.currentPosition(n.parent)
+	var out *tak.Position
+	if len(p.alloc) <= len(p.stack) {
+		p.alloc = append(p.alloc, tak.Alloc(p.position.Size()))
+	}
+	out = p.alloc[len(p.stack)]
+	_, err := current.MovePreallocated(n.move, out)
+	if err != nil {
+		return false
+	}
+	p.stack = p.alloc[0 : len(p.stack)+1]
+	p.checkNode = n
+	return true
+}
+
+func (p *Prover) currentPosition(cur *node) *tak.Position {
+	if cur != p.checkNode {
+		panic("inconsistent current position")
+	}
+	return p.stack[len(p.stack)-1]
+}
+
+func (p *Prover) ascend() {
+	p.stack = p.stack[0 : len(p.stack)-1]
+	p.checkNode = p.checkNode.parent
 }
