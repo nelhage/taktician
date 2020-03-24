@@ -118,12 +118,13 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	} else {
 		move = "(none)"
 	}
-	fmt.Printf(" value=%s move=%s duration=%s searched=%d proof=%d disproof=%d\n",
+	fmt.Printf(" value=%s move=%s duration=%s searched=%d proof=%d disproof=%d depth=%d\n",
 		result,
 		move,
 		out.Duration,
 		out.Stats.Nodes,
 		out.Proof,
 		out.Disproof,
+		out.Depth,
 	)
 }

@@ -39,8 +39,9 @@ type node struct {
 	move            tak.Move
 	proof, disproof uint32
 
-	value Evaluation
-	flags int32
+	value      Evaluation
+	flags      int8
+	proofDepth uint16
 
 	children []*node
 }
@@ -100,6 +101,7 @@ func New(cfg Config) *Prover {
 type ProofResult struct {
 	Duration        time.Duration
 	Result          Evaluation
+	Depth           uint32
 	Stats           Stats
 	Proof, Disproof uint32
 	Move            tak.Move
@@ -120,6 +122,16 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		}
 	} else if p.root.disproof == 0 {
 		p.root.value = EvalFalse
+		var best *node
+		for _, c := range p.root.children {
+			if best == nil || best.proofDepth < c.proofDepth {
+				best = c
+			}
+		}
+		if best != nil {
+			pv = best.move
+		}
+
 	}
 
 	return ProofResult{
@@ -129,6 +141,7 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		Proof:    p.root.proof,
 		Disproof: p.root.disproof,
 		Move:     pv,
+		Depth:    uint32(p.root.proofDepth),
 	}
 }
 
@@ -214,13 +227,10 @@ func (p *Prover) evaluate(node *node) {
 		} else {
 			node.value = EvalFalse
 		}
+	} else if p.checkRepetition(node) {
+		node.value = EvalFalse
 	} else {
-		if p.checkRepetition(node) {
-			node.value = EvalFalse
-		} else {
-			node.value = EvalUnknown
-		}
-
+		node.value = EvalUnknown
 	}
 }
 
@@ -374,7 +384,30 @@ func (p *Prover) updateAncestors(node *node) *node {
 		oldproof := node.proof
 		olddisproof := node.disproof
 		p.setNumbers(node)
-		if (node.proof == 0 || node.disproof == 0) && node != p.root {
+		if node.proof == 0 || node.disproof == 0 {
+			if p.andNode(node) == (node.proof == 0) {
+				var d uint16
+				for _, c := range node.children {
+					if c.proof != 0 && c.disproof != 0 {
+						continue
+					}
+					if c.proofDepth > d {
+						d = c.proofDepth
+					}
+				}
+				node.proofDepth = d + 1
+			} else {
+				d := uint16(1 << 15)
+				for _, c := range node.children {
+					if c.proof != 0 && c.disproof != 0 {
+						continue
+					}
+					if c.proofDepth < d {
+						d = c.proofDepth
+					}
+				}
+				node.proofDepth = d + 1
+			}
 			if node.proof == 0 {
 				p.stats.Proved += 1
 				if !p.andNode(node) {
@@ -386,7 +419,9 @@ func (p *Prover) updateAncestors(node *node) *node {
 					p.stats.Dropped += uint64(len(node.children) - 1)
 				}
 			}
-			node.children = nil
+			if node != p.root {
+				node.children = nil
+			}
 		} else if node.proof == oldproof && node.disproof == olddisproof {
 			return node
 		}
