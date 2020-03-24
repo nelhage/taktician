@@ -65,8 +65,13 @@ type Stats struct {
 	Dropped   uint64
 }
 
+func (st *Stats) Live() uint64 {
+	return st.Nodes - (st.Proved + st.Disproved + st.Dropped)
+}
+
 type Config struct {
-	Debug int
+	Debug    int
+	MaxNodes uint64
 }
 
 type Prover struct {
@@ -141,7 +146,7 @@ Outer:
 			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%s",
 				time.Since(start),
 				p.stats.Nodes,
-				p.stats.Nodes-(p.stats.Proved+p.stats.Disproved+p.stats.Dropped),
+				p.stats.Live(),
 				p.stats.Proved,
 				p.stats.Disproved,
 				p.stats.Dropped,
@@ -158,6 +163,9 @@ Outer:
 			case <-ctx.Done():
 				break Outer
 			default:
+			}
+			if p.cfg.MaxNodes > 0 && p.stats.Live() > p.cfg.MaxNodes {
+				break Outer
 			}
 		}
 

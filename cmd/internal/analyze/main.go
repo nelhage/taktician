@@ -37,7 +37,7 @@ type Command struct {
 	white     bool
 	variation string
 
-	/* Options which apply to both engines  */
+	/* Options which apply to all engines  */
 	timeLimit time.Duration
 	seed      int64
 
@@ -58,6 +58,9 @@ type Command struct {
 
 	/* MCTS options */
 	dumpTree string
+
+	/* PN options */
+	maxNodes uint64
 }
 
 func (*Command) Name() string     { return "analyze" }
@@ -106,6 +109,8 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.symmetry, "symmetry", false, "ignore symmetries")
 
 	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump MCTS tree as a dot file to PATH")
+
+	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -242,7 +247,8 @@ func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
 		return &pnAnalysis{
 			cmd: c,
 			prover: prove.New(prove.Config{
-				Debug: c.debug,
+				Debug:    c.debug,
+				MaxNodes: c.maxNodes,
 			})}
 	}
 	if c.monteCarlo {
