@@ -334,7 +334,7 @@ func (p *Prover) andNode(n *node) bool {
 }
 
 func (p *Prover) expand(n *node) {
-	var buffer [50]tak.Move
+	var buffer [30]tak.Move
 	current := p.currentPosition(n)
 	allMoves := current.AllMoves(buffer[:])
 	for _, m := range allMoves {
