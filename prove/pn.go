@@ -65,6 +65,7 @@ type Stats struct {
 	Disproved uint64
 	Dropped   uint64
 	Expanded  uint64
+	MaxDepth  uint64
 }
 
 func (st *Stats) Live() uint64 {
@@ -377,6 +378,10 @@ func (p *Prover) expand(n *node) {
 	}
 	p.stats.Expanded += 1
 	n.flags |= flagExpanded
+	d := uint64(n.depth() + 1)
+	if d > p.stats.MaxDepth {
+		p.stats.MaxDepth = d
+	}
 }
 
 func (p *Prover) updateAncestors(node *node) *node {

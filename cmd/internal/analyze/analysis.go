@@ -118,7 +118,7 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	} else {
 		move = "(none)"
 	}
-	fmt.Printf(" value=%s move=%s duration=%s searched=%d proof=%d disproof=%d depth=%d\n",
+	fmt.Printf(" value=%s move=%s duration=%s searched=%d proof=%d disproof=%d depth=%d maxDepth=%d\n",
 		result,
 		move,
 		out.Duration,
@@ -126,5 +126,6 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		out.Proof,
 		out.Disproof,
 		out.Depth,
+		out.Stats.MaxDepth,
 	)
 }
