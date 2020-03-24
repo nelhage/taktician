@@ -63,6 +63,7 @@ type Stats struct {
 	Proved    uint64
 	Disproved uint64
 	Dropped   uint64
+	Expanded  uint64
 }
 
 func (st *Stats) Live() uint64 {
@@ -143,13 +144,14 @@ Outer:
 		if i%kProgressFrequency == 0 && p.cfg.Debug > 0 {
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
-			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d root=(%d, %d) heap=%s",
+			log.Printf("time=%s nodes=%d live=%d done=%d/%d/%d expanded=%d root=(%d, %d) heap=%s",
 				time.Since(start),
 				p.stats.Nodes,
 				p.stats.Live(),
 				p.stats.Proved,
 				p.stats.Disproved,
 				p.stats.Dropped,
+				p.stats.Expanded,
 				p.root.proof,
 				p.root.disproof,
 				formatBytes(stats.HeapAlloc),
@@ -341,6 +343,7 @@ func (p *Prover) expand(n *node) {
 			break
 		}
 	}
+	p.stats.Expanded += 1
 	n.flags |= flagExpanded
 }
 
