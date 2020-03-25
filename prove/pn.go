@@ -353,13 +353,13 @@ func (p *Prover) setNumbers(node *node) {
 			node.proof = inf
 			node.disproof = 0
 		case EvalUnknown:
-			var buffer [100]tak.Move
-			moves := len(p.currentPosition(node).AllMoves(buffer[:0]))
+			pos := p.currentPosition(node)
+			stones := uint32(pos.BlackStones() + pos.WhiteStones())
 			if p.andNode(node) {
-				node.proof = uint32(moves)
+				node.proof = stones
 				node.disproof = 1
 			} else {
-				node.disproof = uint32(moves)
+				node.disproof = stones
 				node.proof = 1
 			}
 		}
