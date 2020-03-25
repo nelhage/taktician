@@ -503,7 +503,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 			return node
 		}
 
-		if node.parent == nil {
+		if node == p.root {
 			return node
 		}
 		node = node.parent
