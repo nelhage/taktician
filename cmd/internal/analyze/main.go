@@ -107,7 +107,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.logCuts, "log-cuts", "", "log all cuts")
 	flags.BoolVar(&c.symmetry, "symmetry", false, "ignore symmetries")
 
-	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree as a dot file to PATH (MCTS, PN only)")
+	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree to PATH (MCTS and PN only)")
 
 	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
 }

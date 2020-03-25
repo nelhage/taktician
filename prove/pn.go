@@ -3,10 +3,12 @@ package prove
 import (
 	"bytes"
 	"context"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/nelhage/taktician/ptn"
@@ -162,29 +164,50 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	}
 }
 
-func (p *Prover) DumpTree(out io.Writer) {
-	fmt.Fprint(out, "digraph G {\n")
-	p.walkTree(out, p.root)
-	fmt.Fprint(out, "\n}")
+func name(n string) xml.Name {
+	return xml.Name{Space: "", Local: n}
 }
 
-func (p *Prover) walkTree(out io.Writer, node *node) {
-	var shape string
+func elt(e *xml.Encoder, el xml.StartElement, inner func(*xml.Encoder)) {
+	e.EncodeToken(el)
+	inner(e)
+	e.EncodeToken(xml.EndElement{Name: el.Name})
+}
+
+func (p *Prover) DumpTree(out io.Writer) {
+	e := xml.NewEncoder(out)
+	elt(e, xml.StartElement{Name: name("PNTree")},
+		func(e *xml.Encoder) {
+			p.walkTree(e, p.root)
+		})
+	if err := e.Flush(); err != nil {
+		panic(fmt.Sprintf("flush: %v", err))
+	}
+}
+
+func (p *Prover) walkTree(e *xml.Encoder, node *node) {
+	var ty string
 	if p.andNode(node) {
-		shape = "box"
+		ty = "AND"
 	} else {
-		shape = "circle"
+		ty = "OR"
 	}
-	fmt.Fprintf(out, `nd%p[label="%s\n(%d, %d)\nv=%s\nd=%d", shape=%s];`,
-		node, ptn.FormatMove(node.move),
-		node.proof, node.disproof, node.value, node.proofDepth,
-		shape,
-	)
-	fmt.Fprintln(out)
-	for _, c := range node.children {
-		fmt.Fprintf(out, "nd%p -> nd%p\n", node, c)
-		p.walkTree(out, c)
-	}
+	elt(e, xml.StartElement{Name: name("Node"),
+		Attr: []xml.Attr{
+			{Name: name("Move"), Value: ptn.FormatMove(node.move)},
+			{Name: name("Type"), Value: ty},
+			{Name: name("Proof"), Value: strconv.FormatUint(uint64(node.proof), 10)},
+			{Name: name("Disproof"), Value: strconv.FormatUint(uint64(node.disproof), 10)},
+			{Name: name("Value"), Value: node.value.String()},
+		},
+	}, func(e *xml.Encoder) {
+		elt(e, xml.StartElement{Name: name("Children")},
+			func(e *xml.Encoder) {
+				for _, c := range node.children {
+					p.walkTree(e, c)
+				}
+			})
+	})
 }
 
 const kProgressFrequency = 10000
