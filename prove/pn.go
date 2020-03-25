@@ -413,7 +413,7 @@ func (p *Prover) expand(n *node) {
 		p.setNumbers(child)
 		p.ascend()
 		n.children = append(n.children, child)
-		if (p.andNode(n) && child.proof == 0) || (!p.andNode(n) && child.disproof == 0) {
+		if (p.andNode(n) && child.disproof == 0) || (!p.andNode(n) && child.proof == 0) {
 			break
 		}
 	}
