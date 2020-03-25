@@ -94,9 +94,12 @@ type Config struct {
 	MaxNodes       uint64
 	LogPrefix      string
 	PreserveSolved bool
+	PN2            bool
 }
 
 type Prover struct {
+	ctx context.Context
+
 	cfg    *Config
 	stats  Stats
 	player tak.Color

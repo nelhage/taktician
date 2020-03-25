@@ -60,6 +60,7 @@ type Command struct {
 
 	/* PN options */
 	maxNodes uint64
+	pn2      bool
 }
 
 func (*Command) Name() string     { return "analyze" }
@@ -110,6 +111,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree to PATH (MCTS and PN only)")
 
 	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
+	flags.BoolVar(&c.pn2, "pn2", false, "Use PN² search")
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
