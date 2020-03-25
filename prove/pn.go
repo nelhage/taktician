@@ -215,7 +215,6 @@ const kProgressFrequency = 10000
 const kCheckDoneFrequency = 1000
 
 func (p *Prover) prove(ctx context.Context, pos *tak.Position) {
-	start := time.Now()
 	p.stats.Nodes += 1
 	p.root = &node{
 		parent: nil,
@@ -225,6 +224,10 @@ func (p *Prover) prove(ctx context.Context, pos *tak.Position) {
 	p.checkNode = p.root
 	p.evaluate(p.root)
 	p.setNumbers(p.root)
+	p.search(ctx, p.cfg.MaxNodes)
+}
+
+func (p *Prover) search(ctx context.Context, maxNodes uint64) {
 	var i uint64
 	current := p.root
 Outer:
