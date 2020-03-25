@@ -100,10 +100,9 @@ type Config struct {
 type Prover struct {
 	ctx context.Context
 
-	cfg    *Config
-	stats  Stats
-	player tak.Color
-	root   *node
+	cfg   *Config
+	stats Stats
+	root  *node
 
 	position *tak.Position
 
@@ -130,7 +129,6 @@ type ProofResult struct {
 }
 
 func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
-	p.player = pos.ToMove()
 	p.position = pos
 	start := time.Now()
 	p.prove(ctx, pos)
@@ -290,7 +288,7 @@ func (p *Prover) checkRepetition(n *node) bool {
 
 func (p *Prover) evaluate(node *node) {
 	if over, who := p.currentPosition(node).GameOver(); over {
-		if who == p.player {
+		if who == p.position.ToMove() {
 			node.value = EvalTrue
 		} else {
 			node.value = EvalFalse
