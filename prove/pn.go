@@ -42,7 +42,13 @@ const (
 	flagAnd
 )
 
-const inf = ^uint32(0)
+const (
+	inf = ^uint32(0)
+
+	kCheckFrequency = 1000
+
+	pn2Threshold = 1000
+)
 
 func saturatingAdd(l uint32, r uint32) uint32 {
 	if (l + r) < l {
@@ -102,8 +108,10 @@ type Prover struct {
 
 	cfg   *Config
 	stats Stats
-	root  *node
 
+	start time.Time
+
+	root     *node
 	position *tak.Position
 
 	checkNode *node
@@ -111,6 +119,8 @@ type Prover struct {
 	alloc     []*tak.Position
 
 	moveBuffer [100]tak.Move
+
+	progress <-chan time.Time
 }
 
 func New(cfg Config) *Prover {
@@ -129,9 +139,17 @@ type ProofResult struct {
 }
 
 func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
+	p.start = time.Now()
+	p.stats = Stats{}
 	p.position = pos
-	start := time.Now()
+	p.ctx = ctx
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	p.progress = ticker.C
+
 	p.prove(ctx, pos)
+
 	var pv tak.Move
 	if p.root.proof == 0 {
 		p.root.value = EvalTrue
@@ -157,7 +175,7 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	return ProofResult{
 		Result:   p.root.value,
 		Stats:    p.stats,
-		Duration: time.Since(start),
+		Duration: time.Since(p.start),
 		Proof:    p.root.proof,
 		Disproof: p.root.disproof,
 		Move:     pv,
@@ -211,9 +229,6 @@ func (p *Prover) walkTree(e *xml.Encoder, node *node) {
 	})
 }
 
-const kProgressFrequency = 10000
-const kCheckDoneFrequency = 1000
-
 func (p *Prover) prove(ctx context.Context, pos *tak.Position) {
 	p.stats.Nodes += 1
 	p.root = &node{
@@ -235,39 +250,44 @@ Outer:
 		i++
 		next := p.selectMostProving(current)
 
-		if i%kProgressFrequency == 0 && p.cfg.Debug > 0 {
-			var stats runtime.MemStats
-			runtime.ReadMemStats(&stats)
-			log.Printf("%stime=%s nodes=%d live=%d done=%d/%d/%d expanded=%d root=(%d, %d) heap=%s",
-				p.cfg.LogPrefix,
-				time.Since(start),
-				p.stats.Nodes,
-				p.stats.Live(),
-				p.stats.Proved,
-				p.stats.Disproved,
-				p.stats.Dropped,
-				p.stats.Expanded,
-				p.root.proof,
-				p.root.disproof,
-				formatBytes(stats.HeapAlloc),
-			)
-			if p.cfg.Debug > 1 {
-				log.Printf("%s  children=%s", p.cfg.LogPrefix, formatChildren(p.root.children))
-			}
-		}
-		if i%kCheckDoneFrequency == 0 {
+		if i%kCheckFrequency == 0 || p.cfg.PN2 {
 			select {
 			case <-ctx.Done():
 				break Outer
 			default:
 			}
-			if p.cfg.MaxNodes > 0 && p.stats.Live() > p.cfg.MaxNodes {
-				break Outer
+			select {
+			case <-p.progress:
+				var stats runtime.MemStats
+				runtime.ReadMemStats(&stats)
+				log.Printf("%stime=%s nodes=%d live=%d done=%d/%d/%d expanded=%d root=(%d, %d) heap=%s",
+					p.cfg.LogPrefix,
+					time.Since(p.start),
+					p.stats.Nodes,
+					p.stats.Live(),
+					p.stats.Proved,
+					p.stats.Disproved,
+					p.stats.Dropped,
+					p.stats.Expanded,
+					p.root.proof,
+					p.root.disproof,
+					formatBytes(stats.HeapAlloc),
+				)
+				if p.cfg.Debug > 1 {
+					log.Printf("%s  children=%s", p.cfg.LogPrefix, formatChildren(p.root.children))
+				}
+			default:
 			}
+		}
+		if maxNodes > 0 && p.stats.Live() > maxNodes {
+			break Outer
 		}
 
 		p.expand(next)
 		current = p.updateAncestors(next)
+	}
+	for p.checkNode != p.root {
+		p.ascend()
 	}
 }
 
@@ -421,8 +441,59 @@ func (p *Prover) andNode(n *node) bool {
 	return (n.flags & flagAnd) != 0
 }
 
+func (p *Prover) pn2(n *node) {
+	oldRoot := p.root
+	oldStats := p.stats
+
+	p.root = n
+	p.stats = Stats{}
+	p.cfg.PN2 = false
+	p.cfg.LogPrefix = " [PN₂]"
+
+	p.search(p.ctx, oldStats.Live())
+	if n.proof == 0 {
+		n.value = EvalTrue
+	} else if n.disproof == 0 {
+		n.value = EvalFalse
+	}
+
+	if p.cfg.Debug > 2 {
+		log.Printf("[pn2] depth=%d(%d) val=%s limit=%d searched=%d pn=(%d,%d)",
+			n.depth(),
+			oldStats.MaxDepth,
+			n.value,
+			oldStats.Live(),
+			p.stats.Nodes,
+			n.proof,
+			n.disproof,
+		)
+	}
+
+	if p.stats.MaxDepth > oldStats.MaxDepth {
+		oldStats.MaxDepth = p.stats.MaxDepth
+	}
+
+	p.root = oldRoot
+	p.stats = oldStats
+	p.cfg.PN2 = true
+	p.cfg.LogPrefix = ""
+
+	for _, c := range n.children {
+		c.flags &= ^flagExpanded
+		c.children = nil
+		p.stats.Nodes += 1
+	}
+	p.stats.Expanded += 1
+}
+
 func (p *Prover) expand(n *node) {
 	current := p.currentPosition(n)
+
+	if p.cfg.PN2 && p.stats.Nodes > pn2Threshold {
+		p.pn2(n)
+		return
+	}
+
 	allMoves := current.AllMoves(p.moveBuffer[:0])
 	for _, m := range allMoves {
 		child := &node{
@@ -451,6 +522,7 @@ func (p *Prover) expand(n *node) {
 			break
 		}
 	}
+
 	p.stats.Expanded += 1
 	n.flags |= flagExpanded
 	d := uint64(n.depth() + 1)
