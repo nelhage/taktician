@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -93,15 +94,21 @@ func (m *monteCarloAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 }
 
 type pnAnalysis struct {
-	cmd    *Command
-	prover *prove.Prover
+	cmd *Command
 }
 
 func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	prover := prove.New(prove.Config{
+		Debug:          a.cmd.debug,
+		MaxNodes:       a.cmd.maxNodes,
+		PreserveSolved: a.cmd.dumpTree != "",
+	})
+
 	if !a.cmd.quiet {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
-	out := a.prover.Prove(ctx, p)
+
+	out := prover.Prove(ctx, p)
 	var result string
 	switch out.Result {
 	case prove.EvalTrue:
@@ -128,4 +135,17 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		out.Depth,
 		out.Stats.MaxDepth,
 	)
+
+	if a.cmd.dumpTree != "" {
+		out, e := os.OpenFile(a.cmd.dumpTree, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if e != nil {
+			log.Fatalf("dump-tree(%s): %v", a.cmd.dumpTree, e)
+		}
+		buf := bufio.NewWriter(out)
+		prover.DumpTree(buf)
+		if e := buf.Flush(); e != nil {
+			log.Fatalf("dump-tree(%s): %v", a.cmd.dumpTree, e)
+		}
+		out.Close()
+	}
 }

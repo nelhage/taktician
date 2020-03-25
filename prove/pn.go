@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"runtime"
 	"time"
 
+	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -18,6 +20,19 @@ const (
 	EvalTrue
 	EvalFalse
 )
+
+func (e Evaluation) String() string {
+	switch e {
+	case EvalUnknown:
+		return "unknown"
+	case EvalTrue:
+		return "proven"
+	case EvalFalse:
+		return "disproven"
+	default:
+		return fmt.Sprintf("ERR(%d)", e)
+	}
+}
 
 const (
 	flagIrreversible = 1 << iota
@@ -73,9 +88,10 @@ func (st *Stats) Live() uint64 {
 }
 
 type Config struct {
-	Debug     int
-	MaxNodes  uint64
-	LogPrefix string
+	Debug          int
+	MaxNodes       uint64
+	LogPrefix      string
+	PreserveSolved bool
 }
 
 type Prover struct {
@@ -143,6 +159,31 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		Disproof: p.root.disproof,
 		Move:     pv,
 		Depth:    uint32(p.root.proofDepth),
+	}
+}
+
+func (p *Prover) DumpTree(out io.Writer) {
+	fmt.Fprint(out, "digraph G {\n")
+	p.walkTree(out, p.root)
+	fmt.Fprint(out, "\n}")
+}
+
+func (p *Prover) walkTree(out io.Writer, node *node) {
+	var shape string
+	if p.andNode(node) {
+		shape = "box"
+	} else {
+		shape = "circle"
+	}
+	fmt.Fprintf(out, `nd%p[label="%s\n(%d, %d)\nv=%s\nd=%d", shape=%s];`,
+		node, ptn.FormatMove(node.move),
+		node.proof, node.disproof, node.value, node.proofDepth,
+		shape,
+	)
+	fmt.Fprintln(out)
+	for _, c := range node.children {
+		fmt.Fprintf(out, "nd%p -> nd%p\n", node, c)
+		p.walkTree(out, c)
 	}
 }
 
@@ -424,7 +465,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 					p.stats.Dropped += uint64(len(node.children) - 1)
 				}
 			}
-			if node != p.root {
+			if node != p.root && !p.cfg.PreserveSolved {
 				node.children = nil
 			}
 		} else if node.proof == oldproof && node.disproof == olddisproof {

@@ -15,7 +15,6 @@ import (
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
-	"github.com/nelhage/taktician/prove"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -108,7 +107,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.logCuts, "log-cuts", "", "log all cuts")
 	flags.BoolVar(&c.symmetry, "symmetry", false, "ignore symmetries")
 
-	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump MCTS tree as a dot file to PATH")
+	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree as a dot file to PATH (MCTS, PN only)")
 
 	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
 }
@@ -246,10 +245,7 @@ func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
 	if c.prove {
 		return &pnAnalysis{
 			cmd: c,
-			prover: prove.New(prove.Config{
-				Debug:    c.debug,
-				MaxNodes: c.maxNodes,
-			})}
+		}
 	}
 	if c.monteCarlo {
 		return &monteCarloAnalysis{
