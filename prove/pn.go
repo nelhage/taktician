@@ -459,7 +459,7 @@ func (p *Prover) pn2(n *node) {
 
 	if p.cfg.Debug > 2 {
 		log.Printf("[pn2] depth=%d(%d) val=%s limit=%d searched=%d pn=(%d,%d)",
-			n.depth(),
+			p.depth(),
 			oldStats.MaxDepth,
 			n.value,
 			oldStats.Live(),
@@ -525,7 +525,7 @@ func (p *Prover) expand(n *node) {
 
 	p.stats.Expanded += 1
 	n.flags |= flagExpanded
-	d := uint64(n.depth() + 1)
+	d := uint64(p.depth() + 1)
 	if d > p.stats.MaxDepth {
 		p.stats.MaxDepth = d
 	}
@@ -608,6 +608,10 @@ func (p *Prover) currentPosition(cur *node) *tak.Position {
 		panic("inconsistent current position")
 	}
 	return p.stack[len(p.stack)-1]
+}
+
+func (p *Prover) depth() int {
+	return len(p.stack) - 1
 }
 
 func (p *Prover) ascend() {
