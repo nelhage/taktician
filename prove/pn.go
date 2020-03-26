@@ -217,15 +217,18 @@ func (p *Prover) walkTree(e *xml.Encoder, node *node) {
 			{Name: name("Type"), Value: ty},
 			{Name: name("Proof"), Value: strconv.FormatUint(uint64(node.proof), 10)},
 			{Name: name("Disproof"), Value: strconv.FormatUint(uint64(node.disproof), 10)},
+			{Name: name("Depth"), Value: strconv.FormatUint(uint64(node.proofDepth), 10)},
 			{Name: name("Value"), Value: node.value.String()},
 		},
 	}, func(e *xml.Encoder) {
-		elt(e, xml.StartElement{Name: name("Children")},
-			func(e *xml.Encoder) {
-				for _, c := range node.children {
-					p.walkTree(e, c)
-				}
-			})
+		if node.expanded() {
+			elt(e, xml.StartElement{Name: name("Children")},
+				func(e *xml.Encoder) {
+					for _, c := range node.children {
+						p.walkTree(e, c)
+					}
+				})
+		}
 	})
 }
 
