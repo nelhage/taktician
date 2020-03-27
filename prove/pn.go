@@ -75,6 +75,10 @@ func (n *node) expanded() bool {
 	return n.flags&flagExpanded != 0
 }
 
+func (n *node) andNode() bool {
+	return (n.flags & flagAnd) != 0
+}
+
 func (n *node) depth() int {
 	d := 0
 	for n.parent != nil {
@@ -208,7 +212,7 @@ func (p *Prover) DumpTree(out io.Writer) {
 
 func (p *Prover) walkTree(e *xml.Encoder, node *node) {
 	var ty string
-	if p.andNode(node) {
+	if node.andNode() {
 		ty = "AND"
 	} else {
 		ty = "OR"
@@ -341,7 +345,7 @@ func (p *Prover) setNumbers(node *node) {
 	} else {
 		switch node.value {
 		case EvalTrue, EvalFalse:
-			if p.andNode(node) == (node.value == EvalTrue) {
+			if node.andNode() == (node.value == EvalTrue) {
 				node.phi = inf
 				node.delta = 0
 			} else {
@@ -396,7 +400,7 @@ func (p *Prover) selectMostProving(current *node) *node {
 		}
 		if child == nil {
 			var ty string
-			if p.andNode(current) {
+			if current.andNode() {
 				ty = "AND"
 			} else {
 				ty = "OR"
@@ -418,10 +422,6 @@ func (p *Prover) selectMostProving(current *node) *node {
 	return current
 }
 
-func (p *Prover) andNode(n *node) bool {
-	return (n.flags & flagAnd) != 0
-}
-
 func (p *Prover) pn2(n *node) {
 	oldRoot := p.root
 	oldStats := p.stats
@@ -433,13 +433,13 @@ func (p *Prover) pn2(n *node) {
 
 	p.search(p.ctx, oldStats.Live())
 	if n.phi == 0 {
-		if p.andNode(n) {
+		if n.andNode() {
 			n.value = EvalFalse
 		} else {
 			n.value = EvalTrue
 		}
 	} else if n.delta == 0 {
-		if p.andNode(n) {
+		if n.andNode() {
 			n.value = EvalTrue
 		} else {
 			n.value = EvalFalse
@@ -500,7 +500,7 @@ func (p *Prover) expand(n *node) {
 		if !reversible {
 			child.flags |= flagIrreversible
 		}
-		if !p.andNode(n) {
+		if !n.andNode() {
 			child.flags |= flagAnd
 		}
 		p.evaluate(child)
@@ -549,7 +549,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 				}
 				node.proofDepth = d + 1
 			}
-			if (node.phi == 0) == p.andNode(node) {
+			if (node.phi == 0) == node.andNode() {
 				p.stats.Disproved += 1
 			} else {
 				p.stats.Proved += 1
