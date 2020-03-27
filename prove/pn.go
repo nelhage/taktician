@@ -455,7 +455,14 @@ func (p *Prover) pn2(n *node) {
 	p.cfg.PN2 = false
 	p.cfg.LogPrefix = " [PN₂]"
 
-	p.search(p.ctx, oldStats.Live())
+	var lim uint64
+	if p.cfg.MaxNodes > 0 {
+		lim = (oldStats.Live() * oldStats.Live()) / p.cfg.MaxNodes
+	} else {
+		lim = oldStats.Live()
+	}
+	p.search(p.ctx, lim)
+
 	if n.proof() == 0 {
 		n.value = EvalTrue
 	} else if n.disproof() == 0 {
@@ -467,7 +474,7 @@ func (p *Prover) pn2(n *node) {
 			p.depth(),
 			oldStats.MaxDepth,
 			n.value,
-			oldStats.Live(),
+			lim,
 			p.stats.Nodes,
 			n.phi,
 			n.delta,
