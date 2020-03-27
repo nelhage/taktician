@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"runtime"
 	"strconv"
 	"time"
@@ -43,8 +44,6 @@ const (
 )
 
 const (
-	inf = ^uint32(0)
-
 	kCheckFrequency = 1000
 
 	pn2Threshold = 1000
@@ -52,7 +51,7 @@ const (
 
 func saturatingAdd(l uint32, r uint32) uint32 {
 	if (l + r) < l {
-		return inf
+		return math.MaxUint32
 	}
 	return l + r
 }
@@ -123,6 +122,7 @@ type Config struct {
 	LogPrefix      string
 	PreserveSolved bool
 	PN2            bool
+	MaxDepth       int
 }
 
 type Prover struct {
@@ -165,6 +165,9 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	p.stats = Stats{}
 	p.position = pos
 	p.ctx = ctx
+	if p.cfg.MaxDepth == 0 {
+		p.cfg.MaxDepth = math.MaxInt16
+	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
@@ -335,6 +338,11 @@ func (p *Prover) checkRepetition(n *node) bool {
 }
 
 func (p *Prover) evaluate(node *node) {
+	if p.depth() > p.cfg.MaxDepth {
+		node.value = EvalFalse
+		return
+	}
+
 	if over, who := p.currentPosition(node).GameOver(); over {
 		if who == p.position.ToMove() {
 			node.value = EvalTrue
@@ -351,7 +359,7 @@ func (p *Prover) evaluate(node *node) {
 func (p *Prover) setNumbers(node *node) {
 	if node.expanded() {
 		node.delta = 0
-		node.phi = inf
+		node.phi = math.MaxUint32
 		for _, c := range node.children {
 			node.delta = saturatingAdd(node.delta, c.phi)
 			if c.delta < node.phi {
@@ -362,11 +370,11 @@ func (p *Prover) setNumbers(node *node) {
 		switch node.value {
 		case EvalTrue, EvalFalse:
 			if node.andNode() == (node.value == EvalTrue) {
-				node.phi = inf
+				node.phi = math.MaxUint32
 				node.delta = 0
 			} else {
 				node.phi = 0
-				node.delta = inf
+				node.delta = math.MaxUint32
 			}
 		case EvalUnknown:
 			pos := p.currentPosition(node)

@@ -103,6 +103,7 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		MaxNodes:       a.cmd.maxNodes,
 		PreserveSolved: a.cmd.dumpTree != "",
 		PN2:            a.cmd.pn2,
+		MaxDepth:       a.cmd.maxDepth,
 	})
 
 	if !a.cmd.quiet {
