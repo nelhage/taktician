@@ -58,9 +58,11 @@ func saturatingAdd(l uint32, r uint32) uint32 {
 }
 
 type node struct {
-	parent          *node
-	move            tak.Move
-	proof, disproof uint32
+	parent *node
+	move   tak.Move
+	// phi -> proof for OR, disproof for AND
+	// delta -> proof for AND, disproof for OR
+	phi, delta uint32
 
 	value      Evaluation
 	flags      int8
@@ -151,14 +153,14 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	p.prove(ctx, pos)
 
 	var pv tak.Move
-	if p.root.proof == 0 {
+	if p.root.phi == 0 {
 		p.root.value = EvalTrue
 		for _, c := range p.root.children {
-			if c.proof == 0 {
+			if c.delta == 0 {
 				pv = c.move
 			}
 		}
-	} else if p.root.disproof == 0 {
+	} else if p.root.delta == 0 {
 		p.root.value = EvalFalse
 		var best *node
 		for _, c := range p.root.children {
@@ -176,8 +178,8 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		Result:   p.root.value,
 		Stats:    p.stats,
 		Duration: time.Since(p.start),
-		Proof:    p.root.proof,
-		Disproof: p.root.disproof,
+		Proof:    p.root.phi,
+		Disproof: p.root.delta,
 		Move:     pv,
 		Depth:    uint32(p.root.proofDepth),
 	}
@@ -215,8 +217,8 @@ func (p *Prover) walkTree(e *xml.Encoder, node *node) {
 		Attr: []xml.Attr{
 			{Name: name("Move"), Value: ptn.FormatMove(node.move)},
 			{Name: name("Type"), Value: ty},
-			{Name: name("Proof"), Value: strconv.FormatUint(uint64(node.proof), 10)},
-			{Name: name("Disproof"), Value: strconv.FormatUint(uint64(node.disproof), 10)},
+			{Name: name("Phi"), Value: strconv.FormatUint(uint64(node.phi), 10)},
+			{Name: name("Delta"), Value: strconv.FormatUint(uint64(node.delta), 10)},
 			{Name: name("Depth"), Value: strconv.FormatUint(uint64(node.proofDepth), 10)},
 			{Name: name("Value"), Value: node.value.String()},
 		},
@@ -249,7 +251,7 @@ func (p *Prover) search(ctx context.Context, maxNodes uint64) {
 	var i uint64
 	current := p.root
 Outer:
-	for p.root.proof != 0 && p.root.disproof != 0 {
+	for p.root.phi != 0 && p.root.delta != 0 {
 		i++
 		next := p.selectMostProving(current)
 
@@ -272,8 +274,8 @@ Outer:
 					p.stats.Disproved,
 					p.stats.Dropped,
 					p.stats.Expanded,
-					p.root.proof,
-					p.root.disproof,
+					p.root.phi,
+					p.root.delta,
 					formatBytes(stats.HeapAlloc),
 				)
 				if p.cfg.Debug > 1 {
@@ -328,43 +330,29 @@ func (p *Prover) evaluate(node *node) {
 
 func (p *Prover) setNumbers(node *node) {
 	if node.expanded() {
-		if p.andNode(node) {
-			node.proof = 0
-			node.disproof = inf
-			for _, c := range node.children {
-				node.proof = saturatingAdd(node.proof, c.proof)
-				if c.disproof < node.disproof {
-					node.disproof = c.disproof
-				}
-			}
-		} else {
-			node.proof = inf
-			node.disproof = 0
-			for _, c := range node.children {
-				node.disproof = saturatingAdd(node.disproof, c.disproof)
-				if c.proof < node.proof {
-					node.proof = c.proof
-				}
+		node.delta = 0
+		node.phi = inf
+		for _, c := range node.children {
+			node.delta = saturatingAdd(node.delta, c.phi)
+			if c.delta < node.phi {
+				node.phi = c.delta
 			}
 		}
 	} else {
 		switch node.value {
-		case EvalTrue:
-			node.proof = 0
-			node.disproof = inf
-		case EvalFalse:
-			node.proof = inf
-			node.disproof = 0
+		case EvalTrue, EvalFalse:
+			if p.andNode(node) == (node.value == EvalTrue) {
+				node.phi = inf
+				node.delta = 0
+			} else {
+				node.phi = 0
+				node.delta = inf
+			}
 		case EvalUnknown:
 			pos := p.currentPosition(node)
 			stones := uint32(pos.BlackStones() + pos.WhiteStones())
-			if p.andNode(node) {
-				node.proof = stones
-				node.disproof = 1
-			} else {
-				node.disproof = stones
-				node.proof = 1
-			}
+			node.phi = 1
+			node.delta = stones
 		}
 	}
 }
@@ -372,7 +360,7 @@ func (p *Prover) setNumbers(node *node) {
 func formatChildren(children []*node) string {
 	var buf bytes.Buffer
 	for _, c := range children {
-		fmt.Fprintf(&buf, "(%d, %d) ", c.proof, c.disproof)
+		fmt.Fprintf(&buf, "(%d, %d) ", c.phi, c.delta)
 	}
 	return buf.String()
 }
@@ -400,20 +388,10 @@ func formatBytes(bytes uint64) string {
 func (p *Prover) selectMostProving(current *node) *node {
 	for current.expanded() {
 		var child *node
-		if p.andNode(current) {
-			for _, c := range current.children {
-				if c.disproof == current.disproof {
-					child = c
-					break
-				}
-			}
-
-		} else {
-			for _, c := range current.children {
-				if c.proof == current.proof {
-					child = c
-					break
-				}
+		for _, c := range current.children {
+			if c.delta == current.phi {
+				child = c
+				break
 			}
 		}
 		if child == nil {
@@ -423,11 +401,11 @@ func (p *Prover) selectMostProving(current *node) *node {
 			} else {
 				ty = "OR"
 			}
-			log.Printf("consistency error depth=%d type=%s proof=%d disproof=%d",
+			log.Printf("consistency error depth=%d type=%s delta=%d phi=%d",
 				current.depth(),
 				ty,
-				current.proof,
-				current.disproof,
+				current.phi,
+				current.delta,
 			)
 			log.Printf("children: %s", formatChildren(current.children))
 			panic("consistency error")
@@ -454,10 +432,18 @@ func (p *Prover) pn2(n *node) {
 	p.cfg.LogPrefix = " [PN₂]"
 
 	p.search(p.ctx, oldStats.Live())
-	if n.proof == 0 {
-		n.value = EvalTrue
-	} else if n.disproof == 0 {
-		n.value = EvalFalse
+	if n.phi == 0 {
+		if p.andNode(n) {
+			n.value = EvalFalse
+		} else {
+			n.value = EvalTrue
+		}
+	} else if n.delta == 0 {
+		if p.andNode(n) {
+			n.value = EvalTrue
+		} else {
+			n.value = EvalFalse
+		}
 	}
 
 	if p.cfg.Debug > 2 {
@@ -467,8 +453,8 @@ func (p *Prover) pn2(n *node) {
 			n.value,
 			oldStats.Live(),
 			p.stats.Nodes,
-			n.proof,
-			n.disproof,
+			n.phi,
+			n.delta,
 		)
 	}
 
@@ -521,7 +507,7 @@ func (p *Prover) expand(n *node) {
 		p.setNumbers(child)
 		p.ascend()
 		n.children = append(n.children, child)
-		if (p.andNode(n) && child.disproof == 0) || (!p.andNode(n) && child.proof == 0) {
+		if child.delta == 0 {
 			break
 		}
 	}
@@ -536,15 +522,15 @@ func (p *Prover) expand(n *node) {
 
 func (p *Prover) updateAncestors(node *node) *node {
 	for true {
-		oldproof := node.proof
-		olddisproof := node.disproof
+		oldphi := node.phi
+		olddelta := node.delta
 		p.setNumbers(node)
-		if node.proof == 0 || node.disproof == 0 {
-			if p.andNode(node) == (node.proof == 0) {
+		if node.phi == 0 || node.delta == 0 {
+			if node.delta == 0 {
 				var d uint16
 				for _, c := range node.children {
-					if c.proof != 0 && c.disproof != 0 {
-						continue
+					if c.phi != 0 {
+						panic("inconsistent")
 					}
 					if c.proofDepth > d {
 						d = c.proofDepth
@@ -554,7 +540,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 			} else {
 				d := uint16(1 << 15)
 				for _, c := range node.children {
-					if c.proof != 0 && c.disproof != 0 {
+					if c.delta != 0 {
 						continue
 					}
 					if c.proofDepth < d {
@@ -563,21 +549,18 @@ func (p *Prover) updateAncestors(node *node) *node {
 				}
 				node.proofDepth = d + 1
 			}
-			if node.proof == 0 {
-				p.stats.Proved += 1
-				if !p.andNode(node) {
-					p.stats.Dropped += uint64(len(node.children) - 1)
-				}
-			} else {
+			if (node.phi == 0) == p.andNode(node) {
 				p.stats.Disproved += 1
-				if p.andNode(node) {
-					p.stats.Dropped += uint64(len(node.children) - 1)
-				}
+			} else {
+				p.stats.Proved += 1
+			}
+			if node.phi == 0 {
+				p.stats.Dropped += uint64(len(node.children) - 1)
 			}
 			if node != p.root && !p.cfg.PreserveSolved {
 				node.children = nil
 			}
-		} else if node.proof == oldproof && node.disproof == olddisproof {
+		} else if node.phi == oldphi && node.delta == olddelta {
 			return node
 		}
 
