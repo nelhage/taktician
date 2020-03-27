@@ -71,6 +71,22 @@ type node struct {
 	children []*node
 }
 
+func (n *node) proof() uint32 {
+	if n.andNode() {
+		return n.delta
+	} else {
+		return n.phi
+	}
+}
+
+func (n *node) disproof() uint32 {
+	if n.andNode() {
+		return n.phi
+	} else {
+		return n.delta
+	}
+}
+
 func (n *node) expanded() bool {
 	return n.flags&flagExpanded != 0
 }
@@ -182,8 +198,8 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 		Result:   p.root.value,
 		Stats:    p.stats,
 		Duration: time.Since(p.start),
-		Proof:    p.root.phi,
-		Disproof: p.root.delta,
+		Proof:    p.root.proof(),
+		Disproof: p.root.disproof(),
 		Move:     pv,
 		Depth:    uint32(p.root.proofDepth),
 	}
@@ -432,18 +448,10 @@ func (p *Prover) pn2(n *node) {
 	p.cfg.LogPrefix = " [PN₂]"
 
 	p.search(p.ctx, oldStats.Live())
-	if n.phi == 0 {
-		if n.andNode() {
-			n.value = EvalFalse
-		} else {
-			n.value = EvalTrue
-		}
-	} else if n.delta == 0 {
-		if n.andNode() {
-			n.value = EvalTrue
-		} else {
-			n.value = EvalFalse
-		}
+	if n.proof() == 0 {
+		n.value = EvalTrue
+	} else if n.disproof() == 0 {
+		n.value = EvalFalse
 	}
 
 	if p.cfg.Debug > 2 {
@@ -549,10 +557,10 @@ func (p *Prover) updateAncestors(node *node) *node {
 				}
 				node.proofDepth = d + 1
 			}
-			if (node.phi == 0) == node.andNode() {
-				p.stats.Disproved += 1
-			} else {
+			if node.proof() == 0 {
 				p.stats.Proved += 1
+			} else {
+				p.stats.Disproved += 1
 			}
 			if node.phi == 0 {
 				p.stats.Dropped += uint64(len(node.children) - 1)
