@@ -168,6 +168,9 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	if p.cfg.MaxDepth == 0 {
 		p.cfg.MaxDepth = math.MaxInt16
 	}
+	if p.cfg.PN2 {
+		p.cfg.MaxNodes /= 2
+	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
