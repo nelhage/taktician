@@ -380,10 +380,10 @@ func (p *Prover) setNumbers(node *node) {
 				node.delta = math.MaxUint32
 			}
 		case EvalUnknown:
-			pos := p.currentPosition(node)
-			stones := uint32(pos.BlackStones() + pos.WhiteStones())
+			var buffer [100]tak.Move
+			moves := len(p.currentPosition(node).AllMoves(buffer[:0]))
 			node.phi = 1
-			node.delta = stones
+			node.delta = uint32(moves)
 		}
 	}
 }
