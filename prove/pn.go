@@ -67,7 +67,8 @@ type node struct {
 	flags      int8
 	proofDepth uint16
 
-	children []*node
+	firstChild *node
+	sibling    *node
 }
 
 func (n *node) proof() uint32 {
@@ -181,7 +182,7 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	var pv tak.Move
 	if p.root.phi == 0 {
 		p.root.value = EvalTrue
-		for _, c := range p.root.children {
+		for c := p.root.firstChild; c != nil; c = c.sibling {
 			if c.delta == 0 {
 				pv = c.move
 			}
@@ -189,7 +190,7 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 	} else if p.root.delta == 0 {
 		p.root.value = EvalFalse
 		var best *node
-		for _, c := range p.root.children {
+		for c := p.root.firstChild; c != nil; c = c.sibling {
 			if best == nil || best.proofDepth < c.proofDepth {
 				best = c
 			}
@@ -252,7 +253,7 @@ func (p *Prover) walkTree(e *xml.Encoder, node *node) {
 		if node.expanded() {
 			elt(e, xml.StartElement{Name: name("Children")},
 				func(e *xml.Encoder) {
-					for _, c := range node.children {
+					for c := node.firstChild; c != nil; c = c.sibling {
 						p.walkTree(e, c)
 					}
 				})
@@ -305,7 +306,7 @@ Outer:
 					formatBytes(stats.HeapAlloc),
 				)
 				if p.cfg.Debug > 1 {
-					log.Printf("%s  children=%s", p.cfg.LogPrefix, formatChildren(p.root.children))
+					log.Printf("%s  children=%s", p.cfg.LogPrefix, formatChildren(p.root.firstChild))
 				}
 			default:
 			}
@@ -363,7 +364,7 @@ func (p *Prover) setNumbers(node *node) {
 	if node.expanded() {
 		node.delta = 0
 		node.phi = math.MaxUint32
-		for _, c := range node.children {
+		for c := node.firstChild; c != nil; c = c.sibling {
 			node.delta = saturatingAdd(node.delta, c.phi)
 			if c.delta < node.phi {
 				node.phi = c.delta
@@ -388,9 +389,9 @@ func (p *Prover) setNumbers(node *node) {
 	}
 }
 
-func formatChildren(children []*node) string {
+func formatChildren(c *node) string {
 	var buf bytes.Buffer
-	for _, c := range children {
+	for ; c != nil; c = c.sibling {
 		fmt.Fprintf(&buf, "(%d, %d) ", c.phi, c.delta)
 	}
 	return buf.String()
@@ -419,7 +420,7 @@ func formatBytes(bytes uint64) string {
 func (p *Prover) selectMostProving(current *node) *node {
 	for current.expanded() {
 		var child *node
-		for _, c := range current.children {
+		for c := current.firstChild; c != nil; c = c.sibling {
 			if c.delta == current.phi {
 				child = c
 				break
@@ -438,7 +439,7 @@ func (p *Prover) selectMostProving(current *node) *node {
 				current.phi,
 				current.delta,
 			)
-			log.Printf("children: %s", formatChildren(current.children))
+			log.Printf("children: %s", formatChildren(current.firstChild))
 			panic("consistency error")
 		}
 		if !p.tryDescend(child) {
@@ -493,9 +494,9 @@ func (p *Prover) pn2(n *node) {
 	p.cfg.PN2 = true
 	p.cfg.LogPrefix = ""
 
-	for _, c := range n.children {
+	for c := n.firstChild; c != nil; c = c.sibling {
 		c.flags &= ^flagExpanded
-		c.children = nil
+		c.firstChild = nil
 		p.stats.Nodes += 1
 	}
 	p.stats.Expanded += 1
@@ -532,7 +533,8 @@ func (p *Prover) expand(n *node) {
 		p.evaluate(child)
 		p.setNumbers(child)
 		p.ascend()
-		n.children = append(n.children, child)
+		child.sibling = n.firstChild
+		n.firstChild = child
 		if child.delta == 0 {
 			break
 		}
@@ -554,7 +556,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 		if node.phi == 0 || node.delta == 0 {
 			if node.delta == 0 {
 				var d uint16
-				for _, c := range node.children {
+				for c := node.firstChild; c != nil; c = c.sibling {
 					if c.phi != 0 {
 						panic("inconsistent")
 					}
@@ -565,7 +567,7 @@ func (p *Prover) updateAncestors(node *node) *node {
 				node.proofDepth = d + 1
 			} else {
 				d := uint16(1 << 15)
-				for _, c := range node.children {
+				for c := node.firstChild; c != nil; c = c.sibling {
 					if c.delta != 0 {
 						continue
 					}
@@ -581,10 +583,12 @@ func (p *Prover) updateAncestors(node *node) *node {
 				p.stats.Disproved += 1
 			}
 			if node.phi == 0 {
-				p.stats.Dropped += uint64(len(node.children) - 1)
+				for c := node.firstChild; c != nil; c = c.sibling {
+					p.stats.Dropped += 1
+				}
 			}
 			if node != p.root && !p.cfg.PreserveSolved {
-				node.children = nil
+				node.firstChild = nil
 			}
 		} else if node.phi == oldphi && node.delta == olddelta {
 			return node
