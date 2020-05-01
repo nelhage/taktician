@@ -16,6 +16,16 @@ below commands using:
 go get -u github.com/nelhage/taktician/cmd/...
 ```
 
+Alternately, if you have a checkout of this repository, build+install
+it using
+
+```
+go install ./cmd/...
+```
+
+to install a `taktician` binary into your `$GOPATH/bin` (`~/go/bin` by
+default).
+
 # Subcommands
 
 Taktician consists of a single binary, `taktician`, which accepts a
