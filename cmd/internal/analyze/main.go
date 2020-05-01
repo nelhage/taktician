@@ -87,7 +87,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.memProfile, "memprofile", "", "write memory profile")
 
 	flags.IntVar(&c.move, "move", 0, "PTN move number to analyze")
-	flags.BoolVar(&c.all, "all", false, "show all possible moves")
+	flags.BoolVar(&c.all, "all", false, "analyze all positions in the PTN")
 	flags.BoolVar(&c.black, "black", false, "only analyze black's move")
 	flags.BoolVar(&c.white, "white", false, "only analyze white's move")
 	flags.StringVar(&c.variation, "variation", "", "apply the listed moves after the given position")

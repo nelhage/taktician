@@ -16,60 +16,68 @@ below commands using:
 go get -u github.com/nelhage/taktician/cmd/...
 ```
 
-# Programs
+Alternately, if you have a checkout of this repository, build+install
+it using
 
-There are several commands included under the `cmd` directory. All
-commands accept `-help` to list flags, but are otherwise minimally
-documented at present.
+```
+go install ./cmd/...
+```
 
-Perhaps the most useful is `analyzetak`, which allows you evaluate a
-position offline using Taktician's AI:
+to install a `taktician` binary into your `$GOPATH/bin` (`~/go/bin` by
+default).
 
-## analyzetak
+# Subcommands
 
-A program that reads PTN files and performs AI analysis on the
+Taktician consists of a single binary, `taktician`, which accepts a
+number of subcommands. You can run `taktician -help` to list all
+available commands, and `taktician [command] -help` for details on the
+options available to an individual command.
+
+Perhaps the most generally useful subcommand is `taktician analyze`,
+which allows you evaluate a position offline using Taktician's AI:
+
+## taktician analyze
+
+A command that reads PTN files and performs AI analysis on the
 terminal position.
 
 By default
 
 ```
-analyzetak FILE.ptn
+taktician analyze FILE.ptn
 ```
 
-will analyze every position and report Taktician's evaluation and
-suggested move. You can also analzye e.g. white's 10th move using:
+will analyze the final position and report Taktician's evaluation and
+suggested move.
+
+You can also analzye e.g. white's 10th move using:
 
 ```
-analyzetak -white -move 10 FILE.ptn
+taktician analyze -white -move 10 FILE.ptn
 ```
 
-With no `-move` argument, `analyzetak` will analyze the final position
-of the PTN file.
+With `-all`, `taktician analyze` will analyze each position in the PTN
+file.
 
-By default, `analyzetak` will search for up to 1m before returning a
-final assessment. Use `-limit 2m` to give it more time, or `-depth 5`
-to search to a fixed depth.
+By default, `taktician analyze` will search for up to 1m before
+returning a final assessment. Use `-limit 2m` to give it more time, or
+`-depth 5` to search to a fixed depth.
 
 
-## `playtak`
+## `taktician play`
 
 A simple interface to play tak on the command line. Try e.g.
 
 ```
-playtak -white=human -black=minimax:5
+taktician play -white=human -black=minimax:5
 ```
 
-## taklogger
-
-A bot that connects to playtak.com and logs all games it sees in PTN
-format.
-
-## taktician
+## `taktician playtak`
 
 The AI driver for playtak.com. Can be used via
 
 ```
-taktician -user USERNAME -pass PASSWORD
+taktician playtak -user USERNAME -pass PASSWORD
 ```
 
 [tak]: https://cheapass.com/tak/
