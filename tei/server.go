@@ -17,6 +17,8 @@ import (
 )
 
 type Engine struct {
+	ConfigFactory func(size int) ai.MinimaxConfig
+
 	in  *bufio.Reader
 	out io.Writer
 
@@ -139,9 +141,15 @@ func (e *Engine) analyze(ctx context.Context, words []string) error {
 		return errors.New("No position provided")
 	}
 	if e.mm == nil {
-		e.mm = ai.NewMinimax(ai.MinimaxConfig{
-			Size: e.size,
-		})
+		var cfg ai.MinimaxConfig
+		if e.ConfigFactory != nil {
+			cfg = e.ConfigFactory(e.size)
+		} else {
+			cfg = ai.MinimaxConfig{
+				Size: e.size,
+			}
+		}
+		e.mm = ai.NewMinimax(cfg)
 	}
 	words = words[1:]
 	if len(words) != 2 || words[0] != "movetime" {

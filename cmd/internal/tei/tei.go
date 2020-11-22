@@ -7,14 +7,12 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
-	"github.com/nelhage/taktician/ai"
-	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/cmd/internal/opt"
 	"github.com/nelhage/taktician/tei"
 )
 
 type Command struct {
-	mm  *ai.MinimaxAI
-	pos *tak.Position
+	opt opt.Minimax
 }
 
 func (*Command) Name() string     { return "engine" }
@@ -26,10 +24,12 @@ driven by an external GUI or controller.`
 }
 
 func (c *Command) SetFlags(fs *flag.FlagSet) {
+	c.opt.AddFlags(fs)
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	engine := tei.NewEngine(os.Stdin, os.Stdout)
+	engine.ConfigFactory = c.opt.BuildConfig
 	if err := engine.Run(ctx); err != nil {
 		log.Println("tei: ", err.Error())
 		return subcommands.ExitFailure
