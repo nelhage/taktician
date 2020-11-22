@@ -15,11 +15,12 @@ type Command struct {
 	opt opt.Minimax
 }
 
-func (*Command) Name() string     { return "engine" }
-func (*Command) Synopsis() string { return "Launch Taktician in UCI-like engine mode" }
+func (*Command) Name() string     { return "tei" }
+func (*Command) Synopsis() string { return "Launch Taktician in TEI mode" }
 func (*Command) Usage() string {
-	return `engine
-Launch the engine in a UCI-like mode, suitable for being
+	return `tei
+
+Launch the engine in TEI mode, a a UCI-like protocol suitable for being
 driven by an external GUI or controller.`
 }
 
