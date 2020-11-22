@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -15,6 +14,7 @@ import (
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ai/mcts"
+	"github.com/nelhage/taktician/cmd/internal/opt"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -25,7 +25,6 @@ type Command struct {
 	quiet      bool
 	monteCarlo bool
 	prove      bool
-	debug      int
 	cpuProfile string
 	memProfile string
 
@@ -38,22 +37,11 @@ type Command struct {
 
 	/* Options which apply to all engines  */
 	timeLimit time.Duration
-	seed      int64
 
-	/* minimax options */
-	eval         bool
-	explain      bool
-	depth        int
-	sort         bool
-	tableMem     int64
-	nullMove     bool
-	extendForces bool
-	reduceSlides bool
-	multiCut     bool
-	precise      bool
-	weights      string
-	logCuts      string
-	symmetry     bool
+	/* Options for the minimax engine  */
+	eval    bool
+	explain bool
+	mmopt   opt.Minimax
 
 	/* MCTS options */
 	dumpTree string
@@ -82,7 +70,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.quiet, "quiet", false, "don't print board diagrams")
 	flags.BoolVar(&c.monteCarlo, "mcts", false, "Use the MCTS evaluator")
 	flags.BoolVar(&c.prove, "prove", false, "Use the PN prover")
-	flags.IntVar(&c.debug, "debug", 1, "debug level")
+
 	flags.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
 	flags.StringVar(&c.memProfile, "memprofile", "", "write memory profile")
 
@@ -93,21 +81,10 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.variation, "variation", "", "apply the listed moves after the given position")
 
 	flags.DurationVar(&c.timeLimit, "limit", time.Minute, "limit of how much time to use")
-	flags.Int64Var(&c.seed, "seed", 0, "specify a seed")
-
 	flags.BoolVar(&c.eval, "evaluate", false, "only show static evaluation")
 	flags.BoolVar(&c.explain, "explain", false, "explain scoring")
-	flags.IntVar(&c.depth, "depth", 0, "minimax depth")
-	flags.BoolVar(&c.sort, "sort", true, "sort moves via history heuristic")
-	flags.Int64Var(&c.tableMem, "table-mem", 0, "set table size")
-	flags.BoolVar(&c.nullMove, "null-move", true, "use null-move pruning")
-	flags.BoolVar(&c.extendForces, "extend-forces", true, "extend forced moves")
-	flags.BoolVar(&c.reduceSlides, "reduce-slides", true, "reduce trivial slides")
-	flags.BoolVar(&c.multiCut, "multi-cut", false, "use multi-cut pruning")
-	flags.BoolVar(&c.precise, "precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
-	flags.StringVar(&c.weights, "weights", "", "JSON-encoded evaluation weights")
-	flags.StringVar(&c.logCuts, "log-cuts", "", "log all cuts")
-	flags.BoolVar(&c.symmetry, "symmetry", false, "ignore symmetries")
+
+	c.mmopt.AddFlags(flags)
 
 	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree to PATH (MCTS and PN only)")
 
@@ -209,36 +186,7 @@ func applyVariation(p *tak.Position, variant string) (*tak.Position, error) {
 }
 
 func (c *Command) makeAI(p *tak.Position) *ai.MinimaxAI {
-	var w ai.Weights
-	if c.weights == "" {
-		w = ai.DefaultWeights[p.Size()]
-	} else {
-		e := json.Unmarshal([]byte(c.weights), &w)
-		if e != nil {
-			log.Fatalf("parse weights: %v", e)
-		}
-	}
-	cfg := ai.MinimaxConfig{
-		Size:  p.Size(),
-		Depth: c.depth,
-		Seed:  c.seed,
-		Debug: c.debug,
-
-		NoSort:         !c.sort,
-		TableMem:       c.tableMem,
-		NoNullMove:     !c.nullMove,
-		NoExtendForces: !c.extendForces,
-		NoReduceSlides: !c.reduceSlides,
-		MultiCut:       c.multiCut,
-
-		CutLog:        c.logCuts,
-		DedupSymmetry: c.symmetry,
-
-		Evaluate: ai.MakeEvaluator(p.Size(), &w),
-	}
-	if c.precise {
-		cfg.MakePrecise()
-	}
+	cfg := c.mmopt.BuildConfig(p.Size())
 	return ai.NewMinimax(cfg)
 }
 
@@ -255,8 +203,8 @@ func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
 		return &monteCarloAnalysis{
 			cmd: c,
 			ai: mcts.NewMonteCarlo(mcts.MCTSConfig{
-				Seed:     c.seed,
-				Debug:    c.debug,
+				Seed:     c.mmopt.Seed,
+				Debug:    c.mmopt.Debug,
 				Size:     p.Size(),
 				Limit:    c.timeLimit,
 				DumpTree: c.dumpTree,

@@ -99,7 +99,7 @@ type pnAnalysis struct {
 
 func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 	prover := prove.New(prove.Config{
-		Debug:          a.cmd.debug,
+		Debug:          a.cmd.mmopt.Debug,
 		MaxNodes:       a.cmd.maxNodes,
 		PreserveSolved: a.cmd.dumpTree != "",
 		PN2:            a.cmd.pn2,
