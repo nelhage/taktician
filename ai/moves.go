@@ -99,7 +99,7 @@ func (mg *moveGenerator) Next() (m tak.Move, p *tak.Position) {
 				mg.ms = mg.p.AllMoves(ms[:0])
 				mg.f.moves.slice = ms[:]
 			}
-			if mg.depth > 1 && !mg.ai.cfg.NoSort {
+			if mg.depth > 1 && !mg.ai.Cfg.NoSort {
 				mg.sortMoves()
 			}
 			fallthrough

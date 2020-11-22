@@ -41,7 +41,7 @@ const (
 type EvaluationFunc func(c *bitboard.Constants, p *tak.Position) int64
 
 type MinimaxAI struct {
-	cfg  MinimaxConfig
+	Cfg  MinimaxConfig
 	rand *rand.Rand
 
 	st Stats
@@ -191,22 +191,22 @@ func (cfg *MinimaxConfig) MakePrecise() {
 }
 
 func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
-	m := &MinimaxAI{cfg: cfg}
-	if m.cfg.Depth == 0 {
-		m.cfg.Depth = maxDepth
+	m := &MinimaxAI{Cfg: cfg}
+	if m.Cfg.Depth == 0 {
+		m.Cfg.Depth = maxDepth
 	}
-	if m.cfg.RandomizeScale == 0 {
-		m.cfg.RandomizeScale = 1
+	if m.Cfg.RandomizeScale == 0 {
+		m.Cfg.RandomizeScale = 1
 	}
 	m.precompute()
 	m.evaluate = cfg.Evaluate
 	if m.evaluate == nil {
 		m.evaluate = MakeEvaluator(cfg.Size, nil)
 	}
-	m.history = make(map[tak.Move]int, m.cfg.Size*m.cfg.Size*m.cfg.Size)
-	m.response = make(map[tak.Move]tak.Move, m.cfg.Size*m.cfg.Size*m.cfg.Size)
-	if m.cfg.TableMem >= 0 {
-		mem := m.cfg.TableMem
+	m.history = make(map[tak.Move]int, m.Cfg.Size*m.Cfg.Size*m.Cfg.Size)
+	m.response = make(map[tak.Move]tak.Move, m.Cfg.Size*m.Cfg.Size*m.Cfg.Size)
+	if m.Cfg.TableMem >= 0 {
+		mem := m.Cfg.TableMem
 		if mem == 0 {
 			mem = defaultTableMem
 		}
@@ -214,7 +214,7 @@ func NewMinimax(cfg MinimaxConfig) *MinimaxAI {
 	}
 
 	for i := range m.stack {
-		m.stack[i].p = tak.Alloc(m.cfg.Size)
+		m.stack[i].p = tak.Alloc(m.Cfg.Size)
 	}
 	if cfg.CutLog != "" {
 		f, e := os.OpenFile(cfg.CutLog,
@@ -264,7 +264,7 @@ func (m *MinimaxAI) ttPut(h uint64) *tableEntry {
 }
 
 func (m *MinimaxAI) precompute() {
-	s := uint(m.cfg.Size)
+	s := uint(m.Cfg.Size)
 	m.c = bitboard.Precompute(s)
 }
 
@@ -286,14 +286,14 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 	if len(pv) == 0 {
 		return tak.Move{}
 	}
-	if ai.cfg.RandomizeWindow == 0 {
+	if ai.Cfg.RandomizeWindow == 0 {
 		return pv[0]
 	}
 	if v > WinThreshold || v < -WinThreshold {
 		return pv[0]
 	}
 	rv := pv[0]
-	base := v - ai.cfg.RandomizeWindow
+	base := v - ai.Cfg.RandomizeWindow
 	var i int64
 	mg := &ai.stack[0].mg
 	*mg = moveGenerator{
@@ -313,9 +313,9 @@ func (ai *MinimaxAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 		if cv <= base {
 			continue
 		}
-		pts := (cv - base) / ai.cfg.RandomizeScale
+		pts := (cv - base) / ai.Cfg.RandomizeScale
 		i += pts
-		if ai.cfg.Debug > 2 {
+		if ai.Cfg.Debug > 2 {
 			log.Printf("rand m=%s v=%d cv=%d pts=%d i=%d",
 				ptn.FormatMove(m), v, cv, pts, i)
 		}
@@ -341,7 +341,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 		p:     p,
 		pv:    pv,
 	}
-	if ai.cfg.Debug > 1 {
+	if ai.Cfg.Debug > 1 {
 		log.Printf("[all-search] begin search depth=%d pv=%s v=%d",
 			st.Depth, formatpv(pv), v)
 	}
@@ -353,7 +353,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 		// the child search: (-v-1, -v+1)
 		ms, cv := ai.pvSearch(child, 1, st.Depth-1, pv[1:], -v-1, -v+1)
 		cv = -cv
-		if ai.cfg.Debug > 2 {
+		if ai.Cfg.Debug > 2 {
 			log.Printf("[all-search] m=%s v=%d pv=%s",
 				ptn.FormatMove(m), cv, formatpv(ms))
 		}
@@ -370,7 +370,7 @@ func (ai *MinimaxAI) AnalyzeAll(ctx context.Context, p *tak.Position) ([][]tak.M
 }
 
 func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, int64, Stats) {
-	if m.cfg.Size != p.Size() {
+	if m.Cfg.Size != p.Size() {
 		panic("Analyze: wrong size")
 	}
 	for i, v := range m.history {
@@ -383,12 +383,12 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		atomic.StoreInt32(&cancel, 1)
 	}()
 
-	var seed = m.cfg.Seed
+	var seed = m.Cfg.Seed
 	if seed == 0 {
 		seed = time.Now().Unix()
 	}
 	m.rand = rand.New(rand.NewSource(seed))
-	if m.cfg.Debug > 0 {
+	if m.Cfg.Debug > 0 {
 		log.Printf("start search ply=%d color=%s seed=%d",
 			p.MoveNumber(), p.ToMove(), seed)
 	}
@@ -411,7 +411,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 
 	var st Stats
 	st.Depth = base
-	for i := 1; i+base <= m.cfg.Depth; i++ {
+	for i := 1; i+base <= m.Cfg.Depth; i++ {
 		m.st = Stats{Depth: i + base}
 		start := time.Now()
 		m.depth = i + base
@@ -425,7 +425,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		ms = append(ms[:0], next...)
 		timeUsed := time.Since(top)
 		timeMove := time.Since(start)
-		if m.cfg.Debug > 0 {
+		if m.Cfg.Debug > 0 {
 			log.Printf("[minimax] deepen: depth=%d val=%d pv=%s time=%s total=%s evaluated=%d tt=%d/%d branch=%d(%d)",
 				base+i, v, formatpv(ms),
 				timeMove,
@@ -437,7 +437,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				branchEstimate,
 			)
 		}
-		if m.cfg.Debug > 1 {
+		if m.Cfg.Debug > 1 {
 			log.Printf("[minimax]  stats: visited=%d m/ms=%f cut=%d all=%d cut0=%d(%2.2f) cut1=%d(%2.2f) m/cut=%2.2f",
 				m.st.Visited,
 				float64(m.st.Visited+m.st.Evaluated)/float64(timeMove.Seconds()*1000),
@@ -467,7 +467,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		if v > WinThreshold || v < -WinThreshold {
 			break
 		}
-		if limited && i+base != m.cfg.Depth {
+		if limited && i+base != m.Cfg.Depth {
 			if i > 2 {
 				branchEstimate = branchSum / uint64(i-1)
 			} else {
@@ -479,7 +479,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			}
 			estimate := time.Now().Add(time.Since(start) * time.Duration(branchEstimate))
 			if estimate.After(deadline) {
-				if m.cfg.Debug > 0 {
+				if m.Cfg.Debug > 0 {
 					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
 						base+i, timeUsed, estimate.Sub(top))
 				}
@@ -591,7 +591,7 @@ func (ai *MinimaxAI) pvSearch(
 		ai.st.Scout++
 	}
 
-	dedup := ai.cfg.DedupSymmetry && p.MoveNumber() < maxDedup
+	dedup := ai.Cfg.DedupSymmetry && p.MoveNumber() < maxDedup
 	var dedupCache map[uint64]struct{}
 	if dedup {
 		dedupCache = make(map[uint64]struct{})
@@ -646,7 +646,7 @@ func (ai *MinimaxAI) pvSearch(
 		i++
 		var ms []tak.Move
 		var v int64
-		if ai.cfg.Debug > 4+ply {
+		if ai.Cfg.Debug > 4+ply {
 			log.Printf("%*s>search ply=%d d=%d m=%s w=(%d,%d)",
 				ply, "", ply, depth, ptn.FormatMove(m), α, β)
 		}
@@ -661,7 +661,7 @@ func (ai *MinimaxAI) pvSearch(
 			ms, v = ai.pvSearch(child, ply+1, depth-1, best[1:], -β, -α)
 		}
 		v = -v
-		if ai.cfg.Debug > 4+ply {
+		if ai.Cfg.Debug > 4+ply {
 			log.Printf("%*s search ply=%d d=%d m=%s w=(%d,%d) v=%d pv=%s",
 				ply, "", ply, depth,
 				ptn.FormatMove(m), α, β, v, formatpv(ms))
@@ -750,7 +750,7 @@ func (ai *MinimaxAI) zwSearch(
 		}
 	}
 
-	if !ai.cfg.NoReduceSlides && ply > 0 {
+	if !ai.Cfg.NoReduceSlides && ply > 0 {
 		m := ai.stack[ply-1].m
 		if m.IsSlide() && m.Slides.Singleton() {
 			i := m.X + m.Y*int8(ai.c.Size)
@@ -776,7 +776,7 @@ func (ai *MinimaxAI) zwSearch(
 
 	var i int
 
-	if ai.cfg.MultiCut && cut && depth > 3 {
+	if ai.Cfg.MultiCut && cut && depth > 3 {
 		cuts := 0
 		ai.st.MCSearch++
 		for m, child := mg.Next(); child != nil && i < multiCutSearch; _, child = mg.Next() {
@@ -806,13 +806,13 @@ func (ai *MinimaxAI) zwSearch(
 		var ms []tak.Move
 		var v int64
 		ai.stack[ply].m = m
-		if ai.cfg.Debug > 4+ply {
+		if ai.Cfg.Debug > 4+ply {
 			log.Printf("%*s>search ply=%d d=%d m=%s w=(%d,%d)",
 				ply, "", ply, depth, ptn.FormatMove(m), α, α+1)
 		}
 		ms, v = ai.zwSearch(child, ply+1, depth-1, best[1:], -α-1, !cut)
 		v = -v
-		if ai.cfg.Debug > 4+ply {
+		if ai.Cfg.Debug > 4+ply {
 			log.Printf("%*s<search ply=%d d=%d m=%s w=(%d,%d) v=%d pv=%s",
 				ply, "", ply, depth,
 				ptn.FormatMove(m), α, α+1, v, formatpv(ms))
@@ -854,7 +854,7 @@ func (ai *MinimaxAI) zwSearch(
 }
 
 func (ai *MinimaxAI) nullMoveOK(ply, depth int, p *tak.Position) bool {
-	if ai.cfg.NoNullMove {
+	if ai.Cfg.NoNullMove {
 		return false
 	}
 	if ply == 0 || depth < 3 {
