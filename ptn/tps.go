@@ -13,7 +13,7 @@ func ParseTPS(tpn string) (*tak.Position, error) {
 	var pieces [][]tak.Square
 	words := strings.Split(tpn, " ")
 	if len(words) != 3 {
-		return nil, errors.New("bad TPN: wrong number of words")
+		return nil, errors.New("bad TPS: wrong number of words")
 	}
 	turn, err := strconv.Atoi(words[1])
 	if err != nil {
