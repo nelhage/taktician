@@ -18,6 +18,7 @@ import (
 	"github.com/nelhage/taktician/cli"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/tei"
 )
 
 type Command struct {
@@ -142,6 +143,18 @@ func (c *Command) parsePlayer(in *bufio.Reader, s string) cli.Player {
 			Size:  c.size,
 		})
 		return &aiWrapper{limit, p}
+	}
+	if strings.HasPrefix(s, "tei") {
+		cmdline := strings.Split(s[len("tei:"):], " ")
+		client, err := tei.NewClient(cmdline)
+		if err != nil {
+			log.Fatalf("%s: %v", s, err)
+		}
+		player, err := client.NewGame(c.size)
+		if err != nil {
+			log.Fatalf("%s: %v", s, err)
+		}
+		return &aiWrapper{c.limit, player}
 	}
 	log.Fatalf("unparseable player: %s", s)
 	return nil
