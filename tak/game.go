@@ -17,7 +17,7 @@ type Config struct {
 }
 
 var defaultPieces = []int{0, 0, 0, 10, 15, 21, 30, 40, 50}
-var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 1, 2}
+var defaultCaps = []int{0, 0, 0, 0, 0, 1, 1, 2, 2}
 
 func New(g Config) *Position {
 	if g.Pieces == 0 {
