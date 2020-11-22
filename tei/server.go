@@ -94,25 +94,26 @@ func parsePosition(size int, words []string) (*tak.Position, error) {
 	var pos *tak.Position
 	words = words[1:]
 	if len(words) == 0 {
-		return nil, errors.New("not enoug arguments")
+		return nil, errors.New("not enough arguments")
 	}
 	switch words[0] {
 	case "startpos":
 		words = words[1:]
 		pos = tak.New(tak.Config{Size: size})
-		/*
-			TODO: TPS contains whitespace, decide what we're doing here
-			case "tps":
-				if len(words) < 2 {
-					return nil, errors.New("position ptn: not enough arguments")
-				}
-				var err error
-				pos, err = ptn.ParseTPS(words[1])
-				if err != nil {
-					return nil, fmt.Errorf("Parse TPS: %w", err)
-				}
-				words = words[2:]
-		*/
+	case "tps":
+		// tps A B C
+		if len(words) < 4 {
+			return nil, errors.New("position tps: not enough arguments")
+		}
+		var err error
+		pos, err = ptn.ParseTPS(strings.Join(words[1:4], " "))
+		if err != nil {
+			return nil, fmt.Errorf("Parse TPS: %w", err)
+		}
+		words = words[4:]
+		if pos.Size() != size {
+			return nil, fmt.Errorf("tps has wrong size: got %d, configured for %d", pos.Size(), size)
+		}
 	default:
 		return nil, fmt.Errorf("Unknown initial position: %q", words[0])
 	}
@@ -152,15 +153,19 @@ func (e *Engine) analyze(ctx context.Context, words []string) error {
 		e.mm = ai.NewMinimax(cfg)
 	}
 	words = words[1:]
-	if len(words) != 2 || words[0] != "movetime" {
-		return errors.New("expected <movetime> N")
+	if len(words) > 0 {
+		if len(words) != 2 || words[0] != "movetime" {
+			return errors.New("expected <movetime> N")
+		}
+		ms, err := strconv.ParseUint(words[1], 10, 64)
+		if err != nil {
+			return fmt.Errorf("bad ms: %v", words[1])
+		}
+
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(ms)*time.Millisecond)
+		defer cancel()
 	}
-	ms, err := strconv.ParseUint(words[1], 10, 64)
-	if err != nil {
-		return fmt.Errorf("bad ms: %v", words[1])
-	}
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(ms)*time.Millisecond)
-	defer cancel()
 
 	pv, val, stats := e.mm.Analyze(ctx, e.pos)
 	var pvs strings.Builder
