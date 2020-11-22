@@ -1,52 +1,45 @@
-package engine
+package tei
 
 import (
 	"bufio"
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
 
-type Command struct {
+type Engine struct {
+	in  *bufio.Reader
+	out io.Writer
+
 	mm   *ai.MinimaxAI
 	pos  *tak.Position
 	size int
 }
 
-func (*Command) Name() string     { return "engine" }
-func (*Command) Synopsis() string { return "Launch Taktician in UCI-like engine mode" }
-func (*Command) Usage() string {
-	return `engine
-Launch the engine in a UCI-like mode, suitable for being
-driven by an external GUI or controller.`
+func NewEngine(in io.Reader, out io.Writer) *Engine {
+	return &Engine{
+		in:  bufio.NewReader(in),
+		out: out,
+	}
 }
 
-func (c *Command) SetFlags(fs *flag.FlagSet) {
-	fs.IntVar(&c.size, "size", 5, "Board size for engine")
-}
-
-func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	rdr := bufio.NewReader(os.Stdin)
+func (e *Engine) Run(ctx context.Context) error {
 	for {
-		line, err := rdr.ReadString('\n')
+		line, err := e.in.ReadString('\n')
 		if err == io.EOF {
-			break
+			return nil
 		}
 		if err != nil {
-			log.Printf("IO error: %v", err)
-			return subcommands.ExitFailure
+			return err
 		}
 		line = line[:len(line)-1]
 		if line == "" {
@@ -54,26 +47,33 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		}
 		words := strings.Split(line, " ")
 		switch words[0] {
-		case "uti":
-			fmt.Println("id name Taktician")
-			fmt.Println("id author Nelson Elhage")
-			fmt.Println("utiok")
+		case "tei":
+			fmt.Fprintln(e.out, "id name Taktician")
+			fmt.Fprintln(e.out, "id author Nelson Elhage")
+			fmt.Fprintln(e.out, "teiok")
 		case "quit":
 			break
-		case "utinewgame":
-			c.mm = nil
-			c.pos = nil
+		case "teinewgame":
+			e.mm = nil
+			e.pos = nil
+			if len(words) > 1 {
+				e.size, err = strconv.Atoi(words[1])
+				if err != nil || e.size < 3 || e.size > 8 {
+					return fmt.Errorf("Bad size: %s", words[1])
+				}
+			} else {
+				e.size = 5
+			}
 			break
 		case "position":
-			var err error
-			c.pos, err = parsePosition(c.size, words)
+			e.pos, err = parsePosition(e.size, words)
 			if err != nil {
-				log.Printf("error parsing position: %v\n", err)
+				return fmt.Errorf("error parsing position: %w\n", err)
 				break
 			}
 			break
 		case "go":
-			if err := c.analyze(ctx, words); err != nil {
+			if err := e.analyze(ctx, words); err != nil {
 				log.Printf("error in go: %v\n", err)
 				break
 			}
@@ -83,12 +83,9 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		case "isready":
 			log.Println("readyok")
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown command: %s", line)
-			break
+			return fmt.Errorf("Unknown command: %q", line)
 		}
 	}
-
-	return subcommands.ExitSuccess
 }
 
 func parsePosition(size int, words []string) (*tak.Position, error) {
@@ -101,16 +98,19 @@ func parsePosition(size int, words []string) (*tak.Position, error) {
 	case "startpos":
 		words = words[1:]
 		pos = tak.New(tak.Config{Size: size})
-	case "tps":
-		if len(words) < 2 {
-			return nil, errors.New("position ptn: not enough arguments")
-		}
-		var err error
-		pos, err = ptn.ParseTPS(words[1])
-		if err != nil {
-			return nil, fmt.Errorf("Parse TPS: %w", err)
-		}
-		words = words[2:]
+		/*
+			TODO: TPS contains whitespace, decide what we're doing here
+			case "tps":
+				if len(words) < 2 {
+					return nil, errors.New("position ptn: not enough arguments")
+				}
+				var err error
+				pos, err = ptn.ParseTPS(words[1])
+				if err != nil {
+					return nil, fmt.Errorf("Parse TPS: %w", err)
+				}
+				words = words[2:]
+		*/
 	default:
 		return nil, fmt.Errorf("Unknown initial position: %q", words[0])
 	}
@@ -134,13 +134,13 @@ func parsePosition(size int, words []string) (*tak.Position, error) {
 	return pos, nil
 }
 
-func (c *Command) analyze(ctx context.Context, words []string) error {
-	if c.pos == nil {
+func (e *Engine) analyze(ctx context.Context, words []string) error {
+	if e.pos == nil {
 		return errors.New("No position provided")
 	}
-	if c.mm == nil {
-		c.mm = ai.NewMinimax(ai.MinimaxConfig{
-			Size: c.size,
+	if e.mm == nil {
+		e.mm = ai.NewMinimax(ai.MinimaxConfig{
+			Size: e.size,
 		})
 	}
 	words = words[1:]
@@ -154,19 +154,19 @@ func (c *Command) analyze(ctx context.Context, words []string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(ms)*time.Millisecond)
 	defer cancel()
 
-	pv, val, stats := c.mm.Analyze(ctx, c.pos)
+	pv, val, stats := e.mm.Analyze(ctx, e.pos)
 	var pvs strings.Builder
 	for _, m := range pv {
 		pvs.WriteString(" ")
 		pvs.WriteString(ptn.FormatMove(m))
 	}
-	fmt.Printf("info depth %d time %d nodes %d score cp %d pv%s",
+	fmt.Fprintf(e.out, "info depth %d time %d nodes %d score cp %d pv%s\n",
 		stats.Depth,
 		stats.Elapsed/time.Millisecond,
 		stats.Visited,
 		val,
 		pvs.String(),
 	)
-	fmt.Printf("bestmove %s", ptn.FormatMove(pv[0]))
+	fmt.Fprintf(e.out, "bestmove %s\n", ptn.FormatMove(pv[0]))
 	return nil
 }
