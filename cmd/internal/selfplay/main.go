@@ -238,5 +238,6 @@ func (c *Command) writeSummary(path string, stats *Stats) error {
 		return err
 	}
 	f.Write(bs)
+	fmt.Fprintln(f)
 	return nil
 }
