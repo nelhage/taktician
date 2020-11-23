@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path"
 	"runtime/pprof"
@@ -180,6 +181,12 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		st.Players[0].Wins+st.Players[1].Wins,
 	)
 	tw.Flush()
+
+	score := (float64(st.Players[0].Wins) + float64(st.Ties)/2) / float64(len(st.Games))
+	if score > 0 && score < 1 {
+		elo := -400 * math.Log10(1/score-1)
+		log.Printf("ΔELO=%.0f\n", elo)
+	}
 
 	a, b := int64(st.Players[0].Wins), int64(st.Players[1].Wins)
 	if a < b {
