@@ -1,6 +1,7 @@
 package selfplay
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -28,8 +29,8 @@ type Command struct {
 	cutoff int
 	swap   bool
 
-	prefix string
-	seeds  string
+	prefix   string
+	openings string
 
 	debug int
 	depth int
@@ -60,7 +61,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.cutoff, "cutoff", 80, "cut games off after how many plies")
 	flags.BoolVar(&c.swap, "swap", true, "swap colors each game")
 	flags.StringVar(&c.prefix, "prefix", "", "ptn file to start games at the end of")
-	flags.StringVar(&c.seeds, "seeds", "", "directory of seed positions")
+	flags.StringVar(&c.openings, "openings", "", "File of openings, 1/line in TPS")
 	flags.IntVar(&c.debug, "debug", 0, "debug level")
 	flags.IntVar(&c.depth, "depth", 3, "depth to search each move")
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
@@ -70,34 +71,23 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.memProfile, "mem-profile", "", "write memory profile")
 }
 
-func addSeeds(g *ptn.PTN, ps []*tak.Position) ([]*tak.Position, error) {
-	p, e := g.PositionAtMove(0, tak.NoColor)
-	if e != nil {
-		return nil, e
+func readOpenings(path string) ([]*tak.Position, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
-	return append(ps, p), nil
-}
-
-func readSeeds(d string) ([]*tak.Position, error) {
-	ents, e := ioutil.ReadDir(d)
-	if e != nil {
-		return nil, e
+	defer f.Close()
+	var out []*tak.Position
+	r := bufio.NewScanner(f)
+	for r.Scan() {
+		line := r.Text()
+		pos, err := ptn.ParseTPS(line)
+		if err != nil {
+			return nil, fmt.Errorf("parse TPS: %q: %w", line, err)
+		}
+		out = append(out, pos)
 	}
-	var ps []*tak.Position
-	for _, de := range ents {
-		if !strings.HasSuffix(de.Name(), ".ptn") {
-			continue
-		}
-		g, e := ptn.ParseFile(path.Join(d, de.Name()))
-		if e != nil {
-			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
-		}
-		ps, e = addSeeds(g, ps)
-		if e != nil {
-			return nil, fmt.Errorf("%s/%s: %v", d, de.Name(), e)
-		}
-	}
-	return ps, nil
+	return out, nil
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -117,7 +107,7 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		c.seed = time.Now().Unix()
 	}
 
-	var starts []*tak.Position
+	var openings []*tak.Position
 	if c.prefix != "" {
 		pt, e := ptn.ParseFile(c.prefix)
 		if e != nil {
@@ -127,17 +117,17 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		if e != nil {
 			log.Fatalf("PTN: %v", e)
 		}
-		starts = []*tak.Position{p}
+		openings = []*tak.Position{p}
 	}
-	if c.seeds != "" {
+	if c.openings != "" {
 		var e error
-		starts, e = readSeeds(c.seeds)
+		openings, e = readOpenings(c.openings)
 		if e != nil {
-			log.Fatalf("-seeds: %v", e)
+			log.Fatalf("-openings: %v", e)
 		}
 	}
-	if len(starts) == 0 {
-		starts = []*tak.Position{tak.New(tak.Config{Size: c.size})}
+	if len(openings) == 0 {
+		openings = []*tak.Position{tak.New(tak.Config{Size: c.size})}
 	}
 
 	cfg := &Config{
@@ -151,7 +141,7 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		Seed:    c.seed,
 		Cutoff:  c.cutoff,
 		Limit:   c.limit,
-		Initial: starts,
+		Initial: openings,
 		Verbose: c.verbose,
 		P1:      strings.Split(c.p1, " "),
 		P2:      strings.Split(c.p2, " "),
@@ -196,6 +186,6 @@ func writeGame(d string, r *Result) {
 		}
 		p.Ops = append(p.Ops, &ptn.Move{Move: m})
 	}
-	ptnPath := path.Join(d, fmt.Sprintf("%d.ptn", r.spec.i))
+	ptnPath := path.Join(d, fmt.Sprintf("%d-%d.ptn", r.spec.oi, r.spec.i))
 	ioutil.WriteFile(ptnPath, []byte(p.Render()), 0644)
 }

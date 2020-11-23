@@ -52,6 +52,7 @@ type Stats struct {
 type gameSpec struct {
 	c       *Config
 	opening *tak.Position
+	oi      int
 	i       int
 	r       *rand.Rand
 	p1color tak.Color
@@ -122,7 +123,7 @@ func startGames(c *Config, rc chan<- Result) {
 		}()
 	}
 	r := rand.New(rand.NewSource(c.Seed))
-	for _, pos := range c.Initial {
+	for pi, pos := range c.Initial {
 		n := c.Games
 		if c.Swap {
 			n *= 2
@@ -138,6 +139,7 @@ func startGames(c *Config, rc chan<- Result) {
 			spec := gameSpec{
 				opening: pos,
 				c:       c,
+				oi:      pi,
 				i:       g,
 				p1color: p1color,
 				r:       rand.New(rand.NewSource(r.Int63())),
