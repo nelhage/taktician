@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ptn"
+	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
 )
 
@@ -41,13 +42,17 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	var positions []*tak.Position
 	seen := make(map[uint64]*tak.Position)
 
+generate:
 	for len(positions) < c.n {
 		pos := c.generate(init, c.depth)
-		if got, ok := seen[pos.Hash()]; ok {
-			if !got.Equal(pos) {
-				log.Fatalf("hash collision seen=%q new=%q", ptn.FormatTPS(got), ptn.FormatTPS(pos))
+		syms, _ := symmetry.Symmetries(pos)
+		for _, sym := range syms {
+			if got, ok := seen[sym.P.Hash()]; ok {
+				if !got.Equal(sym.P) {
+					log.Fatalf("hash collision seen=%q new=%q", ptn.FormatTPS(got), ptn.FormatTPS(sym.P))
+				}
+				continue generate
 			}
-			continue
 		}
 		seen[pos.Hash()] = pos
 		positions = append(positions, pos)
