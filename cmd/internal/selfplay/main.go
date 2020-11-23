@@ -18,15 +18,12 @@ import (
 )
 
 type Command struct {
-	size   int
-	zero   bool
-	p1     string
-	p2     string
-	w1     string
-	w2     string
-	c1     string
-	c2     string
-	seed   int64
+	size int
+	zero bool
+	p1   string
+	p2   string
+	seed int64
+
 	games  int
 	cutoff int
 	swap   bool
@@ -55,13 +52,9 @@ func (*Command) Usage() string {
 
 func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.size, "size", 5, "board size")
-	flags.BoolVar(&c.zero, "zero", false, "start with zero weights, not defaults")
-	flags.StringVar(&c.p1, "p1", "minimax", "player1 AI engine")
-	flags.StringVar(&c.p2, "p2", "minimax", "player2 AI engine")
-	flags.StringVar(&c.w1, "w1", "", "first set of weights")
-	flags.StringVar(&c.w2, "w2", "", "second set of weights")
-	flags.StringVar(&c.c1, "c1", "", "custom config 1")
-	flags.StringVar(&c.c2, "c2", "", "custom config 2")
+	flags.StringVar(&c.p1, "p1", "taktician tei", "player1 TIE driver")
+	flags.StringVar(&c.p2, "p2", "taktician tei", "player2 TIE driver")
+
 	flags.Int64Var(&c.seed, "seed", 0, "starting random seed")
 	flags.IntVar(&c.games, "games", 10, "number of games to play per opening/color")
 	flags.IntVar(&c.cutoff, "cutoff", 80, "cut games off after how many plies")
@@ -160,9 +153,9 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		Limit:   c.limit,
 		Initial: starts,
 		Verbose: c.verbose,
+		P1:      strings.Split(c.p1, " "),
+		P2:      strings.Split(c.p2, " "),
 	}
-	cfg.F1 = buildFactory(cfg, c.p1, c.c1, c.w1)
-	cfg.F2 = buildFactory(cfg, c.p2, c.c2, c.w2)
 
 	st := Simulate(cfg)
 

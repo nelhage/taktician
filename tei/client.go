@@ -91,7 +91,7 @@ func (c *Client) Close() {
 	if c.stdoutPipe != nil {
 		c.stdoutPipe.Close()
 	}
-	// c.cmd.Wait()
+	c.cmd.Wait()
 }
 
 func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {

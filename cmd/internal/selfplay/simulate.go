@@ -11,12 +11,8 @@ import (
 	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
+	"github.com/nelhage/taktician/tei"
 )
-
-type AIFactory interface {
-	GetPlayer() ai.TakPlayer
-	String() string
-}
 
 type Config struct {
 	Games int
@@ -25,7 +21,7 @@ type Config struct {
 
 	Initial []*tak.Position
 
-	F1, F2 AIFactory
+	P1, P2 []string
 
 	Zero  bool
 	Size  int
@@ -54,12 +50,11 @@ type Stats struct {
 }
 
 type gameSpec struct {
-	c            *Config
-	opening      *tak.Position
-	i            int
-	r            *rand.Rand
-	white, black AIFactory
-	p1color      tak.Color
+	c       *Config
+	opening *tak.Position
+	i       int
+	r       *rand.Rand
+	p1color tak.Color
 }
 
 type Result struct {
@@ -76,11 +71,9 @@ func Simulate(c *Config) Stats {
 	for r := range rc {
 		d := r.Position.WinDetails()
 		if c.Verbose {
-			log.Printf("game n=%d plies=%d p1=%s white=%s black=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
+			log.Printf("game n=%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
 				r.spec.i, r.Position.MoveNumber(),
 				r.spec.p1color,
-				r.spec.white.String(),
-				r.spec.black.String(),
 				d.Winner,
 				d.WhiteFlats,
 				d.BlackFlats,
@@ -124,7 +117,7 @@ func startGames(c *Config, rc chan<- Result) {
 	wg.Add(c.Threads)
 	for i := 0; i < c.Threads; i++ {
 		go func() {
-			worker(gc, rc)
+			worker(c, gc, rc)
 			wg.Done()
 		}()
 	}
@@ -136,12 +129,9 @@ func startGames(c *Config, rc chan<- Result) {
 		}
 		for g := 0; g < n; g++ {
 			var p1color tak.Color
-			var white, black AIFactory
 			if g%2 == 0 || !c.Swap {
-				white, black = c.F1, c.F2
 				p1color = tak.White
 			} else {
-				black, white = c.F1, c.F2
 				p1color = tak.Black
 			}
 
@@ -149,8 +139,6 @@ func startGames(c *Config, rc chan<- Result) {
 				opening: pos,
 				c:       c,
 				i:       g,
-				white:   white,
-				black:   black,
 				p1color: p1color,
 				r:       rand.New(rand.NewSource(r.Int63())),
 			}
@@ -162,10 +150,33 @@ func startGames(c *Config, rc chan<- Result) {
 	close(rc)
 }
 
-func worker(games <-chan gameSpec, out chan<- Result) {
+func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
+	c1, err := tei.NewClient(c.P1)
+	if err != nil {
+		log.Fatalf("starting client[%v]: %v", c.P1, err)
+	}
+	defer c1.Close()
+	c2, err := tei.NewClient(c.P2)
+	if err != nil {
+		log.Fatalf("starting client[%v]: %v", c.P2, err)
+	}
+	defer c2.Close()
+
 	for g := range games {
-		white := g.white.GetPlayer()
-		black := g.black.GetPlayer()
+		var white, black ai.TakPlayer
+
+		white, err = c1.NewGame(g.opening.Size())
+		if err != nil {
+			log.Fatalf("starting game[%v]: %v", c.P1, err)
+		}
+		black, err = c2.NewGame(g.opening.Size())
+		if err != nil {
+			log.Fatalf("starting game[%v]: %v", c.P2, err)
+		}
+		if g.p1color != tak.White {
+			white, black = black, white
+		}
+
 		var ms []tak.Move
 		p := g.opening
 		for i := 0; i < g.c.Cutoff; i++ {
