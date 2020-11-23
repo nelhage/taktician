@@ -3,7 +3,7 @@ package selfplay
 import (
 	"bufio"
 	"context"
-	"encoding/csv"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -68,7 +68,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
 	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
 	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
-	flags.StringVar(&c.summary, "summary", "", "write summary CSV file")
+	flags.StringVar(&c.summary, "summary", "", "write summary JSON file")
 	flags.BoolVar(&c.verbose, "v", false, "verbose output")
 	flags.StringVar(&c.memProfile, "mem-profile", "", "write memory profile")
 }
@@ -152,14 +152,14 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 
 	if c.out != "" {
 		if c.summary == "" {
-			c.summary = path.Join(c.out, "summary.csv")
+			c.summary = path.Join(c.out, "summary.json")
 		}
 		for _, r := range st.Games {
 			writeGame(c.out, &r)
 		}
 	}
 	if c.summary != "" {
-		if err := writeSummary(c.summary, st.Games); err != nil {
+		if err := c.writeSummary(c.summary, &st); err != nil {
 			log.Println("writing summary: ", err.Error())
 		}
 	}
@@ -211,29 +211,32 @@ func writeGame(d string, r *Result) {
 	ioutil.WriteFile(ptnPath, []byte(p.Render()), 0644)
 }
 
-func writeSummary(path string, games []Result) error {
+type Summary struct {
+	Cmdline []string
+	Player1 string
+	Player2 string
+	Limit   time.Duration
+	Stats   *Stats
+}
+
+func (c *Command) writeSummary(path string, stats *Stats) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	writer := csv.NewWriter(f)
-	defer writer.Flush()
-	writer.Write([]string{
-		"opening",
-		"no",
-		"p1color",
-		"winner",
-		"plies",
-	})
-	for _, g := range games {
-		writer.Write([]string{
-			fmt.Sprintf("%d", g.spec.oi),
-			fmt.Sprintf("%d", g.spec.i),
-			g.spec.p1color.String(),
-			g.Position.WinDetails().Winner.String(),
-			fmt.Sprintf("%d", g.Position.MoveNumber()),
-		})
+	summary := Summary{
+		Cmdline: os.Args,
+		Player1: c.p1,
+		Player2: c.p2,
+		Limit:   c.limit,
+		Stats:   stats,
 	}
+
+	bs, err := json.MarshalIndent(&summary, "", "  ")
+	if err != nil {
+		return err
+	}
+	f.Write(bs)
 	return nil
 }

@@ -48,7 +48,7 @@ type Stats struct {
 	Ties         int
 	Cutoff       int
 
-	Games []Result
+	Games []Result `json:"-"`
 }
 
 type gameSpec struct {
