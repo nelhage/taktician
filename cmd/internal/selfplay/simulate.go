@@ -38,9 +38,11 @@ type Config struct {
 
 type Stats struct {
 	Players [2]struct {
-		Wins     int
-		FlatWins int
-		RoadWins int
+		Wins      int
+		WhiteWins int
+		BlackWins int
+		FlatWins  int
+		RoadWins  int
 	}
 	White, Black int
 	Ties         int
@@ -72,8 +74,8 @@ func Simulate(c *Config) Stats {
 	for r := range rc {
 		d := r.Position.WinDetails()
 		if c.Verbose {
-			log.Printf("game n=%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
-				r.spec.i, r.Position.MoveNumber(),
+			log.Printf("game n=%d/%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
+				r.spec.oi, r.spec.i, r.Position.MoveNumber(),
 				r.spec.p1color,
 				d.Winner,
 				d.WhiteFlats,
@@ -97,6 +99,11 @@ func Simulate(c *Config) Stats {
 			pst := &st.Players[0]
 			if d.Winner == r.spec.p1color.Flip() {
 				pst = &st.Players[1]
+			}
+			if d.Winner == tak.White {
+				pst.WhiteWins += 1
+			} else if d.Winner == tak.Black {
+				pst.BlackWins += 1
 			}
 			pst.Wins++
 			switch d.Reason {

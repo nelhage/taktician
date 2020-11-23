@@ -3,6 +3,7 @@ package selfplay
 import (
 	"bufio"
 	"context"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"path"
 	"runtime/pprof"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/google/subcommands"
@@ -38,6 +40,7 @@ type Command struct {
 	threads int
 
 	out     string
+	summary string
 	verbose bool
 
 	memProfile string
@@ -65,6 +68,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
 	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
 	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
+	flags.StringVar(&c.summary, "summary", "", "write summary CSV file")
 	flags.BoolVar(&c.verbose, "v", false, "verbose output")
 	flags.StringVar(&c.memProfile, "mem-profile", "", "write memory profile")
 }
@@ -147,8 +151,16 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	st := Simulate(cfg)
 
 	if c.out != "" {
+		if c.summary == "" {
+			c.summary = path.Join(c.out, "summary.csv")
+		}
 		for _, r := range st.Games {
 			writeGame(c.out, &r)
+		}
+	}
+	if c.summary != "" {
+		if err := writeSummary(c.summary, st.Games); err != nil {
+			log.Println("writing summary: ", err.Error())
 		}
 	}
 
@@ -157,6 +169,18 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
+	tw := tabwriter.NewWriter(os.Stderr, 2, 4, 2, ' ', 0)
+
+	fmt.Fprintf(tw, "\twhite\tblack\tsum\n")
+	fmt.Fprintf(tw, "p1\t%d\t%d\t%d\n", st.Players[0].WhiteWins, st.Players[0].BlackWins, st.Players[0].Wins)
+	fmt.Fprintf(tw, "p2\t%d\t%d\t%d\n", st.Players[1].WhiteWins, st.Players[1].BlackWins, st.Players[1].Wins)
+	fmt.Fprintf(tw, "sum\t%d\t%d\t%d\n",
+		st.Players[0].WhiteWins+st.Players[1].WhiteWins,
+		st.Players[0].BlackWins+st.Players[1].BlackWins,
+		st.Players[0].Wins+st.Players[1].Wins,
+	)
+	tw.Flush()
+
 	a, b := int64(st.Players[0].Wins), int64(st.Players[1].Wins)
 	if a < b {
 		a, b = b, a
@@ -185,4 +209,31 @@ func writeGame(d string, r *Result) {
 	}
 	ptnPath := path.Join(d, fmt.Sprintf("%d-%d.ptn", r.spec.oi, r.spec.i))
 	ioutil.WriteFile(ptnPath, []byte(p.Render()), 0644)
+}
+
+func writeSummary(path string, games []Result) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	writer := csv.NewWriter(f)
+	defer writer.Flush()
+	writer.Write([]string{
+		"opening",
+		"no",
+		"p1color",
+		"winner",
+		"plies",
+	})
+	for _, g := range games {
+		writer.Write([]string{
+			fmt.Sprintf("%d", g.spec.oi),
+			fmt.Sprintf("%d", g.spec.i),
+			g.spec.p1color.String(),
+			g.Position.WinDetails().Winner.String(),
+			fmt.Sprintf("%d", g.Position.MoveNumber()),
+		})
+	}
+	return nil
 }
