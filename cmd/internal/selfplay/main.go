@@ -33,7 +33,6 @@ type Command struct {
 	openings string
 
 	debug int
-	depth int
 	limit time.Duration
 
 	threads int
@@ -63,7 +62,6 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.prefix, "prefix", "", "ptn file to start games at the end of")
 	flags.StringVar(&c.openings, "openings", "", "File of openings, 1/line in TPS")
 	flags.IntVar(&c.debug, "debug", 0, "debug level")
-	flags.IntVar(&c.depth, "depth", 3, "depth to search each move")
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
 	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
 	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
@@ -133,7 +131,6 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	cfg := &Config{
 		Zero:    c.zero,
 		Size:    c.size,
-		Depth:   c.depth,
 		Debug:   c.debug,
 		Swap:    c.swap,
 		Games:   c.games,
@@ -155,8 +152,8 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		}
 	}
 
-	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d depth=%d limit=%s",
-		len(st.Games), c.seed, st.Ties, st.Cutoff, st.White, st.Black, c.depth, c.limit)
+	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d limit=%s",
+		len(st.Games), c.seed, st.Ties, st.Cutoff, st.White, st.Black, c.limit)
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
