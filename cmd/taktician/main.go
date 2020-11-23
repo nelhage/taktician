@@ -8,6 +8,7 @@ import (
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/cmd/internal/analyze"
 	"github.com/nelhage/taktician/cmd/internal/canonicalize"
+	"github.com/nelhage/taktician/cmd/internal/genopenings"
 	"github.com/nelhage/taktician/cmd/internal/importptn"
 	"github.com/nelhage/taktician/cmd/internal/openings"
 	"github.com/nelhage/taktician/cmd/internal/play"
@@ -29,6 +30,7 @@ func main() {
 	subcommands.Register(&play.Command{}, "")
 	subcommands.Register(&tei.Command{}, "")
 
+	subcommands.Register(&genopenings.Command{}, "")
 	subcommands.Register(&openings.Command{}, "")
 	subcommands.Register(&canonicalize.Command{}, "")
 
