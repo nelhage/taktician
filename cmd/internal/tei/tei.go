@@ -21,7 +21,9 @@ func (*Command) Usage() string {
 	return `tei
 
 Launch the engine in TEI mode, a a UCI-like protocol suitable for being
-driven by an external GUI or controller.`
+driven by an external GUI or controller.
+
+`
 }
 
 func (c *Command) SetFlags(fs *flag.FlagSet) {
