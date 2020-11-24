@@ -43,11 +43,11 @@ func (e *Engine) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		line = line[:len(line)-1]
+		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		words := strings.Split(line, " ")
+		words := strings.Fields(line)
 		switch words[0] {
 		case "tei":
 			fmt.Fprintln(e.out, "id name Taktician")
