@@ -83,7 +83,7 @@ func (e *Engine) Run(ctx context.Context) error {
 		case "stop":
 			break
 		case "isready":
-			log.Println("readyok")
+			fmt.Fprintln(e.out, "readyok")
 		default:
 			return fmt.Errorf("Unknown command: %q", line)
 		}
