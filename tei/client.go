@@ -107,8 +107,8 @@ func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		line = line[:len(line)-1]
-		words := strings.Split(line, " ")
+		line = strings.TrimSpace(line)
+		words := strings.Fields(line)
 		if words[0] == expect {
 			return words, nil
 		}
