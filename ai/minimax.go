@@ -149,10 +149,11 @@ func (s Stats) Merge(other Stats) Stats {
 }
 
 type MinimaxConfig struct {
-	Size  int
-	Depth int
-	Debug int
-	Seed  int64
+	Size     int
+	Depth    int
+	MaxEvals uint64
+	Debug    int
+	Seed     int64
 
 	// How much memory to allocate to the transposition
 	// table. Negative means don't use a table.
@@ -393,6 +394,7 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 			p.MoveNumber(), p.ToMove(), seed)
 	}
 	deadline, limited := ctx.Deadline()
+	limited = limited || m.Cfg.MaxEvals > 0
 
 	var next []tak.Move
 	ms := make([]tak.Move, 0, maxDepth)
@@ -477,13 +479,25 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 				// returns a deep move
 				branchEstimate = 5
 			}
-			estimate := time.Now().Add(time.Since(start) * time.Duration(branchEstimate))
-			if estimate.After(deadline) {
-				if m.Cfg.Debug > 0 {
-					log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
-						base+i, timeUsed, estimate.Sub(top))
+			if !deadline.IsZero() {
+				estimate := time.Now().Add(time.Since(start) * time.Duration(branchEstimate))
+				if estimate.After(deadline) {
+					if m.Cfg.Debug > 0 {
+						log.Printf("[minimax] time cutoff: depth=%d used=%s estimate=%s",
+							base+i, timeUsed, estimate.Sub(top))
+					}
+					break
 				}
-				break
+			}
+			if m.Cfg.MaxEvals > 0 {
+				estimate := m.st.Evaluated * branchEstimate
+				if estimate > m.Cfg.MaxEvals {
+					if m.Cfg.Debug > 0 {
+						log.Printf("[minimax] max eval cutoff: depth=%d used=%d estimate=%d",
+							base+i, m.st.Evaluated, estimate)
+					}
+					break
+				}
 			}
 		}
 	}

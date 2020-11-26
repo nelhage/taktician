@@ -12,6 +12,7 @@ type Minimax struct {
 	Seed         int64
 	Debug        int
 	Depth        int
+	MaxEvals     uint64
 	Sort         bool
 	TableMem     int64
 	NullMove     bool
@@ -28,6 +29,7 @@ func (o *Minimax) AddFlags(flags *flag.FlagSet) {
 	flags.IntVar(&o.Debug, "debug", 1, "debug level")
 	flags.Int64Var(&o.Seed, "seed", 0, "specify a seed")
 	flags.IntVar(&o.Depth, "depth", 0, "minimax depth")
+	flags.Uint64Var(&o.MaxEvals, "max-evals", 0, "Limit the search by number of nodes evaluated")
 	flags.BoolVar(&o.Sort, "sort", true, "sort moves via history heuristic")
 	flags.Int64Var(&o.TableMem, "table-mem", 0, "set table size")
 	flags.BoolVar(&o.NullMove, "null-move", true, "use null-move pruning")
@@ -51,10 +53,11 @@ func (o *Minimax) BuildConfig(size int) ai.MinimaxConfig {
 		}
 	}
 	cfg := ai.MinimaxConfig{
-		Size:  size,
-		Depth: o.Depth,
-		Seed:  o.Seed,
-		Debug: o.Debug,
+		Size:     size,
+		Depth:    o.Depth,
+		MaxEvals: o.MaxEvals,
+		Seed:     o.Seed,
+		Debug:    o.Debug,
 
 		NoSort:         !o.Sort,
 		TableMem:       o.TableMem,
