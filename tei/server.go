@@ -155,7 +155,7 @@ func (e *Engine) analyze(ctx context.Context, words []string) error {
 	words = words[1:]
 	if len(words) > 0 {
 		if len(words) != 2 || words[0] != "movetime" {
-			return errors.New("expected <movetime> N")
+			return fmt.Errorf("go: expected <movetime> N got: %q", words)
 		}
 		ms, err := strconv.ParseUint(words[1], 10, 64)
 		if err != nil {
