@@ -71,7 +71,6 @@ func (e *Engine) Run(ctx context.Context) error {
 			e.pos, err = parsePosition(e.size, words)
 			if err != nil {
 				return fmt.Errorf("error parsing position: %w\n", err)
-				break
 			}
 			break
 		case "go":
@@ -137,6 +136,17 @@ func parsePosition(size int, words []string) (*tak.Position, error) {
 	return pos, nil
 }
 
+func calcBudget(movetime time.Duration, gametime time.Duration, inc time.Duration) time.Duration {
+	var budget time.Duration
+	if gametime != 0 {
+		budget = gametime/10 + inc
+	}
+	if movetime > 0 && (budget == 0 || movetime < budget) {
+		budget = movetime
+	}
+	return budget
+}
+
 func (e *Engine) analyze(ctx context.Context, words []string) error {
 	if e.pos == nil {
 		return errors.New("No position provided")
@@ -153,17 +163,50 @@ func (e *Engine) analyze(ctx context.Context, words []string) error {
 		e.mm = ai.NewMinimax(cfg)
 	}
 	words = words[1:]
-	if len(words) > 0 {
-		if len(words) != 2 || words[0] != "movetime" {
-			return fmt.Errorf("go: expected <movetime> N got: %q", words)
+	var movetime, wtime, winc, btime, binc time.Duration
+	for len(words) > 0 {
+		opt := words[0]
+		if len(words) == 1 {
+			return fmt.Errorf("go: %s: expected arg", opt)
 		}
-		ms, err := strconv.ParseUint(words[1], 10, 64)
+		arg := words[1]
+		words = words[2:]
+		var err error
+		var ms uint64
+		switch opt {
+		case "movetime":
+			ms, err = strconv.ParseUint(arg, 10, 64)
+			movetime = time.Millisecond * time.Duration(ms)
+		case "wtime":
+			ms, err = strconv.ParseUint(arg, 10, 64)
+			wtime = time.Millisecond * time.Duration(ms)
+		case "btime":
+			ms, err = strconv.ParseUint(arg, 10, 64)
+			btime = time.Millisecond * time.Duration(ms)
+		case "winc":
+			ms, err = strconv.ParseUint(arg, 10, 64)
+			winc = time.Millisecond * time.Duration(ms)
+		case "binc":
+			ms, err = strconv.ParseUint(arg, 10, 64)
+			binc = time.Millisecond * time.Duration(ms)
+		default:
+			return fmt.Errorf("go: Unknown option: %s", opt)
+		}
 		if err != nil {
-			return fmt.Errorf("bad ms: %v", words[1])
+			return fmt.Errorf("go: %s: cannot parse value: %q", opt, arg)
 		}
+	}
+	var tm, inc time.Duration
+	if e.pos.ToMove() == tak.White {
+		tm, inc = wtime, winc
+	} else {
+		tm, inc = btime, binc
+	}
 
+	if movetime > 0 || tm > 0 {
+		budget := calcBudget(movetime, tm, inc)
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(ms)*time.Millisecond)
+		ctx, cancel = context.WithTimeout(ctx, budget)
 		defer cancel()
 	}
 
