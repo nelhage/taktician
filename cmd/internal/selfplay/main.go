@@ -44,6 +44,8 @@ type Command struct {
 	summary string
 	verbose bool
 
+	merge bool
+
 	memProfile string
 }
 
@@ -72,6 +74,8 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.summary, "summary", "", "write summary JSON file")
 	flags.BoolVar(&c.verbose, "v", false, "verbose output")
 	flags.StringVar(&c.memProfile, "mem-profile", "", "write memory profile")
+
+	flags.BoolVar(&c.merge, "merge", false, "merge+analyze multiple summary files")
 }
 
 func readOpenings(path string) ([]*tak.Position, error) {
@@ -104,6 +108,17 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			}
 			pprof.Lookup("heap").WriteTo(f, 0)
 		}()
+	}
+
+	if c.merge {
+		var st Stats
+		for _, arg := range flag.Args() {
+			if err := mergeStats(&st, arg); err != nil {
+				log.Fatalf("merge: %q: %s", arg, err.Error())
+			}
+		}
+		printSummary(&st)
+		return subcommands.ExitSuccess
 	}
 
 	if c.seed == 0 {
@@ -167,6 +182,13 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 
 	log.Printf("done games=%d seed=%d ties=%d cutoff=%d white=%d black=%d limit=%s",
 		len(st.Games), c.seed, st.Ties, st.Cutoff, st.White, st.Black, c.limit)
+
+	printSummary(&st)
+
+	return subcommands.ExitSuccess
+}
+
+func printSummary(st *Stats) {
 	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
 		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
 		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
@@ -182,7 +204,7 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	)
 	tw.Flush()
 
-	score := (float64(st.Players[0].Wins) + float64(st.Ties)/2) / float64(len(st.Games))
+	score := (float64(st.Players[0].Wins) + float64(st.Ties+st.Cutoff)/2) / float64(st.Count())
 	if score > 0 && score < 1 {
 		elo := -400 * math.Log10(1/score-1)
 		log.Printf("ΔELO=%.0f\n", elo)
@@ -193,8 +215,6 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		a, b = b, a
 	}
 	log.Printf("p[one-sided]=%f", binomTest(a, b, 0.5))
-
-	return subcommands.ExitSuccess
 }
 
 func writeGame(d string, r *Result) {
@@ -224,6 +244,20 @@ type Summary struct {
 	Player2 string
 	Limit   time.Duration
 	Stats   *Stats
+}
+
+func mergeStats(st *Stats, path string) error {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var summary Summary
+	if err := json.Unmarshal(data, &summary); err != nil {
+		return err
+	}
+
+	*st = st.Merge(summary.Stats)
+	return nil
 }
 
 func (c *Command) writeSummary(path string, stats *Stats) error {

@@ -51,6 +51,26 @@ type Stats struct {
 	Games []Result `json:"-"`
 }
 
+func (s *Stats) Count() int {
+	return s.White + s.Black + s.Ties + s.Cutoff
+}
+
+func (s *Stats) Merge(other *Stats) Stats {
+	out := *s
+	for i := range out.Players {
+		out.Players[i].Wins += other.Players[i].Wins
+		out.Players[i].WhiteWins += other.Players[i].WhiteWins
+		out.Players[i].BlackWins += other.Players[i].BlackWins
+		out.Players[i].FlatWins += other.Players[i].FlatWins
+		out.Players[i].RoadWins += other.Players[i].RoadWins
+	}
+	out.White += other.White
+	out.Black += other.Black
+	out.Ties += other.Ties
+	out.Cutoff += other.Cutoff
+	return out
+}
+
 type gameSpec struct {
 	c       *Config
 	opening *tak.Position
