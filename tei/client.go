@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -55,6 +57,8 @@ func NewClient(cmdline []string) (*Client, error) {
 		cl.stdoutPipe = stdout
 		cl.read = bufio.NewReader(stdout)
 	}
+
+	cmd.Stderr = os.Stderr
 
 	err := cl.cmd.Start()
 	if err != nil {
@@ -107,6 +111,7 @@ func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("TEI: %s", line)
 		line = strings.TrimSpace(line)
 		words := strings.Fields(line)
 		if words[0] == expect {
@@ -135,8 +140,11 @@ func (p *player) GetMove(ctx context.Context, pos *tak.Position) tak.Move {
 		goCmd = fmt.Sprintf("%s movetime %d", goCmd, timeoutMS)
 	}
 	bestmove, err := p.client.sendCommand(goCmd, "bestmove")
+	if err != nil {
+		panic(fmt.Sprintf("tei: server error: %s", err.Error()))
+	}
 	if len(bestmove) != 2 {
-		panic("bad bestmove")
+		panic(fmt.Sprintf("bad bestmove: %v", bestmove))
 	}
 	mv, err := ptn.ParseMove(bestmove[1])
 	if err != nil {
