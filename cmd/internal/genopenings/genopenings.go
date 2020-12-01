@@ -20,6 +20,8 @@ type Command struct {
 	n     int
 
 	rand *rand.Rand
+
+	placeOnly bool
 }
 
 func (*Command) Name() string     { return "genopenings" }
@@ -34,6 +36,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.depth, "depth", 2, "generate openings to what depth")
 	flags.IntVar(&c.n, "n", 100, "generate how many openings")
 	flags.Int64Var(&c.seed, "seed", 0, "Random seed")
+	flags.BoolVar(&c.placeOnly, "only-place", true, "Only generate moves that place flats")
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -69,7 +72,11 @@ func (c *Command) generate(pos *tak.Position, depth int) *tak.Position {
 	for d := 0; d < depth; d++ {
 		moves := pos.AllMoves(buf[:0])
 		for {
-			m := moves[c.rand.Intn(len(moves))]
+			i := c.rand.Intn(len(moves))
+			m := moves[i]
+			if c.placeOnly && m.Type != tak.PlaceFlat {
+				continue
+			}
 			n, e := pos.Move(m)
 			if e != nil {
 				continue
