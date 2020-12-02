@@ -5,13 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
@@ -74,12 +72,12 @@ func NewClient(cmdline []string) (*Client, error) {
 	return cl, nil
 }
 
-func (c *Client) NewGame(size int) (ai.TakPlayer, error) {
+func (c *Client) NewGame(size int) (*Player, error) {
 	c.gameid += 1
 	if _, err := c.sendCommand(fmt.Sprintf("teinewgame %d", size), ""); err != nil {
 		return nil, err
 	}
-	return &player{
+	return &Player{
 		client: c,
 		gameid: c.gameid,
 	}, nil
@@ -111,7 +109,6 @@ func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("TEI: %s", line)
 		line = strings.TrimSpace(line)
 		words := strings.Fields(line)
 		if words[0] == expect {
@@ -120,35 +117,58 @@ func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {
 	}
 }
 
-type player struct {
+type Player struct {
 	client *Client
 	gameid int
 }
 
-func (p *player) GetMove(ctx context.Context, pos *tak.Position) tak.Move {
+func (p *Player) TEIGetMove(ctx context.Context, pos *tak.Position, tc *TimeControl) (tak.Move, error) {
 	if p.gameid != p.client.gameid {
 		panic("bad gameid: calling GetMove on a dead player")
 	}
 	tps := ptn.FormatTPS(pos)
 	_, err := p.client.sendCommand(fmt.Sprintf("position tps %s", tps), "")
 	if err != nil {
-		panic(fmt.Sprintf("send position: %v", err))
+		return tak.Move{}, fmt.Errorf("send position: %w", err)
 	}
-	goCmd := "go"
+	goCmd := []string{"go"}
 	if deadline, ok := ctx.Deadline(); ok {
-		timeoutMS := deadline.Sub(time.Now()) / time.Millisecond
-		goCmd = fmt.Sprintf("%s movetime %d", goCmd, timeoutMS)
+		goCmd = append(goCmd, "movetime", formatTime(deadline.Sub(time.Now())))
 	}
-	bestmove, err := p.client.sendCommand(goCmd, "bestmove")
+	if tc != nil {
+		times := []struct {
+			key string
+			dur time.Duration
+		}{
+			{"wtime", tc.White},
+			{"btime", tc.White},
+			{"winc", tc.WInc},
+			{"binc", tc.BInc},
+		}
+		for _, t := range times {
+			if t.dur != 0 {
+				goCmd = append(goCmd, t.key, formatTime(t.dur))
+			}
+		}
+	}
+	bestmove, err := p.client.sendCommand(strings.Join(goCmd, " "), "bestmove")
 	if err != nil {
-		panic(fmt.Sprintf("tei: server error: %s", err.Error()))
+		return tak.Move{}, fmt.Errorf("tei: server error: %w", err)
 	}
 	if len(bestmove) != 2 {
-		panic(fmt.Sprintf("bad bestmove: %v", bestmove))
+		return tak.Move{}, fmt.Errorf("bad bestmove: %v", bestmove)
 	}
 	mv, err := ptn.ParseMove(bestmove[1])
 	if err != nil {
-		panic(fmt.Sprintf("unable to parse move: %q", bestmove[1]))
+		return tak.Move{}, fmt.Errorf("tei: unparseable move: %q", bestmove[1])
+	}
+	return mv, nil
+}
+
+func (p *Player) GetMove(ctx context.Context, pos *tak.Position) tak.Move {
+	mv, err := p.TEIGetMove(ctx, pos, nil)
+	if err != nil {
+		panic(fmt.Sprintf("TEI: GetMove: %s", err.Error()))
 	}
 	return mv
 }

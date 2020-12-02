@@ -163,44 +163,37 @@ func (e *Engine) analyze(ctx context.Context, words []string) error {
 		e.mm = ai.NewMinimax(cfg)
 	}
 	words = words[1:]
-	var movetime, wtime, winc, btime, binc time.Duration
+	var movetime time.Duration
+	var tc TimeControl
+	timeArgs := map[string]*time.Duration{
+		"movetime": &movetime,
+		"wtime":    &tc.White,
+		"btime":    &tc.Black,
+		"winc":     &tc.WInc,
+		"binc":     &tc.BInc,
+	}
 	for len(words) > 0 {
 		opt := words[0]
 		if len(words) == 1 {
-			return fmt.Errorf("go: %s: expected arg", opt)
+			return fmt.Errorf("%s: expected arg", opt)
 		}
 		arg := words[1]
 		words = words[2:]
-		var err error
-		var ms uint64
-		switch opt {
-		case "movetime":
-			ms, err = strconv.ParseUint(arg, 10, 64)
-			movetime = time.Millisecond * time.Duration(ms)
-		case "wtime":
-			ms, err = strconv.ParseUint(arg, 10, 64)
-			wtime = time.Millisecond * time.Duration(ms)
-		case "btime":
-			ms, err = strconv.ParseUint(arg, 10, 64)
-			btime = time.Millisecond * time.Duration(ms)
-		case "winc":
-			ms, err = strconv.ParseUint(arg, 10, 64)
-			winc = time.Millisecond * time.Duration(ms)
-		case "binc":
-			ms, err = strconv.ParseUint(arg, 10, 64)
-			binc = time.Millisecond * time.Duration(ms)
-		default:
-			return fmt.Errorf("go: Unknown option: %s", opt)
-		}
-		if err != nil {
-			return fmt.Errorf("go: %s: cannot parse value: %q", opt, arg)
+		if dur, ok := timeArgs[opt]; ok {
+			if ms, err := strconv.ParseUint(arg, 10, 64); err == nil {
+				*dur = time.Millisecond * time.Duration(ms)
+			} else {
+				return fmt.Errorf("%s: cannot parse value: %q", opt, arg)
+			}
+		} else {
+			return fmt.Errorf("Unknown option: %s", opt)
 		}
 	}
 	var tm, inc time.Duration
 	if e.pos.ToMove() == tak.White {
-		tm, inc = wtime, winc
+		tm, inc = tc.White, tc.WInc
 	} else {
-		tm, inc = btime, binc
+		tm, inc = tc.Black, tc.BInc
 	}
 
 	if movetime > 0 || tm > 0 {
