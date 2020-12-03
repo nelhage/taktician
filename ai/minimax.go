@@ -379,10 +379,12 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 	}
 	var cancel int32
 	m.cancel = &cancel
-	go func() {
-		<-ctx.Done()
-		atomic.StoreInt32(&cancel, 1)
-	}()
+	if ctx.Done() != nil {
+		go func() {
+			<-ctx.Done()
+			atomic.StoreInt32(&cancel, 1)
+		}()
+	}
 
 	var seed = m.Cfg.Seed
 	if seed == 0 {
