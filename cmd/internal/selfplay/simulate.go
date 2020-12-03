@@ -231,10 +231,12 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 				m, err = black.TEIGetMove(ctx, p, tc)
 			}
 			duration := time.Since(before)
-			if p.ToMove() == tak.White {
-				tc.White = tc.White - duration
-			} else {
-				tc.Black = tc.White - duration
+			if tc != nil {
+				if p.ToMove() == tak.White {
+					tc.White = tc.White - duration
+				} else {
+					tc.Black = tc.White - duration
+				}
 			}
 
 			if err != nil {
