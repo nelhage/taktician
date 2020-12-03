@@ -63,7 +63,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.p2, "p2", "taktician tei", "player2 TIE driver")
 
 	flags.Int64Var(&c.seed, "seed", 0, "starting random seed")
-	flags.IntVar(&c.games, "games", 10, "number of games to play per opening/color")
+	flags.IntVar(&c.games, "games", 1, "number of games to play per opening/color")
 	flags.IntVar(&c.cutoff, "cutoff", 80, "cut games off after how many plies")
 	flags.BoolVar(&c.swap, "swap", true, "swap colors each game")
 	flags.StringVar(&c.prefix, "prefix", "", "ptn file to start games at the end of")
