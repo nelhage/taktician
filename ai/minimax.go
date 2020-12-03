@@ -391,12 +391,16 @@ func (m *MinimaxAI) Analyze(ctx context.Context, p *tak.Position) ([]tak.Move, i
 		seed = time.Now().Unix()
 	}
 	m.rand = rand.New(rand.NewSource(seed))
-	if m.Cfg.Debug > 0 {
-		log.Printf("start search ply=%d color=%s seed=%d",
-			p.MoveNumber(), p.ToMove(), seed)
-	}
 	deadline, limited := ctx.Deadline()
 	limited = limited || m.Cfg.MaxEvals > 0
+	if m.Cfg.Debug > 0 {
+		var limit time.Duration
+		if !deadline.IsZero() {
+			limit = deadline.Sub(time.Now())
+		}
+		log.Printf("start search ply=%d color=%s seed=%d limit=%s",
+			p.MoveNumber(), p.ToMove(), seed, limit)
+	}
 
 	var next []tak.Move
 	ms := make([]tak.Move, 0, maxDepth)
