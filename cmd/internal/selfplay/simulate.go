@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 	"github.com/nelhage/taktician/tei"
@@ -28,11 +27,13 @@ type Config struct {
 	Depth int
 	Debug int
 
-	Swap    bool
-	Threads int
-	Seed    int64
-	Cutoff  int
-	Limit   time.Duration
+	Swap        bool
+	Threads     int
+	Seed        int64
+	Cutoff      int
+	Limit       time.Duration
+	TimeControl time.Duration
+
 	Perturb float64
 }
 
@@ -192,7 +193,7 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 	defer c2.Close()
 
 	for g := range games {
-		var white, black ai.TakPlayer
+		var white, black *tei.Player
 
 		white, err = c1.NewGame(g.opening.Size())
 		if err != nil {
@@ -208,6 +209,13 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 
 		var ms []tak.Move
 		p := g.opening
+		var tc *tei.TimeControl
+		if c.TimeControl != 0 {
+			tc = &tei.TimeControl{
+				White: c.TimeControl,
+				Black: c.TimeControl,
+			}
+		}
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
 			var cancel context.CancelFunc
@@ -215,10 +223,22 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 			if g.c.Limit != 0 {
 				ctx, cancel = context.WithTimeout(ctx, g.c.Limit)
 			}
+			var err error
+			before := time.Now()
 			if p.ToMove() == tak.White {
-				m = white.GetMove(ctx, p)
+				m, err = white.TEIGetMove(ctx, p, tc)
 			} else {
-				m = black.GetMove(ctx, p)
+				m, err = black.TEIGetMove(ctx, p, tc)
+			}
+			duration := time.Since(before)
+			if p.ToMove() == tak.White {
+				tc.White = tc.White - duration
+			} else {
+				tc.Black = tc.White - duration
+			}
+
+			if err != nil {
+				log.Fatalf("Get move: %s", err.Error())
 			}
 			if cancel != nil {
 				cancel()

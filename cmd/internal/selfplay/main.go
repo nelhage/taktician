@@ -35,8 +35,9 @@ type Command struct {
 	prefix   string
 	openings string
 
-	debug int
-	limit time.Duration
+	debug       int
+	limit       time.Duration
+	timeControl time.Duration
 
 	threads int
 
@@ -69,6 +70,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.openings, "openings", "", "File of openings, 1/line in TPS")
 	flags.IntVar(&c.debug, "debug", 0, "debug level")
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
+	flags.DurationVar(&c.timeControl, "tc", 0, "Time control for each side")
 	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
 	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
 	flags.StringVar(&c.summary, "summary", "", "write summary JSON file")
@@ -149,19 +151,20 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	}
 
 	cfg := &Config{
-		Zero:    c.zero,
-		Size:    c.size,
-		Debug:   c.debug,
-		Swap:    c.swap,
-		Games:   c.games,
-		Threads: c.threads,
-		Seed:    c.seed,
-		Cutoff:  c.cutoff,
-		Limit:   c.limit,
-		Initial: openings,
-		Verbose: c.verbose,
-		P1:      strings.Split(c.p1, " "),
-		P2:      strings.Split(c.p2, " "),
+		Zero:        c.zero,
+		Size:        c.size,
+		Debug:       c.debug,
+		Swap:        c.swap,
+		Games:       c.games,
+		Threads:     c.threads,
+		Seed:        c.seed,
+		Cutoff:      c.cutoff,
+		Limit:       c.limit,
+		TimeControl: c.timeControl,
+		Initial:     openings,
+		Verbose:     c.verbose,
+		P1:          strings.Split(c.p1, " "),
+		P2:          strings.Split(c.p2, " "),
 	}
 
 	st := Simulate(cfg)
