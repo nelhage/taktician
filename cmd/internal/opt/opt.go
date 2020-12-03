@@ -21,6 +21,7 @@ type Minimax struct {
 	MultiCut     bool
 	Precise      bool
 	Weights      string
+	ModWeights   string
 	LogCuts      string
 	Symmetry     bool
 }
@@ -38,19 +39,27 @@ func (o *Minimax) AddFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&o.MultiCut, "multi-cut", false, "use multi-cut pruning")
 	flags.BoolVar(&o.Precise, "precise", false, "Limit to optimizations that provably preserve the game-theoretic value")
 	flags.StringVar(&o.Weights, "weights", "", "JSON-encoded evaluation weights")
+	flags.StringVar(&o.ModWeights, "mod-weights", "", "JSON-encoded evaluation weights applied on top of defaults")
 	flags.StringVar(&o.LogCuts, "log-cuts", "", "log all cuts")
 	flags.BoolVar(&o.Symmetry, "symmetry", false, "ignore symmetries")
 }
 
 func (o *Minimax) BuildConfig(size int) ai.MinimaxConfig {
 	var w ai.Weights
-	if o.Weights == "" {
+	var err error
+	if o.Weights == "" && o.ModWeights == "" {
 		w = ai.DefaultWeights[size]
-	} else {
-		e := json.Unmarshal([]byte(o.Weights), &w)
-		if e != nil {
-			log.Fatalf("parse weights: %v", e)
-		}
+	} else if o.Weights != "" && o.ModWeights != "" {
+		log.Fatalf("Can't combine -mod-weights and -weights")
+	} else if o.Weights != "" {
+		err = json.Unmarshal([]byte(o.Weights), &w)
+
+	} else if o.ModWeights != "" {
+		w = ai.DefaultWeights[size]
+		err = json.Unmarshal([]byte(o.ModWeights), &w)
+	}
+	if err != nil {
+		log.Fatalf("parse weights: %s", err.Error())
 	}
 	cfg := ai.MinimaxConfig{
 		Size:     size,
