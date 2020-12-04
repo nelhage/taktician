@@ -3,6 +3,7 @@ package tei
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -147,6 +148,9 @@ func (p *Player) TEIGetMove(ctx context.Context, pos *tak.Position, tc *TimeCont
 		}
 		for _, t := range times {
 			if t.dur != 0 {
+				if t.dur < time.Millisecond {
+					return tak.Move{}, errors.New("Timeout too short")
+				}
 				goCmd = append(goCmd, t.key, formatTime(t.dur))
 			}
 		}

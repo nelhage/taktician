@@ -44,6 +44,7 @@ type Stats struct {
 		BlackWins int
 		FlatWins  int
 		RoadWins  int
+		TimeWins  int
 	}
 	White, Black int
 	Ties         int
@@ -64,6 +65,7 @@ func (s *Stats) Merge(other *Stats) Stats {
 		out.Players[i].BlackWins += other.Players[i].BlackWins
 		out.Players[i].FlatWins += other.Players[i].FlatWins
 		out.Players[i].RoadWins += other.Players[i].RoadWins
+		out.Players[i].TimeWins += other.Players[i].TimeWins
 	}
 	out.White += other.White
 	out.Black += other.Black
@@ -86,6 +88,7 @@ type Result struct {
 	Initial  *tak.Position
 	Position *tak.Position
 	Moves    []tak.Move
+	Winner   tak.Color
 }
 
 func Simulate(c *Config) Stats {
@@ -93,45 +96,45 @@ func Simulate(c *Config) Stats {
 	rc := make(chan Result)
 	go startGames(c, rc)
 	for r := range rc {
-		d := r.Position.WinDetails()
 		if c.Verbose {
-			log.Printf("game n=%d/%d plies=%d p1=%s winner=%s wf=%d bf=%d ws=%d bs=%d",
+			log.Printf("game n=%d/%d plies=%d p1=%s winner=%s ws=%d bs=%d",
 				r.spec.oi, r.spec.i, r.Position.MoveNumber(),
 				r.spec.p1color,
-				d.Winner,
-				d.WhiteFlats,
-				d.BlackFlats,
+				r.Winner,
 				r.Position.WhiteStones(),
 				r.Position.BlackStones(),
 			)
 		}
-		if d.Over {
-			if d.Winner == tak.White {
-				st.White++
-			} else if d.Winner == tak.Black {
-				st.Black++
-			} else {
-				st.Ties++
-			}
+		if r.Winner == tak.White {
+			st.White++
+		} else if r.Winner == tak.Black {
+			st.Black++
+		} else if over, _ := r.Position.GameOver(); over {
+			st.Ties++
 		} else {
 			st.Cutoff++
 		}
-		if d.Over && d.Winner != tak.NoColor {
+		if r.Winner != tak.NoColor {
 			pst := &st.Players[0]
-			if d.Winner == r.spec.p1color.Flip() {
+			if r.Winner == r.spec.p1color.Flip() {
 				pst = &st.Players[1]
 			}
-			if d.Winner == tak.White {
+			if r.Winner == tak.White {
 				pst.WhiteWins += 1
-			} else if d.Winner == tak.Black {
+			} else if r.Winner == tak.Black {
 				pst.BlackWins += 1
 			}
 			pst.Wins++
-			switch d.Reason {
-			case tak.FlatsWin:
-				pst.FlatWins++
-			case tak.RoadWin:
-				pst.RoadWins++
+			d := r.Position.WinDetails()
+			if d.Over {
+				switch d.Reason {
+				case tak.FlatsWin:
+					pst.FlatWins++
+				case tak.RoadWin:
+					pst.RoadWins++
+				}
+			} else {
+				pst.TimeWins++
 			}
 		}
 		st.Games = append(st.Games, r)
@@ -216,6 +219,7 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 				Black: c.TimeControl,
 			}
 		}
+		var winner tak.Color
 		for i := 0; i < g.c.Cutoff; i++ {
 			var m tak.Move
 			var cancel context.CancelFunc
@@ -231,19 +235,25 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 				m, err = black.TEIGetMove(ctx, p, tc)
 			}
 			duration := time.Since(before)
+			if cancel != nil {
+				cancel()
+			}
 			if tc != nil {
+				var tm *time.Duration
 				if p.ToMove() == tak.White {
-					tc.White = tc.White - duration
+					tm = &tc.White
 				} else {
-					tc.Black = tc.White - duration
+					tm = &tc.Black
+				}
+				*tm = *tm - duration
+				if *tm <= time.Millisecond {
+					winner = p.ToMove().Flip()
+					break
 				}
 			}
 
 			if err != nil {
 				log.Fatalf("Get move: %s", err.Error())
-			}
-			if cancel != nil {
-				cancel()
 			}
 			var e error
 			p, e = p.Move(m)
@@ -251,7 +261,8 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 				panic(fmt.Sprintf("illegal move: %s", ptn.FormatMove(m)))
 			}
 			ms = append(ms, m)
-			if ok, _ := p.GameOver(); ok {
+			if ok, w := p.GameOver(); ok {
+				winner = w
 				break
 			}
 		}
@@ -260,6 +271,7 @@ func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
 			Initial:  g.opening,
 			Position: p,
 			Moves:    ms,
+			Winner:   winner,
 		}
 	}
 }

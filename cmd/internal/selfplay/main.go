@@ -192,9 +192,10 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 }
 
 func printSummary(st *Stats) {
-	log.Printf("p1.wins=%d (%d road/%d flat) p2.wins=%d (%d road/%d flat)",
-		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins,
-		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins)
+	log.Printf("p1.wins=%d (%d road/%d flat/%d time) p2.wins=%d (%d road/%d flat/%d time)",
+		st.Players[0].Wins, st.Players[0].RoadWins, st.Players[0].FlatWins, st.Players[0].TimeWins,
+		st.Players[1].Wins, st.Players[1].RoadWins, st.Players[1].FlatWins, st.Players[1].TimeWins,
+	)
 	tw := tabwriter.NewWriter(os.Stderr, 2, 4, 2, ' ', 0)
 
 	fmt.Fprintf(tw, "\twhite\tblack\tsum\n")
