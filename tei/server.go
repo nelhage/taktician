@@ -139,7 +139,7 @@ func parsePosition(size int, words []string) (*tak.Position, error) {
 func calcBudget(movetime time.Duration, gametime time.Duration, inc time.Duration) time.Duration {
 	var budget time.Duration
 	if gametime != 0 {
-		budget = gametime/10 + inc
+		budget = (gametime + inc) / 10
 	}
 	if movetime > 0 && (budget == 0 || movetime < budget) {
 		budget = movetime
