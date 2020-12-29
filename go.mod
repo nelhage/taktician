@@ -8,6 +8,7 @@ require (
 	github.com/google/subcommands v0.0.0-20181012225330-46f0354f6315
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/mattn/go-sqlite3 v1.10.0
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect

@@ -140,6 +140,9 @@ func calcBudget(movetime time.Duration, gametime time.Duration, inc time.Duratio
 	var budget time.Duration
 	if gametime != 0 {
 		budget = gametime/10 + inc
+		if budget > gametime-time.Millisecond {
+			budget = gametime - time.Millisecond
+		}
 	}
 	if movetime > 0 && (budget == 0 || movetime < budget) {
 		budget = movetime
