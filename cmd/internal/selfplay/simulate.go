@@ -27,12 +27,13 @@ type Config struct {
 	Depth int
 	Debug int
 
-	Swap        bool
-	Threads     int
-	Seed        int64
-	Cutoff      int
-	Limit       time.Duration
-	TimeControl time.Duration
+	Swap      bool
+	Threads   int
+	Seed      int64
+	Cutoff    int
+	Limit     time.Duration
+	GameTime  time.Duration
+	Increment time.Duration
 
 	Perturb float64
 }
@@ -219,10 +220,12 @@ func worker(c *Config, wid int, games <-chan gameSpec, out chan<- Result) {
 		var ms []tak.Move
 		p := g.opening
 		var tc *tei.TimeControl
-		if c.TimeControl != 0 {
+		if c.GameTime != 0 {
 			tc = &tei.TimeControl{
-				White: c.TimeControl,
-				Black: c.TimeControl,
+				White: c.GameTime,
+				Black: c.GameTime,
+				WInc:  c.Increment,
+				BInc:  c.Increment,
 			}
 		}
 		var winner tak.Color
@@ -246,16 +249,20 @@ func worker(c *Config, wid int, games <-chan gameSpec, out chan<- Result) {
 			}
 			if tc != nil {
 				var tm *time.Duration
+				var inc time.Duration
 				if p.ToMove() == tak.White {
 					tm = &tc.White
+					inc = tc.WInc
 				} else {
 					tm = &tc.Black
+					inc = tc.BInc
 				}
 				*tm = *tm - duration
 				if *tm <= time.Millisecond {
 					winner = p.ToMove().Flip()
 					break
 				}
+				*tm += inc
 			}
 
 			if err != nil {

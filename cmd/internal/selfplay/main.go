@@ -37,7 +37,9 @@ type Command struct {
 
 	debug       int
 	limit       time.Duration
-	timeControl time.Duration
+	timeControl string
+	gameTime    time.Duration
+	increment   time.Duration
 
 	threads int
 
@@ -70,7 +72,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.StringVar(&c.openings, "openings", "", "File of openings, 1/line in TPS")
 	flags.IntVar(&c.debug, "debug", 0, "debug level")
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
-	flags.DurationVar(&c.timeControl, "tc", 0, "Time control for each side")
+	flags.StringVar(&c.timeControl, "tc", "", "Time control for each side (TIME[+INC])")
 	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
 	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
 	flags.StringVar(&c.summary, "summary", "", "write summary JSON file")
@@ -99,7 +101,26 @@ func readOpenings(path string) ([]*tak.Position, error) {
 	return out, nil
 }
 
+func parseTimeControl(tc string) (time.Duration, time.Duration, error) {
+	var tm, inc time.Duration
+	var err error
+	idx := strings.Index(tc, "+")
+	if idx > 0 {
+		inc, err = time.ParseDuration(tc[idx+1:])
+		if err != nil {
+			return 0, 0, err
+		}
+		tc = tc[:idx]
+	}
+	tm, err = time.ParseDuration(tc)
+	if err != nil {
+		return 0, 0, err
+	}
+	return tm, inc, nil
+}
+
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 	if c.memProfile != "" {
 		defer func() {
 			f, e := os.OpenFile(c.memProfile,
@@ -110,6 +131,14 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			}
 			pprof.Lookup("heap").WriteTo(f, 0)
 		}()
+	}
+
+	if c.timeControl != "" {
+		var err error
+		c.gameTime, c.increment, err = parseTimeControl(c.timeControl)
+		if err != nil {
+			log.Fatalf("parsing time control %q: %s", c.timeControl, err.Error())
+		}
 	}
 
 	if c.merge {
@@ -151,20 +180,21 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	}
 
 	cfg := &Config{
-		Zero:        c.zero,
-		Size:        c.size,
-		Debug:       c.debug,
-		Swap:        c.swap,
-		Games:       c.games,
-		Threads:     c.threads,
-		Seed:        c.seed,
-		Cutoff:      c.cutoff,
-		Limit:       c.limit,
-		TimeControl: c.timeControl,
-		Initial:     openings,
-		Verbose:     c.verbose,
-		P1:          strings.Split(c.p1, " "),
-		P2:          strings.Split(c.p2, " "),
+		Zero:      c.zero,
+		Size:      c.size,
+		Debug:     c.debug,
+		Swap:      c.swap,
+		Games:     c.games,
+		Threads:   c.threads,
+		Seed:      c.seed,
+		Cutoff:    c.cutoff,
+		Limit:     c.limit,
+		GameTime:  c.gameTime,
+		Increment: c.increment,
+		Initial:   openings,
+		Verbose:   c.verbose,
+		P1:        strings.Split(c.p1, " "),
+		P2:        strings.Split(c.p2, " "),
 	}
 
 	st := Simulate(cfg)
@@ -243,11 +273,13 @@ func writeGame(d string, r *Result) {
 }
 
 type Summary struct {
-	Cmdline []string
-	Player1 string
-	Player2 string
-	Limit   time.Duration
-	Stats   *Stats
+	Cmdline   []string
+	Player1   string
+	Player2   string
+	Limit     time.Duration
+	GameTime  time.Duration
+	Increment time.Duration
+	Stats     *Stats
 }
 
 func mergeStats(st *Stats, path string) error {
@@ -271,11 +303,13 @@ func (c *Command) writeSummary(path string, stats *Stats) error {
 	}
 	defer f.Close()
 	summary := Summary{
-		Cmdline: os.Args,
-		Player1: c.p1,
-		Player2: c.p2,
-		Limit:   c.limit,
-		Stats:   stats,
+		Cmdline:   os.Args,
+		Player1:   c.p1,
+		Player2:   c.p2,
+		Limit:     c.limit,
+		GameTime:  c.gameTime,
+		Increment: c.increment,
+		Stats:     stats,
 	}
 
 	bs, err := json.MarshalIndent(&summary, "", "  ")
