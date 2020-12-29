@@ -142,7 +142,7 @@ func (p *Player) TEIGetMove(ctx context.Context, pos *tak.Position, tc *TimeCont
 			dur time.Duration
 		}{
 			{"wtime", tc.White},
-			{"btime", tc.White},
+			{"btime", tc.Black},
 			{"winc", tc.WInc},
 			{"binc", tc.BInc},
 		}
