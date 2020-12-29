@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,6 +17,8 @@ import (
 )
 
 type Client struct {
+	DebugPfx string
+
 	cmd *exec.Cmd
 
 	stdinPipe  io.WriteCloser
@@ -98,6 +101,9 @@ func (c *Client) Close() {
 }
 
 func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {
+	if c.DebugPfx != "" {
+		log.Printf("[%s]> %s", c.DebugPfx, cmd)
+	}
 	if _, err := fmt.Fprintln(c.write, cmd); err != nil {
 		return nil, err
 	}
@@ -109,6 +115,9 @@ func (c *Client) sendCommand(cmd string, expect string) ([]string, error) {
 		line, err := c.read.ReadString('\n')
 		if err != nil {
 			return nil, err
+		}
+		if c.DebugPfx != "" {
+			log.Printf("[%s]< %s", c.DebugPfx, line)
 		}
 		line = strings.TrimSpace(line)
 		words := strings.Fields(line)

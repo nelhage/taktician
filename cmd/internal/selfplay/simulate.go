@@ -148,10 +148,10 @@ func startGames(c *Config, rc chan<- Result) {
 	var wg sync.WaitGroup
 	wg.Add(c.Threads)
 	for i := 0; i < c.Threads; i++ {
-		go func() {
-			worker(c, gc, rc)
+		go func(i int) {
+			worker(c, i, gc, rc)
 			wg.Done()
-		}()
+		}(i)
 	}
 	r := rand.New(rand.NewSource(c.Seed))
 	for pi, pos := range c.Initial {
@@ -183,15 +183,21 @@ func startGames(c *Config, rc chan<- Result) {
 	close(rc)
 }
 
-func worker(c *Config, games <-chan gameSpec, out chan<- Result) {
+func worker(c *Config, wid int, games <-chan gameSpec, out chan<- Result) {
 	c1, err := tei.NewClient(c.P1)
 	if err != nil {
 		log.Fatalf("starting client[%v]: %v", c.P1, err)
+	}
+	if c.Debug > 1 {
+		c1.DebugPfx = fmt.Sprintf("p1-%d", wid)
 	}
 	defer c1.Close()
 	c2, err := tei.NewClient(c.P2)
 	if err != nil {
 		log.Fatalf("starting client[%v]: %v", c.P2, err)
+	}
+	if c.Debug > 1 {
+		c2.DebugPfx = fmt.Sprintf("p2-%d", wid)
 	}
 	defer c2.Close()
 
