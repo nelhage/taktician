@@ -2,6 +2,7 @@ package playtak
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -86,8 +87,8 @@ func (c *client) recvThread() {
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			close(c.recv)
 			c.err = err
+			close(c.recv)
 			c.conn.Close()
 			return
 		}
@@ -101,6 +102,10 @@ func (c *client) recvThread() {
 			for _, m := range c.lastSent() {
 				log.Printf(" - `%s`", m)
 			}
+			c.err = errors.New("server sent NOK")
+			close(c.recv)
+			c.conn.Close()
+			return
 		}
 		select {
 		case c.recv <- line:
