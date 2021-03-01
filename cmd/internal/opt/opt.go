@@ -27,7 +27,7 @@ type Minimax struct {
 }
 
 func (o *Minimax) AddFlags(flags *flag.FlagSet) {
-	flags.IntVar(&o.Debug, "debug", 1, "debug level")
+	flags.IntVar(&o.Debug, "debug", 0, "debug level")
 	flags.Int64Var(&o.Seed, "seed", 0, "specify a seed")
 	flags.IntVar(&o.Depth, "depth", 0, "minimax depth")
 	flags.Uint64Var(&o.MaxEvals, "max-evals", 0, "Limit the search by number of nodes evaluated")
