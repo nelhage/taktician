@@ -62,6 +62,36 @@ func TestParseMove(t *testing.T) {
 			"5d4-221",
 			"5d4-221",
 		},
+		{
+			"a1?",
+			tak.Move{X: 0, Y: 0, Type: tak.PlaceFlat},
+			"a1",
+			"Fa1",
+		},
+		{
+			"Ch7!",
+			tak.Move{X: 7, Y: 6, Type: tak.PlaceCapstone},
+			"Ch7",
+			"Ch7",
+		},
+		{
+			"b1>*'",
+			tak.Move{X: 1, Y: 0, Type: tak.SlideRight, Slides: tak.MkSlides(1)},
+			"b1>",
+			"1b1>1",
+		},
+		{
+			"2a2<*",
+			tak.Move{X: 0, Y: 1, Type: tak.SlideLeft, Slides: tak.MkSlides(2)},
+			"2a2<",
+			"2a2<2",
+		},
+		{
+			"3a1+111''!",
+			tak.Move{X: 0, Y: 0, Type: tak.SlideUp, Slides: tak.MkSlides(1, 1, 1)},
+			"3a1+111",
+			"3a1+111",
+		},
 	}
 	for _, tc := range cases {
 		get, err := ParseMove(tc.in)

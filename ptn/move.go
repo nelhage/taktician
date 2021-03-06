@@ -2,9 +2,9 @@ package ptn
 
 import (
 	"errors"
-	"regexp"
-
 	"github.com/nelhage/taktician/tak"
+	"regexp"
+	"strings"
 )
 
 var moveRE = regexp.MustCompile(
@@ -56,7 +56,7 @@ func ParseMove(move string) (tak.Move, error) {
 	} else {
 		return tak.Move{}, errors.New("illegal move")
 	}
-	if i == len(move) {
+	if i == len(move) || strings.ContainsRune("!?*'", rune(move[i])) {
 		if stack != 0 {
 			return tak.Move{}, errors.New("illegal move")
 		}
@@ -82,9 +82,15 @@ func ParseMove(move string) (tak.Move, error) {
 	var slides []int
 	for ; i != len(move); i++ {
 		d := move[i]
-		slides = append(slides, int(d-'0'))
-		j++
-		stack -= int(d - '0')
+		if d >= '1' && d <= '8' {
+			slides = append(slides, int(d-'0'))
+			j++
+			stack -= int(d - '0')
+		} else if strings.ContainsRune("!?*'", rune(d)) {
+			break
+		} else {
+			return tak.Move{}, errors.New("malformed move: bad count " + string(d))
+		}
 	}
 	if stack > 0 {
 		slides = append(slides, stack)
