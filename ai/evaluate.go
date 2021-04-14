@@ -74,13 +74,13 @@ var defaultWeights = Weights{
 	HardTopCap:  100,
 	CapMobility: 10,
 
-	FlatCaptives_Hard: 200,
+	FlatCaptives_Hard: 300,
 	FlatCaptives_Soft: -200,
 
 	StandingCaptives_Hard: 300,
 	StandingCaptives_Soft: -100,
 
-	CapstoneCaptives_Hard: 250,
+	CapstoneCaptives_Hard: 350,
 	CapstoneCaptives_Soft: -100,
 
 	Groups_3: 100,
