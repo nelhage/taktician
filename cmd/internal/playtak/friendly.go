@@ -207,10 +207,12 @@ func (f *Friendly) handleCommand(who, cmd, arg string) string {
 		}
 		if sz >= 3 && sz <= 8 {
 			f.cmd.size = sz
-			f.client.SendCommand("Seek",
-				strconv.Itoa(f.cmd.size),
-				strconv.Itoa(int(f.cmd.gameTime.Seconds())),
-				strconv.Itoa(int(f.cmd.increment.Seconds())))
+			if f.g == nil {
+				f.client.SendCommand("Seek",
+					strconv.Itoa(f.cmd.size),
+					strconv.Itoa(int(f.cmd.gameTime.Seconds())),
+					strconv.Itoa(int(f.cmd.increment.Seconds())))
+			}
 		}
 	case "help":
 		return fmt.Sprintf("[%s@level %d]: %s",

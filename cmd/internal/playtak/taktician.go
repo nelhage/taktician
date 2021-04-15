@@ -63,6 +63,7 @@ func (t *Taktician) timeBound(remaining time.Duration) time.Duration {
 
 func (t *Taktician) GameOver() {
 	t.ai = nil
+	t.g = nil
 }
 
 func (t *Taktician) handleCommand(cmd, arg string) {
@@ -75,10 +76,12 @@ func (t *Taktician) handleCommand(cmd, arg string) {
 		}
 		if sz >= 4 && sz <= 6 {
 			t.cmd.size = sz
-			t.client.SendCommand("Seek",
-				strconv.Itoa(t.cmd.size),
-				strconv.Itoa(int(t.cmd.gameTime.Seconds())),
-				strconv.Itoa(int(t.cmd.increment.Seconds())))
+			if t.g == nil {
+				t.client.SendCommand("Seek",
+					strconv.Itoa(t.cmd.size),
+					strconv.Itoa(int(t.cmd.gameTime.Seconds())),
+					strconv.Itoa(int(t.cmd.increment.Seconds())))
+			}
 		}
 	}
 }
