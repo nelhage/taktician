@@ -15,7 +15,7 @@ def main():
   )
   ds = xformer.data.PileDataset('data/pile/train/00.jsonl.zst', n_ctx=cfg.n_ctx)
   loader = torch.utils.data.DataLoader(ds, batch_size=MINIBATCH_SIZE, collate_fn=xformer.data.collate_fn)
-  model = xformer.Transformer(cfg, dtype=torch.float16, device='cuda')
+  model = xformer.Transformer(cfg, dtype=torch.float32, device='cuda')
 
   xent = torch.nn.CrossEntropyLoss(reduction='mean')
   opt = torch.optim.Adam(model.parameters())
