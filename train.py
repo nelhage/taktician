@@ -1,15 +1,16 @@
 import xformer
 import xformer.data
 import torch
+import time
 import itertools
 
-BATCH_SIZE = 1024
-MINIBATCH_SIZE = 1
+BATCH_SIZE = 512
+MINIBATCH_SIZE = 4
 
 def main():
   cfg = xformer.Config(
-    n_layer = 2,
-    d_model = 2 * 128,
+    n_layer = 4,
+    d_model = 4 * 128,
     d_head = 32,
     n_vocab = 256,
   )
@@ -24,6 +25,8 @@ def main():
 
   data = iter(loader)
 
+  start = time.time()
+
   for step_i in itertools.count():
     avg_loss = 0.0
     for _ in range(steps_per_batch):
@@ -36,7 +39,8 @@ def main():
       opt.zero_grad()
       loss.backward()
       opt.step()
-    print(f"[{step_i:06d}] loss={avg_loss/steps_per_batch:2.2f}")
+    now = time.time()
+    print(f"[step={step_i:06d} t={now-start:6.1f}s tokens={(step_i+1)*BATCH_SIZE*cfg.n_ctx:08d}] loss={avg_loss/steps_per_batch:2.2f}")
 
 if __name__ == '__main__':
   main()
