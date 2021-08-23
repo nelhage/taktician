@@ -50,7 +50,7 @@ class Resblock(nn.Module):
 
   @lru_cache
   def ar_mask(self, n_ctx, dtype, device):
-    return torch.tril(torch.ones((n_ctx, n_ctx), dtype=torch.bool, device=device))
+    return torch.triu(torch.ones((n_ctx, n_ctx), dtype=torch.bool, device=device), diagonal=1)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model: int, max_n_ctx: int = 2048, device=None, dtype=None):

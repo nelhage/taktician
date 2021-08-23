@@ -15,3 +15,4 @@ def test_xformer():
   logits = model(tokens)
 
   assert logits.shape == (4, 1024, cfg.n_vocab)
+  assert logits.isnan().sum() == 0, "No NaNs"
