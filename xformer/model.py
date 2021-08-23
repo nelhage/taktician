@@ -57,7 +57,7 @@ class PositionalEncoding(nn.Module):
         super().__init__()
 
         position = torch.arange(max_n_ctx, device=device, dtype=dtype).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(torch.arange(0, d_model, 2, device=device, dtype=dtype) * (-math.log(10000.0) / d_model))
         pe = torch.zeros((max_n_ctx, d_model), dtype=dtype, device=device)
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -74,7 +74,7 @@ class PositionalEncoding(nn.Module):
 class Transformer(nn.Module):
   def __init__(self, cfg, dtype=None, device=None):
     super().__init__()
-    self.embedding = nn.Embedding(cfg.n_vocab, cfg.d_model)
+    self.embedding = nn.Embedding(cfg.n_vocab, cfg.d_model, dtype=dtype, device=device)
     self.positional_encoding = PositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
     self.layers = nn.ModuleList([
       Resblock(cfg, dtype=dtype, device=device)
