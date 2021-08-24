@@ -19,6 +19,7 @@ def main():
   parser.add_argument('--device', type=str, choices=('cpu', 'cuda'), default='cuda', help="device")
   parser.add_argument('--wandb', action='store_true', default=False)
   parser.add_argument('--no-wandb', action='store_false', dest='wandb')
+  parser.add_argument('--steps', type=int, default=None)
 
   args = parser.parse_args()
 
@@ -49,7 +50,9 @@ def main():
   start = time.time()
   tokens = 0
 
-  for step_i in itertools.count():
+  steps = range(args.steps) if args.steps is not None else itertools.count()
+
+  for step_i in steps:
     avg_loss = 0.0
     opt.zero_grad()
     for _ in range(steps_per_batch):
