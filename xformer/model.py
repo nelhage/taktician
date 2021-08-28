@@ -42,12 +42,13 @@ class Resblock(nn.Module):
     self.mlp_down = nn.Linear(cfg.d_mlp, cfg.d_model, dtype=dtype, device=device)
 
   def init_weights(self, cfg: Config):
+    std = cfg.initializer_range / math.sqrt(cfg.n_layer)
     self.attn_ln.reset_parameters()
-    self.attn.in_proj_weight.data.normal_(mean=0, std=cfg.initializer_range)
-    self.attn.out_proj.weight.data.normal_(mean=0, std=cfg.initializer_range)
+    self.attn.in_proj_weight.data.normal_(mean=0, std=std)
+    self.attn.out_proj.weight.data.normal_(mean=0, std=std)
     self.mlp_ln.reset_parameters()
-    self.mlp_up.weight.data.normal_(mean=0, std=cfg.initializer_range)
-    self.mlp_down.weight.data.normal_(mean=0, std=cfg.initializer_range)
+    self.mlp_up.weight.data.normal_(mean=0, std=std)
+    self.mlp_down.weight.data.normal_(mean=0, std=std)
 
   def forward(self, resid):
     n_batch, n_ctx, d_model = resid.shape
