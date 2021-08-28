@@ -2,7 +2,6 @@
 import torch
 from torch import nn
 
-
 import math
 
 from dataclasses import dataclass
@@ -86,12 +85,28 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(1)]
         return x
 
+class LearnedPositionalEncoding(nn.Module):
+    def __init__(self, d_model: int, max_n_ctx: int = 2048, device=None, dtype=None):
+        super().__init__()
+
+        self.pe = nn.Parameter(torch.empty((max_n_ctx, d_model), dtype=dtype, device=device))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: Tensor, shape [batch_size, n_ctx, d_model]
+        """
+        x = x + self.pe[:x.size(1)]
+        return x
+
+
 class Transformer(nn.Module):
   def __init__(self, cfg, dtype=None, device=None):
     super().__init__()
     self.cfg = cfg
     self.embedding = nn.Embedding(cfg.n_vocab, cfg.d_model, dtype=dtype, device=device)
-    self.positional_encoding = PositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
+    # self.positional_encoding = PositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
+    self.positional_encoding = LearnedPositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
     self.layers = nn.ModuleList([
       Resblock(cfg, dtype=dtype, device=device)
       for _ in range(cfg.n_layer)])
@@ -104,6 +119,9 @@ class Transformer(nn.Module):
     self.unembedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range)
     for layer in self.layers:
       layer.init_weights(self.cfg)
+
+    if isinstance(self.positional_encoding, LearnedPositionalEncoding):
+      self.positional_encoding.pe.data.normal_(mean=0.0, std=self.cfg.initializer_range)
 
 
   def forward(self, tokens):
