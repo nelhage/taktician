@@ -19,7 +19,9 @@ def main():
   parser.add_argument('--device', type=str, choices=('cpu', 'cuda'), default='cuda', help="device")
   parser.add_argument('--wandb', action='store_true', default=False)
   parser.add_argument('--no-wandb', action='store_false', dest='wandb')
+  parser.add_argument('--lr', type=float, default=0.001, help="learning rate")
   parser.add_argument('--steps', type=int, default=None)
+  parser.add_argument('--tokens', type=int, default=None)
 
   args = parser.parse_args()
 
@@ -36,16 +38,20 @@ def main():
   model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
   xent = torch.nn.CrossEntropyLoss(reduction='mean')
-  opt = torch.optim.Adam(model.parameters())
+  opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
+  assert args.batch % args.minibatch == 0, "minibatch must divide batch"
   steps_per_batch = args.batch // args.minibatch
 
   data = iter(loader)
 
   if args.wandb:
     run = wandb.init()
-    wandb.watch(model, log_freq=10, log='all')
+    wandb.watch(model, log_freq=100, log='gradients')
     wandb.config.update(args)
+    wandb.config.update({"n_parameters": cfg.n_parameters})
+
+  print(f"Training a {cfg.n_layer}L model with {cfg.n_parameters:,} non-embedding parameters...")
 
   start = time.time()
   tokens = 0
@@ -63,16 +69,19 @@ def main():
       loss = xent(logits.permute(0, 2, 1), targets)
       avg_loss += loss.item()
       tokens += batch.numel()
-      loss.backward()
+      (loss / steps_per_batch).backward()
     opt.step()
     now = time.time()
-    print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss/steps_per_batch:2.2f}")
+    avg_loss = avg_loss/steps_per_batch
+    print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f}")
     if args.wandb:
       wandb.log({
         'tokens': tokens,
         'elapsed_time': now-start,
         'train_loss': avg_loss,
       }, step=step_i)
+    if tokens >= args.tokens:
+      break
 
 if __name__ == '__main__':
   main()

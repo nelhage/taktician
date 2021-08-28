@@ -24,6 +24,10 @@ class Config:
     assert self.d_model % self.d_head == 0
     return self.d_model // self.d_head
 
+  @cached_property
+  def n_parameters(self):
+    return self.n_layer * (2*self.d_mlp*self.d_model + 4*self.d_model**2)
+
 class Resblock(nn.Module):
   def __init__(self, cfg: Config, dtype=None, device=None):
     super().__init__()
