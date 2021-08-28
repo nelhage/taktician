@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 
+
 import math
 
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ class Config:
   d_model: int
   d_head: int
   n_ctx: int = 1024
+  initializer_range: float = 0.02
 
   @cached_property
   def d_mlp(self):
@@ -38,6 +40,14 @@ class Resblock(nn.Module):
     self.mlp_up = nn.Linear(cfg.d_model, cfg.d_mlp, dtype=dtype, device=device)
     self.mlp_act = nn.ReLU()
     self.mlp_down = nn.Linear(cfg.d_mlp, cfg.d_model, dtype=dtype, device=device)
+
+  def init_weights(self, cfg: Config):
+    self.attn_ln.reset_parameters()
+    self.attn.in_proj_weight.data.normal_(mean=0, std=cfg.initializer_range)
+    self.attn.out_proj.weight.data.normal_(mean=0, std=cfg.initializer_range)
+    self.mlp_ln.reset_parameters()
+    self.mlp_up.weight.data.normal_(mean=0, std=cfg.initializer_range)
+    self.mlp_down.weight.data.normal_(mean=0, std=cfg.initializer_range)
 
   def forward(self, resid):
     n_batch, n_ctx, d_model = resid.shape
@@ -78,6 +88,7 @@ class PositionalEncoding(nn.Module):
 class Transformer(nn.Module):
   def __init__(self, cfg, dtype=None, device=None):
     super().__init__()
+    self.cfg = cfg
     self.embedding = nn.Embedding(cfg.n_vocab, cfg.d_model, dtype=dtype, device=device)
     self.positional_encoding = PositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
     self.layers = nn.ModuleList([
@@ -85,6 +96,14 @@ class Transformer(nn.Module):
       for _ in range(cfg.n_layer)])
     self.final_ln = nn.LayerNorm(cfg.d_model, dtype=dtype, device=device)
     self.unembedding = nn.Linear(cfg.d_model, cfg.n_vocab, dtype=dtype, device=device)
+
+  def init_weights(self):
+    self.embedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range)
+    self.final_ln.reset_parameters()
+    self.unembedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range)
+    for layer in self.layers:
+      layer.init_weights(self.cfg)
+
 
   def forward(self, tokens):
     resid = self.embedding(tokens)

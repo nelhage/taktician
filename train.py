@@ -58,6 +58,8 @@ def main():
 
   steps = range(args.steps) if args.steps is not None else itertools.count()
 
+  model.init_weights()
+
   for step_i in steps:
     avg_loss = 0.0
     opt.zero_grad()
@@ -80,7 +82,7 @@ def main():
         'elapsed_time': now-start,
         'train_loss': avg_loss,
       }, step=step_i)
-    if tokens >= args.tokens:
+    if args.tokens is not None and tokens >= args.tokens:
       break
 
 if __name__ == '__main__':
