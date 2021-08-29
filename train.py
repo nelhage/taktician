@@ -54,18 +54,22 @@ def main():
     wandb.config.update(args)
     wandb.config.update({"n_parameters": cfg.n_parameters})
 
+  model.init_weights()
+  param_bytes = 0
+  for p in model.parameters():
+    param_bytes += p.numel() * p.element_size()
+
   print(f"Training a {cfg.n_layer}L model with {cfg.n_parameters:,} non-embedding parameters...")
+  print(f" Model params use {param_bytes/1024**3:.2f}GiB on device")
 
   start = time.time()
   tokens = 0
 
   steps = range(args.steps) if args.steps is not None else itertools.count()
 
-  model.init_weights()
-
   for step_i in steps:
     avg_loss = 0.0
-    opt.zero_grad()
+    opt.zero_grad(set_to_none=True)
     for _ in range(steps_per_batch):
       batch = next(data)
       batch = batch.to(args.device)
