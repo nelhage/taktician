@@ -119,7 +119,7 @@ class Transformer(nn.Module):
     self.unembedding = nn.Linear(cfg.d_model, cfg.n_vocab, dtype=dtype, device=device)
 
   def init_weights(self):
-    self.embedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range)
+    self.embedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range * math.sqrt(self.cfg.d_model))
     self.final_ln.reset_parameters()
     self.unembedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range)
     for layer in self.layers:
