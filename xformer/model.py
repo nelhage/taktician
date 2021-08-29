@@ -15,6 +15,7 @@ class Config:
   d_head: int
   n_ctx: int = 1024
   initializer_range: float = 0.02
+  positional_encoding: str = 'sin'
 
   @cached_property
   def d_mlp(self):
@@ -105,8 +106,12 @@ class Transformer(nn.Module):
     super().__init__()
     self.cfg = cfg
     self.embedding = nn.Embedding(cfg.n_vocab, cfg.d_model, dtype=dtype, device=device)
-    # self.positional_encoding = PositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
-    self.positional_encoding = LearnedPositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
+    if cfg.positional_encoding == 'sin':
+      self.positional_encoding = PositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
+    elif cfg.positional_encoding == 'learned':
+      self.positional_encoding = LearnedPositionalEncoding(d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device)
+    else:
+      raise ValueError(f"Unknown positional encoding type: {cfg.positional_encoding!r}")
     self.layers = nn.ModuleList([
       Resblock(cfg, dtype=dtype, device=device)
       for _ in range(cfg.n_layer)])

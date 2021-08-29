@@ -20,6 +20,7 @@ def main():
   parser.add_argument('--wandb', action='store_true', default=False)
   parser.add_argument('--no-wandb', action='store_false', dest='wandb')
   parser.add_argument('--lr', type=float, default=0.001, help="learning rate")
+  parser.add_argument('--pe', type=str, default=None, help="positional encoding (sin, learned)")
   parser.add_argument('--steps', type=int, default=None)
   parser.add_argument('--tokens', type=int, default=None)
 
@@ -32,6 +33,8 @@ def main():
     n_ctx = args.n_ctx,
     n_vocab = 256,
   )
+  if args.pe is not None:
+    cfg.positional_encoding = args.pe
 
   ds = xformer.data.PileDataset(args.data, n_ctx=cfg.n_ctx)
   loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch, collate_fn=xformer.data.collate_fn)
