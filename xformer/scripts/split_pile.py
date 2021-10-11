@@ -1,29 +1,40 @@
 import xformer.data
+from xformer.data import record_file
 import argparse
 import zstandard as zstd
-import json
+import pickle
 import torch
+import os
 import io
 import glob
 import re
 import random
+import multiprocessing
 import contextlib
 
 class ChunkWriter:
   def __init__(self, output_files):
     self.handles = [
-      open(fh, 'w') for fh in output_files
+      record_file.Writer(open(fh, 'wb')) for fh in output_files
     ]
 
   def write(self, obj):
     handle = random.choice(self.handles)
-    json.dump(obj, handle)
-    handle.write("\n")
+    handle.write(pickle.dumps(obj))
 
   def close(self):
     for fh in self.handles:
       fh.close()
 
+
+def postprocess_chunk(infile, outfile):
+  with record_file.Reader(open(infile, 'rb')) as read:
+    records = [pickle.loads(data) for data in read]
+  random.shuffle(records)
+  for r in records:
+    r['text'] = torch.tensor(bytearray(r['text']), dtype=torch.uint8)
+  torch.save(records, outfile)
+  os.unlink(infile)
 
 def main():
   parser = argparse.ArgumentParser(description="Split a pile dataset into chunks")
@@ -59,25 +70,33 @@ def main():
   bytes_read = 0
   read_buffer = b''
 
-  writer = ChunkWriter([
-    args.output + f"{i:04d}.jsonl" for i in range(args.n_chunks)
-  ])
+  temp_files = [
+    args.output + f"{i:04d}.tmp" for i in range(args.n_chunks)
+  ]
+  out_files = [
+    args.output + f"{i:04d}.pt" for i in range(args.n_chunks)
+  ]
 
-  for file in files:
-    for record in xformer.data.pile_iterator(file):
-      if not want(record['meta']['pile_set_name']):
-        continue
-      data = read_buffer + record['text'].encode('utf-8')
-      for i in range(0, len(data) - args.n_ctx + 1, args.n_ctx):
-        writer.write({'text': data[i:i+args.n_ctx].decode('utf-8', errors='ignore')})
-        bytes_read += args.n_ctx
+  writer = ChunkWriter(temp_files)
+
+  with contextlib.closing(writer):
+    for file in files:
+      for record in xformer.data.pile_iterator(file):
+        if not want(record['meta']['pile_set_name']):
+          continue
+        data = read_buffer + record['text'].encode('utf-8')
+        for i in range(0, len(data) - args.n_ctx + 1, args.n_ctx):
+          assert len(data) >= i + args.n_ctx
+          writer.write({'text': data[i:i+args.n_ctx]})
+          bytes_read += args.n_ctx
+          if bytes_read > args.read_bytes:
+            break
+        read_buffer = data[i:]
         if bytes_read > args.read_bytes:
           break
-      read_buffer = data[i:]
-      if bytes_read > args.read_bytes:
-        break
 
-  writer.close()
+  pool = multiprocessing.Pool()
+  pool.starmap(postprocess_chunk, zip(temp_files, out_files))
 
 if __name__ == '__main__':
   main()

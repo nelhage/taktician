@@ -3,3 +3,4 @@
 torch==1.9.1+cu111
 zstandard
 numpy
+pytest
