@@ -4,6 +4,7 @@ import torch
 import time
 import itertools
 import argparse
+import glob
 import wandb
 from contextlib import nullcontext
 
@@ -16,7 +17,7 @@ def main():
   parser.add_argument('--d_model', type=int, default=None, help="embedding dimension")
   parser.add_argument('--d_head', type=int, default=32, help="head dimension")
   parser.add_argument('--n_ctx', type=int, default=1024, help="maximum context length")
-  parser.add_argument('--data', type=str, default='data/pile/train/00.jsonl.zst', help="datasource")
+  parser.add_argument('--data', type=str, default='data/pile/chunked/train-*.pt', help="datasource")
   parser.add_argument('--batch', type=int, default=64, help="batch size")
   parser.add_argument('--minibatch', type=int, default=4, help="minibatch")
   parser.add_argument('--device', type=str, choices=('cpu', 'cuda'), default='cuda', help="device")
@@ -44,8 +45,9 @@ def main():
   if args.pe is not None:
     cfg.positional_encoding = args.pe
 
-  ds = xformer.data.PileDataset(args.data, n_ctx=cfg.n_ctx)
-  loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch, collate_fn=xformer.data.PileDataset.collate)
+  files = sorted(glob.glob(args.data))
+  ds = xformer.data.PTDataset(files)
+  loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch)
   model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
   xent = torch.nn.CrossEntropyLoss(reduction='mean')
@@ -85,8 +87,8 @@ def main():
       avg_loss = 0.0
       opt.zero_grad(set_to_none=True)
       for _ in range(steps_per_batch):
-        batch = next(data)
-        batch = batch.to(args.device)
+        batch = next(data)['text']
+        batch = batch.to(device=args.device, dtype=torch.long)
         logits = model(batch[:, :-1])
         targets = batch[:, 1:]
         loss = xent(logits.permute(0, 2, 1), targets)
