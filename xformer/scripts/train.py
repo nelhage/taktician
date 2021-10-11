@@ -47,7 +47,7 @@ def main():
 
   files = sorted(glob.glob(args.data))
   ds = xformer.data.PTDataset(files)
-  loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch)
+  loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch, pin_memory=True, num_workers=1)
   model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
   xent = torch.nn.CrossEntropyLoss(reduction='mean')
@@ -78,17 +78,18 @@ def main():
   steps = range(args.steps) if args.steps is not None else itertools.count()
 
   for step_i in steps:
+    step_start = time.time()
     if step_i in profile_steps:
       print(f"Profiling step {step_i}...")
       ctx = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA])
     else:
       ctx = nullcontext()
     with ctx as prof:
-      avg_loss = 0.0
+      avg_loss = torch.zeros((), device=args.device)
       opt.zero_grad(set_to_none=True)
       for _ in range(steps_per_batch):
         batch = next(data)['text']
-        batch = batch.to(device=args.device, dtype=torch.long)
+        batch = batch.to(device=args.device)
         logits = model(batch[:, :-1])
         targets = batch[:, 1:]
         loss = xent(logits.permute(0, 2, 1), targets)
@@ -100,8 +101,8 @@ def main():
       prof.export_chrome_trace(f"step_{step_i}_prof.json")
 
     now = time.time()
-    avg_loss = avg_loss/steps_per_batch
-    print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f}")
+    avg_loss = (avg_loss/steps_per_batch).item()
+    print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f} ms_per_step={1000*(now-step_start):.0f}")
     if args.wandb:
       wandb.log({
         'tokens': tokens,
