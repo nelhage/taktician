@@ -5,6 +5,9 @@ import time
 import itertools
 import argparse
 import wandb
+from contextlib import nullcontext
+
+from torch.profiler import profile, ProfilerActivity
 
 
 def main():
@@ -22,9 +25,14 @@ def main():
   parser.add_argument('--lr', type=float, default=0.001, help="learning rate")
   parser.add_argument('--pe', type=str, default=None, help="positional encoding (sin, learned)")
   parser.add_argument('--steps', type=int, default=None)
+  parser.add_argument('--profile-steps', type=str, default=None)
   parser.add_argument('--tokens', type=int, default=None)
 
   args = parser.parse_args()
+
+  profile_steps = set()
+  if args.profile_steps is not None:
+    profile_steps = set(int(s) for s in args.profile_steps.split(','))
 
   cfg = xformer.Config(
     n_layer = args.layers,
@@ -68,18 +76,28 @@ def main():
   steps = range(args.steps) if args.steps is not None else itertools.count()
 
   for step_i in steps:
-    avg_loss = 0.0
-    opt.zero_grad(set_to_none=True)
-    for _ in range(steps_per_batch):
-      batch = next(data)
-      batch = batch.to(args.device)
-      logits = model(batch[:, :-1])
-      targets = batch[:, 1:]
-      loss = xent(logits.permute(0, 2, 1), targets)
-      avg_loss += loss.item()
-      tokens += batch.numel()
-      (loss / steps_per_batch).backward()
-    opt.step()
+    if step_i in profile_steps:
+      print(f"Profiling step {step_i}...")
+      ctx = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True)
+    else:
+      ctx = nullcontext()
+    with ctx as prof:
+      avg_loss = 0.0
+      opt.zero_grad(set_to_none=True)
+      for _ in range(steps_per_batch):
+        batch = next(data)
+        batch = batch.to(args.device)
+        logits = model(batch[:, :-1])
+        targets = batch[:, 1:]
+        loss = xent(logits.permute(0, 2, 1), targets)
+        avg_loss += loss.item()
+        tokens += batch.numel()
+        (loss / steps_per_batch).backward()
+      opt.step()
+    if prof is not None:
+      prof.export_chrome_trace(f"step_{step_i}_prof.json")
+      print(f"# Step {step_i} memory summary:")
+      print(prof.key_averages().table(sort_by="self_cuda_memory_usage", row_limit=20))
     now = time.time()
     avg_loss = avg_loss/steps_per_batch
     print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f}")
