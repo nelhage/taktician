@@ -7,5 +7,5 @@ setup(
     description='A toy transformer model',
     author='Nelson Elhage',
     author_email='nelhage@nelhage.com',
-    packages=find_packages(exclude=('tests',))
+    packages=find_packages(exclude=('test',))
 )
