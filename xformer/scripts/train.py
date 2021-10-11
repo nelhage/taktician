@@ -93,7 +93,7 @@ def main():
         logits = model(batch[:, :-1])
         targets = batch[:, 1:]
         loss = xent(logits.permute(0, 2, 1), targets)
-        avg_loss += loss.item()
+        avg_loss += loss
         tokens += batch.numel()
         (loss / steps_per_batch).backward()
       opt.step()
