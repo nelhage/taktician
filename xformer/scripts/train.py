@@ -80,7 +80,7 @@ def main():
   for step_i in steps:
     if step_i in profile_steps:
       print(f"Profiling step {step_i}...")
-      ctx = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True)
+      ctx = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA])
     else:
       ctx = nullcontext()
     with ctx as prof:
@@ -98,8 +98,7 @@ def main():
       opt.step()
     if prof is not None:
       prof.export_chrome_trace(f"step_{step_i}_prof.json")
-      print(f"# Step {step_i} memory summary:")
-      print(prof.key_averages().table(sort_by="self_cuda_memory_usage", row_limit=20))
+
     now = time.time()
     avg_loss = avg_loss/steps_per_batch
     print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f}")
