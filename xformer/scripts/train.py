@@ -1,5 +1,7 @@
 import xformer
 import xformer.data
+
+import os
 import torch
 import time
 import itertools
@@ -8,7 +10,7 @@ import glob
 import wandb
 from contextlib import nullcontext
 
-from torch.profiler import profile, ProfilerActivity
+from torch.profiler import profile, ProfilerAction
 
 
 def main():
@@ -30,10 +32,6 @@ def main():
   parser.add_argument('--tokens', type=int, default=None)
 
   args = parser.parse_args()
-
-  profile_steps = set()
-  if args.profile_steps is not None:
-    profile_steps = set(int(s) for s in args.profile_steps.split(','))
 
   cfg = xformer.Config(
     n_layer = args.layers,
@@ -77,14 +75,29 @@ def main():
 
   steps = range(args.steps) if args.steps is not None else itertools.count()
 
-  for step_i in steps:
-    step_start = time.time()
-    if step_i in profile_steps:
-      print(f"Profiling step {step_i}...")
-      ctx = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA])
-    else:
-      ctx = nullcontext()
-    with ctx as prof:
+  profile_steps = set()
+  if args.profile_steps is not None:
+    profile_steps = set(int(s) for s in args.profile_steps.split(','))
+  def schedule(step):
+    if step in profile_steps:
+      print(f"Profiling step {step}...")
+      return ProfilerAction.RECORD_AND_SAVE
+    if step+1 in profile_steps:
+      return ProfilerAction.WARMUP
+    return ProfilerAction.NONE
+
+  def save_profile(prof):
+    os.makedirs('profile', 0o755, True)
+    prof.export_chrome_trace(f"profile/step_{step_i}.pt.trace.json")
+
+  profiler = profile(schedule=schedule,
+                     with_stack=True,
+                     on_trace_ready=save_profile)
+
+  with profiler:
+    for step_i in steps:
+      step_start = time.time()
+
       avg_loss = torch.zeros((), device=args.device)
       opt.zero_grad(set_to_none=True)
       for _ in range(steps_per_batch):
@@ -97,20 +110,19 @@ def main():
         tokens += batch.numel()
         (loss / steps_per_batch).backward()
       opt.step()
-    if prof is not None:
-      prof.export_chrome_trace(f"step_{step_i}_prof.json")
+      profiler.step()
 
-    now = time.time()
-    avg_loss = (avg_loss/steps_per_batch).item()
-    print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f} ms_per_step={1000*(now-step_start):.0f}")
-    if args.wandb:
-      wandb.log({
-        'tokens': tokens,
-        'elapsed_time': now-start,
-        'train_loss': avg_loss,
-      }, step=step_i)
-    if args.tokens is not None and tokens >= args.tokens:
-      break
+      now = time.time()
+      avg_loss = (avg_loss/steps_per_batch).item()
+      print(f"[step={step_i:06d} t={now-start:.1f}s tokens={tokens:08d}] loss={avg_loss:2.2f} ms_per_step={1000*(now-step_start):.0f}")
+      if args.wandb:
+        wandb.log({
+          'tokens': tokens,
+          'elapsed_time': now-start,
+          'train_loss': avg_loss,
+        }, step=step_i)
+      if args.tokens is not None and tokens >= args.tokens:
+        break
 
 if __name__ == '__main__':
   main()
