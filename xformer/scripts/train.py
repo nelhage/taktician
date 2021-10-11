@@ -37,7 +37,7 @@ def main():
     cfg.positional_encoding = args.pe
 
   ds = xformer.data.PileDataset(args.data, n_ctx=cfg.n_ctx)
-  loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch, collate_fn=xformer.data.collate_fn)
+  loader = torch.utils.data.DataLoader(ds, batch_size=args.minibatch, collate_fn=xformer.data.PileDataset.collate)
   model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
   xent = torch.nn.CrossEntropyLoss(reduction='mean')

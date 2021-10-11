@@ -19,9 +19,10 @@ class PileDataset(torch.utils.data.IterableDataset):
           yield torch.tensor(bs, dtype=torch.uint8)
 
 
-def collate_fn(tensors):
-  n_ctx = max(t.shape[0] for t in tensors)
-  data = torch.zeros((len(tensors), n_ctx), dtype=torch.long)
-  for i, t in enumerate(tensors):
-    data[i, :len(t)] = t
-  return data
+  @staticmethod
+  def collate(tensors):
+    n_ctx = max(t.shape[0] for t in tensors)
+    data = torch.zeros((len(tensors), n_ctx), dtype=torch.long)
+    for i, t in enumerate(tensors):
+      data[i, :len(t)] = t
+    return data
