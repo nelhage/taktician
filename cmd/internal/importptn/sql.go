@@ -9,16 +9,24 @@ CREATE TABLE IF NOT EXISTS ptns (
 
 /*
 CREATE TABLE games (
-  id INTEGER PRIMARY KEY,
-  date INT,
-  size INT,
-  player_white VARCHAR(20),
-  player_black VARCHAR(20),
-  notation TEXT,
-  result VARCHAR(10),
-  timertime INT DEFAULT 0,
-  timerinc INT DEFAULT 0
-);
+   id INTEGER PRIMARY KEY,
+   date INT,
+   size INT,
+   player_white VARCHAR(20),
+   player_black VARCHAR(20),
+   notation TEXT,
+   result VARCAR(10),
+   timertime INT DEFAULT 0,
+   timerinc INT DEFAULT 0,
+   rating_white int default 1000,
+   rating_black int default 1000,
+   unrated int default 0,
+   tournament int default 0,
+   komi int default 0,
+   pieces int default -1,
+   capstones int default -1,
+   rating_change_white int default 0,
+   rating_change_black int default 0);
 */
 
 type gameRow struct {
@@ -42,10 +50,12 @@ type ptnRow struct {
 }
 
 const selectTODO = `
-SELECT g.*
+SELECT g.id, g.date, g.size, g.player_white, g.player_black, g.notation, g.result, g.timertime, g.timerinc
 FROM games g LEFT OUTER JOIN ptns p
   ON (g.id = p.id)
 WHERE p.id is NULL
+  AND g.notation IS NOT NULL
+  AND g.notation != ""
 `
 
 const insertPTN = `

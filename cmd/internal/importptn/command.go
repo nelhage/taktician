@@ -2,7 +2,6 @@ package importptn
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -88,6 +87,9 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			func() error {
 				for game := range todo {
 					ptn, err := importOne(&game)
+					if ptn == "" {
+						continue
+					}
 					if err != nil {
 						log.Printf("could not import: id=%d err=%v", game.Id, err)
 						continue
@@ -158,7 +160,7 @@ func formatTags(g *gameRow) []ptn.Tag {
 
 func importOne(g *gameRow) (string, error) {
 	if g.Notation == "" {
-		return "", errors.New("no notation")
+		return "", nil
 	}
 
 	var out ptn.PTN
