@@ -5,6 +5,7 @@ import zstandard as zstd
 import pickle
 import torch
 import os
+import itertools
 import io
 import glob
 import re
@@ -12,15 +13,37 @@ import random
 import multiprocessing
 import contextlib
 
+class BufferedTorchWriter:
+  def __init__(self, writer: record_file.Writer, flush_interval=100):
+    self.writer = writer
+    self.flush_interval = flush_interval
+    self.buffer = []
+
+  def write(self, obj):
+    self.buffer.append(obj)
+    if len(self.buffer) >= self.flush_interval:
+      self.flush()
+
+  def flush(self):
+    bytes = io.BytesIO()
+    torch.save(self.buffer, bytes)
+    self.writer.write(bytes.getvalue())
+    self.buffer.clear()
+
+  def close(self):
+    self.flush()
+    self.writer.close()
+
 class ChunkWriter:
   def __init__(self, output_files):
     self.handles = [
-      record_file.Writer(open(fh, 'wb')) for fh in output_files
+      BufferedTorchWriter(record_file.Writer(open(fh, 'wb')))
+      for fh in output_files
     ]
 
   def write(self, obj):
     handle = random.choice(self.handles)
-    handle.write(pickle.dumps(obj))
+    handle.write(obj)
 
   def close(self):
     for fh in self.handles:
@@ -29,12 +52,52 @@ class ChunkWriter:
 
 def postprocess_chunk(infile, outfile):
   with record_file.Reader(open(infile, 'rb')) as read:
-    records = [pickle.loads(data) for data in read]
+    records = []
+    for data in read:
+      records += torch.load(io.BytesIO(data))
   random.shuffle(records)
-  for r in records:
-    r['text'] = torch.tensor(bytearray(r['text']), dtype=torch.uint8)
   torch.save(records, outfile)
   os.unlink(infile)
+
+
+def filtered_texts(input_texts, want, limit_bytes):
+  read_bytes = 0
+  for record in input_texts:
+    if not want(record):
+      continue
+    text = record['text'].encode('utf-8')
+    yield text
+    read_bytes += len(text)
+    if read_bytes >= limit_bytes:
+      return
+
+def join_batches(texts, n_ctx):
+  current = None
+  text_nos = None
+  idx = 0
+  text_no = 0
+
+  for txt in texts:
+    while len(txt) > 0:
+      if current is None:
+        current = torch.zeros(n_ctx, dtype=torch.uint8)
+        text_nos = torch.zeros(n_ctx, dtype=torch.uint8)
+        text_no = 1
+        idx = 0
+
+      take = min(len(current) - idx - 1, len(txt))
+      text_nos[idx:idx+take+1] = text_no
+      text_no += 1
+      current[idx] = 0
+      current.numpy()[idx+1:idx+1+take] = memoryview(txt[:take])
+      txt = txt[take:]
+      idx += take+1
+
+      if idx >= len(current)-1:
+        yield {'text': current, 'text_nos': text_nos}
+        current = None
+  if current is not None:
+    yield {'text': current, 'text_nos': text_nos}
 
 def main():
   parser = argparse.ArgumentParser(description="Split a pile dataset into chunks")
@@ -56,19 +119,16 @@ def main():
     set_filter = re.compile(args.set_filter)
   want_cache = {}
 
-  def want(dataset):
+  def want(record):
     if set_filter is None:
       return True
+    dataset = record['meta']['pile_set_name']
     cached = want_cache.get(dataset, None)
     if cached is not None:
       return cached
     match = bool(set_filter.search(dataset))
     set_filter[dataset] = match
     return match
-
-
-  bytes_read = 0
-  read_buffer = b''
 
   temp_files = [
     args.output + f"{i:04d}.tmp" for i in range(args.n_chunks)
@@ -79,21 +139,16 @@ def main():
 
   writer = ChunkWriter(temp_files)
 
+  in_texts = itertools.chain.from_iterable(
+    xformer.data.pile_iterator(file)
+    for file in files)
+
+  want_texts = filtered_texts(in_texts, want, args.read_bytes)
+  batches = join_batches(want_texts, args.n_ctx)
+
   with contextlib.closing(writer):
-    for file in files:
-      for record in xformer.data.pile_iterator(file):
-        if not want(record['meta']['pile_set_name']):
-          continue
-        data = read_buffer + record['text'].encode('utf-8')
-        for i in range(0, len(data) - args.n_ctx + 1, args.n_ctx):
-          assert len(data) >= i + args.n_ctx
-          writer.write({'text': data[i:i+args.n_ctx]})
-          bytes_read += args.n_ctx
-          if bytes_read > args.read_bytes:
-            break
-        read_buffer = data[i:]
-        if bytes_read > args.read_bytes:
-          break
+    for batch in batches:
+        writer.write(batch)
 
   pool = multiprocessing.Pool()
   pool.starmap(postprocess_chunk, zip(temp_files, out_files))
