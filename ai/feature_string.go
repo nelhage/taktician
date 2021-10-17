@@ -4,6 +4,49 @@ package ai
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Tempo-0]
+	_ = x[TopFlat-1]
+	_ = x[Standing-2]
+	_ = x[Capstone-3]
+	_ = x[HardTopCap-4]
+	_ = x[CapMobility-5]
+	_ = x[FlatCaptives_Soft-6]
+	_ = x[FlatCaptives_Hard-7]
+	_ = x[StandingCaptives_Soft-8]
+	_ = x[StandingCaptives_Hard-9]
+	_ = x[CapstoneCaptives_Soft-10]
+	_ = x[CapstoneCaptives_Hard-11]
+	_ = x[Liberties-12]
+	_ = x[GroupLiberties-13]
+	_ = x[Groups-14]
+	_ = x[Groups_1-15]
+	_ = x[Groups_2-16]
+	_ = x[Groups_3-17]
+	_ = x[Groups_4-18]
+	_ = x[Groups_5-19]
+	_ = x[Groups_6-20]
+	_ = x[Groups_7-21]
+	_ = x[Groups_8-22]
+	_ = x[Potential-23]
+	_ = x[Threat-24]
+	_ = x[EmptyControl-25]
+	_ = x[FlatControl-26]
+	_ = x[Center-27]
+	_ = x[CenterControl-28]
+	_ = x[ThrowMine-29]
+	_ = x[ThrowTheirs-30]
+	_ = x[ThrowEmpty-31]
+	_ = x[Terminal_Plies-32]
+	_ = x[Terminal_Flats-33]
+	_ = x[Terminal_Reserves-34]
+	_ = x[Terminal_OpponentReserves-35]
+	_ = x[MaxFeature-36]
+}
+
 const _Feature_name = "TempoTopFlatStandingCapstoneHardTopCapCapMobilityFlatCaptives_SoftFlatCaptives_HardStandingCaptives_SoftStandingCaptives_HardCapstoneCaptives_SoftCapstoneCaptives_HardLibertiesGroupLibertiesGroupsGroups_1Groups_2Groups_3Groups_4Groups_5Groups_6Groups_7Groups_8PotentialThreatEmptyControlFlatControlCenterCenterControlThrowMineThrowTheirsThrowEmptyTerminal_PliesTerminal_FlatsTerminal_ReservesTerminal_OpponentReservesMaxFeature"
 
 var _Feature_index = [...]uint16{0, 5, 12, 20, 28, 38, 49, 66, 83, 104, 125, 146, 167, 176, 190, 196, 204, 212, 220, 228, 236, 244, 252, 260, 269, 275, 287, 298, 304, 317, 326, 337, 347, 361, 375, 392, 417, 427}
