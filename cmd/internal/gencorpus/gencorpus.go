@@ -44,6 +44,9 @@ type GameRow struct {
 	RatingWhite int `db:"rating_white" parquet:"name=rating_white, type=INT32, encoding=DELTA_BINARY_PACKED"`
 	RatingBlack int `db:"rating_black" parquet:"name=rating_black, type=INT32, encoding=DELTA_BINARY_PACKED"`
 
+	Pieces    int `db:"pieces"`
+	Capstones int `db:"capstones"`
+
 	PTN string `db:"ptn"`
 }
 
@@ -66,6 +69,7 @@ SELECT g.id, g.size,
        g.player_white, g.player_black,
        g.timertime, g.timerinc,
        g.rating_white, g.rating_black,
+       g.pieces, g.capstones,
        p.ptn
 FROM games g, ptns p
 WHERE g.rating_white >= ?
@@ -105,6 +109,12 @@ WHERE g.rating_white >= ?
 		}
 
 		it := positions.Iterator()
+
+		if (row.Pieces != -1 && row.Pieces != it.Position().Config().Pieces) ||
+			(row.Capstones != -1 && row.Capstones != it.Position().Config().Capstones) {
+			continue
+		}
+
 		for it.Next() {
 			pos := it.Position()
 			var move string
