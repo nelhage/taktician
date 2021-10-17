@@ -124,7 +124,7 @@ WHERE g.rating_white >= ?
 			out := &Position{
 				GameRow:  row,
 				Ply:      int32(pos.MoveNumber()),
-				Position: ptn.FormatTPS(pos),
+				Position: ptn.FormatTPSLong(pos),
 				Move:     move,
 			}
 			if err := pw.Write(out); err != nil {

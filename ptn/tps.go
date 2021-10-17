@@ -48,9 +48,17 @@ func ParseTPS(tpn string) (*tak.Position, error) {
 }
 
 func FormatTPS(p *tak.Position) string {
+	return formatTPS(p, false)
+}
+
+func FormatTPSLong(p *tak.Position) string {
+	return formatTPS(p, true)
+}
+
+func formatTPS(p *tak.Position, long bool) string {
 	var rows []string
 	for i := p.Size() - 1; i >= 0; i-- {
-		rows = append(rows, tpsRow(p, i))
+		rows = append(rows, tpsRow(p, i, long))
 	}
 	var toMove string
 	if p.ToMove() == tak.White {
@@ -61,11 +69,17 @@ func FormatTPS(p *tak.Position) string {
 	return fmt.Sprintf("%s %s %d", strings.Join(rows, "/"), toMove, p.MoveNumber()/2+1)
 }
 
-func tpsRow(p *tak.Position, y int) string {
+func tpsRow(p *tak.Position, y int, long bool) string {
 	var bits []string
 	for x := 0; x < p.Size(); {
 		var i int
-		for i = 0; x+i < p.Size() && len(p.At(x+i, y)) == 0; i++ {
+		if long {
+			if len(p.At(x, y)) == 0 {
+				i = 1
+			}
+		} else {
+			for i = 0; x+i < p.Size() && len(p.At(x+i, y)) == 0; i++ {
+			}
 		}
 		switch i {
 		case 0:
