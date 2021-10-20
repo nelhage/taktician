@@ -32,17 +32,17 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 }
 
 type GameRow struct {
-	Id   int32 `db:"id" parquet:"name=id, type=INT32, encoding=DELTA_BINARY_PACKED"`
-	Size int32 `db:"size" parquet:"name=size, type=INT32, encoding=PLAIN"`
+	Id   int32 `db:"id"`
+	Size int32 `db:"size"`
 
-	PlayerWhite string `db:"player_white" parquet:"name=player_white, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	PlayerBlack string `db:"player_black" parquet:"name=player_black, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	PlayerWhite string `db:"player_white"`
+	PlayerBlack string `db:"player_black"`
 
-	TimerTime int32 `db:"timertime" parquet:"name=timer_time, type=INT32, encoding=PLAIN"`
-	TimerInc  int32 `db:"timerinc" parquet:"name=timer_inc, type=INT32, encoding=PLAIN"`
+	TimerTime int32 `db:"timertime"`
+	TimerInc  int32 `db:"timerinc"`
 
-	RatingWhite int `db:"rating_white" parquet:"name=rating_white, type=INT32, encoding=DELTA_BINARY_PACKED"`
-	RatingBlack int `db:"rating_black" parquet:"name=rating_black, type=INT32, encoding=DELTA_BINARY_PACKED"`
+	RatingWhite int `db:"rating_white"`
+	RatingBlack int `db:"rating_black"`
 
 	Pieces    int `db:"pieces"`
 	Capstones int `db:"capstones"`
@@ -51,9 +51,19 @@ type GameRow struct {
 }
 
 type Position struct {
-	GameRow `parquet:"name=game"`
+	Id   int32 `parquet:"name=id, type=INT32, encoding=PLAIN"`
+	Size int32 `parquet:"name=size, type=INT32, encoding=PLAIN"`
 
-	Ply      int32  `parquet:"name=ply, type=INT32, convertedtype=UINT_32, encoding=DELTA_BINARY_PACKED"`
+	PlayerWhite string `parquet:"name=player_white, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	PlayerBlack string `parquet:"name=player_black, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+
+	TimerTime int32 `parquet:"name=timer_time, type=INT32, encoding=PLAIN"`
+	TimerInc  int32 `parquet:"name=timer_inc, type=INT32, encoding=PLAIN"`
+
+	RatingWhite int `parquet:"name=rating_white, type=INT32, encoding=PLAIN"`
+	RatingBlack int `parquet:"name=rating_black, type=INT32, encoding=PLAIN"`
+
+	Ply      int32  `parquet:"name=ply, type=INT32, convertedtype=UINT_32, encoding=PLAIN"`
 	Position string `parquet:"name=position, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN"`
 	Move     string `parquet:"name=move, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN"`
 }
@@ -122,10 +132,17 @@ WHERE g.rating_white >= ?
 				move = ptn.FormatMove(mv)
 			}
 			out := &Position{
-				GameRow:  row,
-				Ply:      int32(pos.MoveNumber()),
-				Position: ptn.FormatTPSLong(pos),
-				Move:     move,
+				Id:          row.Id,
+				PlayerWhite: row.PlayerWhite,
+				PlayerBlack: row.PlayerBlack,
+				TimerTime:   row.TimerTime,
+				TimerInc:    row.TimerInc,
+				RatingWhite: row.RatingWhite,
+				RatingBlack: row.RatingBlack,
+				Size:        row.Size,
+				Ply:         int32(pos.MoveNumber()),
+				Position:    ptn.FormatTPSLong(pos),
+				Move:        move,
 			}
 			if err := pw.Write(out); err != nil {
 				log.Fatalf("write parquet: %v", err)
