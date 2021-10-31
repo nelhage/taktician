@@ -151,3 +151,41 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		out.Close()
 	}
 }
+
+type dfpnAnalysis struct {
+	cmd *Command
+}
+
+func (a *dfpnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	prover := prove.NewDFPN(&prove.DFPNConfig{
+		Debug:    a.cmd.mmopt.Debug,
+		TableMem: a.cmd.mmopt.TableMem,
+	})
+
+	if !a.cmd.quiet {
+		cli.RenderBoard(nil, os.Stdout, p)
+	}
+
+	out := prover.Prove(p)
+	var result string
+	switch out.Result {
+	case prove.EvalTrue:
+		result = "WIN"
+	case prove.EvalFalse:
+		result = "DRAW|LOSE"
+	case prove.EvalUnknown:
+		result = "UNKNOWN"
+	}
+	fmt.Printf("PN search analysis:\n")
+	var move string
+	if out.Move.Type != 0 {
+		move = ptn.FormatMove(out.Move)
+	} else {
+		move = "(none)"
+	}
+	fmt.Printf(" value=%s move=%s duration=%s\n",
+		result,
+		move,
+		out.Duration,
+	)
+}

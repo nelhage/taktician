@@ -50,6 +50,7 @@ type Command struct {
 	maxNodes uint64
 	maxDepth int
 	pn2      bool
+	dfpn     bool
 }
 
 func (*Command) Name() string     { return "analyze" }
@@ -70,6 +71,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.quiet, "quiet", false, "don't print board diagrams")
 	flags.BoolVar(&c.monteCarlo, "mcts", false, "Use the MCTS evaluator")
 	flags.BoolVar(&c.prove, "prove", false, "Use the PN prover")
+	flags.BoolVar(&c.dfpn, "dfpn", false, "Use the DFPN prover")
 
 	flags.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
 	flags.StringVar(&c.memProfile, "memprofile", "", "write memory profile")
@@ -193,6 +195,9 @@ func (c *Command) makeAI(p *tak.Position) *ai.MinimaxAI {
 func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
 	if c.monteCarlo && c.prove {
 		log.Fatal("-mcts and -prove are incompatible!")
+	}
+	if c.dfpn {
+		return &dfpnAnalysis{cmd: c}
 	}
 	if c.prove {
 		return &pnAnalysis{
