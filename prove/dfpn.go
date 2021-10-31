@@ -225,16 +225,12 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 }
 
 func (d *DFPNSolver) terminalBounds(g *tak.Position, result tak.Color) proofNumbers {
-	switch result {
-	case tak.NoColor:
-		if g.ToMove() == d.attacker {
-			return proofNumbers{phi: INFINITY, delta: 0}
-		} else {
-			return proofNumbers{phi: 0, delta: INFINITY}
-		}
-	case g.ToMove():
+	if result == tak.NoColor {
+		result = d.attacker.Flip()
+	}
+	if result == g.ToMove() {
 		return proofNumbers{phi: 0, delta: INFINITY}
-	default:
+	} else {
 		return proofNumbers{phi: INFINITY, delta: 0}
 	}
 }
