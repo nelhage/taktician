@@ -12,7 +12,6 @@ from contextlib import nullcontext
 
 from torch.profiler import profile, ProfilerAction
 
-
 def main():
   parser = argparse.ArgumentParser(description="Train a transformer")
   parser.add_argument('--layers', type=int, default=2, help="Number of layers")
@@ -101,8 +100,8 @@ def main():
       avg_loss = torch.zeros((), device=args.device)
       opt.zero_grad(set_to_none=True)
       for _ in range(steps_per_batch):
-        batch = next(data)['text']
-        batch = batch.to(device=args.device)
+        record = next(data)
+        batch = record['text'].to(device=args.device)
         logits = model(batch[:, :-1])
         targets = batch[:, 1:]
         loss = xent(logits.permute(0, 2, 1), targets)
