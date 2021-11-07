@@ -15,6 +15,7 @@ type DFPNSolver struct {
 	debug    int
 
 	stack []dfpnFrame
+	pool  chan *tak.Position
 }
 
 type dfpnFrame struct {
@@ -79,6 +80,7 @@ type dfpnChild struct {
 }
 
 const defaultTableMem = 100 * 1024 * 1024
+const poolSize = 1024
 
 func NewDFPN(cfg *DFPNConfig) *DFPNSolver {
 	if cfg.TableMem <= 0 {
@@ -90,6 +92,7 @@ func NewDFPN(cfg *DFPNConfig) *DFPNSolver {
 			entries: make([]entry, cfg.TableMem/int64(unsafe.Sizeof(entry{}))),
 		},
 		debug: cfg.Debug,
+		pool:  make(chan *tak.Position, poolSize),
 	}
 }
 
@@ -146,6 +149,22 @@ func (d *DFPNSolver) checkRepetition() bool {
 	return false
 }
 
+func (d *DFPNSolver) alloc() *tak.Position {
+	select {
+	case p := <-d.pool:
+		return p
+	default:
+		return nil
+	}
+}
+
+func (d *DFPNSolver) release(p *tak.Position) {
+	select {
+	case d.pool <- p:
+	default:
+	}
+}
+
 func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (entry, uint64) {
 	if current.bounds.exceeded(bounds) {
 		return current, 0
@@ -171,12 +190,20 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 
 	localWork := uint64(1)
 	// compute children
-	var children []dfpnChild
-	var alloc [100]tak.Move
-	moves := g.AllMoves(alloc[:])
+	var allocChildren [100]dfpnChild
+	children := allocChildren[:0]
+	var allocMoves [100]tak.Move
+	moves := g.AllMoves(allocMoves[:0])
+	defer func() {
+		for _, ch := range children {
+			d.release(ch.g)
+		}
+	}()
 	for _, m := range moves {
-		p, err := g.Move(m)
+		alloc := d.alloc()
+		p, err := g.MovePreallocated(m, alloc)
 		if err != nil {
+			d.release(alloc)
 			continue
 		}
 		childEntry := entry{
