@@ -5,9 +5,17 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 )
+
+const poolSize = 1024
+
+type positionPool struct {
+	buf  [poolSize]*tak.Position
+	r, w int
+}
 
 type DFPNSolver struct {
 	attacker tak.Color
@@ -15,7 +23,9 @@ type DFPNSolver struct {
 	debug    int
 
 	stack []dfpnFrame
-	pool  chan *tak.Position
+	pool  positionPool
+
+	c *bitboard.Constants
 }
 
 type dfpnFrame struct {
@@ -80,7 +90,6 @@ type dfpnChild struct {
 }
 
 const defaultTableMem = 100 * 1024 * 1024
-const poolSize = 1024
 
 func NewDFPN(cfg *DFPNConfig) *DFPNSolver {
 	if cfg.TableMem <= 0 {
@@ -92,7 +101,6 @@ func NewDFPN(cfg *DFPNConfig) *DFPNSolver {
 			entries: make([]entry, cfg.TableMem/int64(unsafe.Sizeof(entry{}))),
 		},
 		debug: cfg.Debug,
-		pool:  make(chan *tak.Position, poolSize),
 	}
 }
 
@@ -150,19 +158,23 @@ func (d *DFPNSolver) checkRepetition() bool {
 }
 
 func (d *DFPNSolver) alloc() *tak.Position {
-	select {
-	case p := <-d.pool:
-		return p
-	default:
+	if d.pool.r == d.pool.w {
 		return nil
 	}
+	p := d.pool.buf[d.pool.r]
+	d.pool.r += 1
+	if d.pool.r == len(d.pool.buf) {
+		d.pool.r = 0
+	}
+	return p
 }
 
 func (d *DFPNSolver) release(p *tak.Position) {
-	select {
-	case d.pool <- p:
-	default:
+	if (d.pool.w+1)%len(d.pool.buf) == d.pool.r {
+		return
 	}
+	d.pool.buf[d.pool.w] = p
+	d.pool.w = (d.pool.w + 1) % len(d.pool.buf)
 }
 
 func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (entry, uint64) {
