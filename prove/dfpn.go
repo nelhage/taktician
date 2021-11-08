@@ -5,6 +5,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/nelhage/taktician/ai"
 	"github.com/nelhage/taktician/bitboard"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
@@ -25,7 +26,7 @@ type DFPNSolver struct {
 	stack []dfpnFrame
 	pool  positionPool
 
-	c *bitboard.Constants
+	c bitboard.Constants
 }
 
 type dfpnFrame struct {
@@ -108,6 +109,8 @@ func (d *DFPNSolver) Prove(g *tak.Position) ProofResult {
 	if d.attacker == tak.NoColor {
 		d.attacker = g.ToMove()
 	}
+	d.c = bitboard.Precompute(uint(g.Size()))
+
 	d.stack = nil
 	start := time.Now()
 	entry, _ := d.mid(g, proofNumbers{phi: INFINITY / 2, delta: INFINITY / 2}, entry{
@@ -177,15 +180,28 @@ func (d *DFPNSolver) release(p *tak.Position) {
 	d.pool.w = (d.pool.w + 1) % len(d.pool.buf)
 }
 
+func (d *DFPNSolver) solve(p *tak.Position) (bool, tak.Color) {
+	wp, wt, bp, bt := ai.CountThreats(&d.c, p)
+	if wp+wt > 0 && p.ToMove() == tak.White {
+		return true, tak.White
+	}
+	if bp+bt > 0 && p.ToMove() == tak.Black {
+		return true, tak.Black
+	}
+	return false, tak.NoColor
+}
+
 func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (entry, uint64) {
 	if current.bounds.exceeded(bounds) {
 		return current, 0
 	}
 
-	if over, result := g.GameOver(); over {
-		current.bounds = d.terminalBounds(g, result)
-		return current, 0
-	}
+	/*
+		if over, result := g.GameOver(); over {
+			current.bounds = d.terminalBounds(g, result)
+			return current, 0
+		}
+	*/
 	if d.checkRepetition() {
 		current.bounds = d.terminalBounds(g, tak.NoColor)
 		return current, 0
@@ -223,6 +239,8 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 			bounds: proofNumbers{1, 1},
 		}
 		if over, result := p.GameOver(); over {
+			childEntry.bounds = d.terminalBounds(p, result)
+		} else if over, result := d.solve(p); over {
 			childEntry.bounds = d.terminalBounds(p, result)
 		} else if b, ok := d.table.lookup(p); ok {
 			childEntry = b
