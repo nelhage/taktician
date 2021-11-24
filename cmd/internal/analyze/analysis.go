@@ -110,7 +110,7 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
 
-	out := prover.Prove(ctx, p)
+	out, stats := prover.Prove(ctx, p)
 	var result string
 	switch out.Result {
 	case prove.EvalTrue:
@@ -131,11 +131,11 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		result,
 		move,
 		out.Duration,
-		out.Stats.Nodes,
+		stats.Nodes,
 		out.Proof,
 		out.Disproof,
 		out.Depth,
-		out.Stats.MaxDepth,
+		stats.MaxDepth,
 	)
 
 	if a.cmd.dumpTree != "" {
@@ -166,7 +166,7 @@ func (a *dfpnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
 
-	out := prover.Prove(p)
+	out, stats := prover.Prove(p)
 	var result string
 	switch out.Result {
 	case prove.EvalTrue:
@@ -187,5 +187,14 @@ func (a *dfpnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		result,
 		move,
 		out.Duration,
+	)
+	fmt.Printf(" work=%d terminal=%d solved=%d repetition=%d hit=%d/%d (%0.2f%%)\n",
+		stats.Work,
+		stats.Terminal,
+		stats.Solved,
+		stats.Repetition,
+		stats.Hits,
+		stats.Hits+stats.Miss,
+		100*float64(stats.Hits)/float64(stats.Hits+stats.Miss),
 	)
 }

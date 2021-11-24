@@ -18,13 +18,27 @@ type positionPool struct {
 	r, w int
 }
 
+type DFPNStats struct {
+	Work       uint64
+	Repetition uint64
+
+	Terminal uint64
+	Solved   uint64
+	Hits     uint64
+	Miss     uint64
+}
+
 type DFPNSolver struct {
 	attacker tak.Color
 	table    dfpnTable
 	debug    int
 
-	stack []dfpnFrame
-	pool  positionPool
+	stats DFPNStats
+
+	stack   []dfpnFrame
+	killers []tak.Move
+
+	pool positionPool
 
 	c bitboard.Constants
 }
@@ -105,19 +119,21 @@ func NewDFPN(cfg *DFPNConfig) *DFPNSolver {
 	}
 }
 
-func (d *DFPNSolver) Prove(g *tak.Position) ProofResult {
+func (d *DFPNSolver) Prove(g *tak.Position) (ProofResult, DFPNStats) {
 	if d.attacker == tak.NoColor {
 		d.attacker = g.ToMove()
 	}
 	d.c = bitboard.Precompute(uint(g.Size()))
+	d.stats = DFPNStats{}
 
 	d.stack = nil
 	start := time.Now()
-	entry, _ := d.mid(g, proofNumbers{phi: INFINITY / 2, delta: INFINITY / 2}, entry{
+	entry, work := d.mid(g, proofNumbers{phi: INFINITY / 2, delta: INFINITY / 2}, entry{
 		hash:   g.Hash(),
 		work:   0,
 		bounds: proofNumbers{phi: 1, delta: 1},
 	})
+	d.stats.Work = work
 	duration := time.Since(start)
 	var result Evaluation = EvalUnknown
 	if entry.bounds.phi == 0 {
@@ -131,7 +147,7 @@ func (d *DFPNSolver) Prove(g *tak.Position) ProofResult {
 		Proof:    entry.bounds.phi,
 		Disproof: entry.bounds.delta,
 		Duration: duration,
-	}
+	}, d.stats
 }
 
 func (d *DFPNSolver) checkRepetition() bool {
@@ -203,6 +219,7 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 		}
 	*/
 	if d.checkRepetition() {
+		d.stats.Repetition++
 		current.bounds = d.terminalBounds(g, tak.NoColor)
 		return current, 0
 	}
@@ -239,13 +256,22 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 			bounds: proofNumbers{1, 1},
 		}
 		if over, result := p.GameOver(); over {
+			d.stats.Terminal++
 			childEntry.bounds = d.terminalBounds(p, result)
 		} else if over, result := d.solve(p); over {
+			d.stats.Solved++
 			childEntry.bounds = d.terminalBounds(p, result)
 		} else if b, ok := d.table.lookup(p); ok {
+			d.stats.Hits++
 			childEntry = b
+		} else {
+			d.stats.Miss++
+			/*
+				var buffer [100]tak.Move
+				moves := len(p.AllMoves(buffer[:0]))
+				childEntry.bounds = proofNumbers{phi: 1, delta: uint32(moves)}
+			*/
 		}
-		// todo look up table
 		children = append(children, dfpnChild{
 			move: m,
 			g:    p,
@@ -263,7 +289,6 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 		}
 
 		best_idx, childBounds := d.selectChild(children, bounds, current.bounds)
-		// todo recurse
 
 		current.pv = children[best_idx].move
 
