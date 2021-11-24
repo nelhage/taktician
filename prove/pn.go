@@ -104,7 +104,7 @@ func (n *node) depth() int {
 	return d
 }
 
-type Stats struct {
+type PNStats struct {
 	Nodes     uint64
 	Proved    uint64
 	Disproved uint64
@@ -113,7 +113,7 @@ type Stats struct {
 	MaxDepth  uint64
 }
 
-func (st *Stats) Live() uint64 {
+func (st *PNStats) Live() uint64 {
 	return st.Nodes - (st.Proved + st.Disproved + st.Dropped)
 }
 
@@ -130,7 +130,7 @@ type Prover struct {
 	ctx context.Context
 
 	cfg   *Config
-	stats Stats
+	stats PNStats
 
 	start time.Time
 
@@ -156,14 +156,13 @@ type ProofResult struct {
 	Duration        time.Duration
 	Result          Evaluation
 	Depth           uint32
-	Stats           Stats
 	Proof, Disproof uint32
 	Move            tak.Move
 }
 
-func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
+func (p *Prover) Prove(ctx context.Context, pos *tak.Position) (ProofResult, PNStats) {
 	p.start = time.Now()
-	p.stats = Stats{}
+	p.stats = PNStats{}
 	p.position = pos
 	p.ctx = ctx
 	if p.cfg.MaxDepth == 0 {
@@ -203,13 +202,12 @@ func (p *Prover) Prove(ctx context.Context, pos *tak.Position) ProofResult {
 
 	return ProofResult{
 		Result:   p.root.value,
-		Stats:    p.stats,
 		Duration: time.Since(p.start),
 		Proof:    p.root.proof(),
 		Disproof: p.root.disproof(),
 		Move:     pv,
 		Depth:    uint32(p.root.proofDepth),
-	}
+	}, p.stats
 }
 
 func name(n string) xml.Name {
@@ -455,7 +453,7 @@ func (p *Prover) pn2(n *node) {
 	oldStats := p.stats
 
 	p.root = n
-	p.stats = Stats{}
+	p.stats = PNStats{}
 	p.cfg.PN2 = false
 	p.cfg.LogPrefix = " [PN₂]"
 
