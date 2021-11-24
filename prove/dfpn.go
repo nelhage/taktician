@@ -244,6 +244,13 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 			d.release(ch.g)
 		}
 	}()
+
+	depth := len(d.stack)
+	var killer tak.Move
+	if len(d.killers) > depth && d.killers[depth].Type != 0 {
+		killer = d.killers[depth]
+	}
+
 	for _, m := range moves {
 		alloc := d.alloc()
 		p, err := g.MovePreallocated(m, alloc)
@@ -266,17 +273,19 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 			childEntry = b
 		} else {
 			d.stats.Miss++
-			/*
-				var buffer [100]tak.Move
-				moves := len(p.AllMoves(buffer[:0]))
-				childEntry.bounds = proofNumbers{phi: 1, delta: uint32(moves)}
-			*/
+			var buffer [100]tak.Move
+			moves := len(p.AllMoves(buffer[:0]))
+			childEntry.bounds = proofNumbers{phi: 1, delta: uint32(moves)}
 		}
 		children = append(children, dfpnChild{
 			move: m,
 			g:    p,
 			data: childEntry,
 		})
+		if m == killer {
+			children[0], children[len(children)-1] = children[len(children)-1], children[0]
+		}
+
 		if childEntry.bounds.delta == 0 {
 			break
 		}
@@ -299,6 +308,13 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 		children[best_idx].data = newEntry
 		localWork += work
 		current.work += work
+	}
+
+	if current.bounds.phi == 0 {
+		for len(d.killers) <= depth {
+			d.killers = append(d.killers, tak.Move{})
+		}
+		d.killers[depth] = current.pv
 	}
 
 	d.table.store(&current)
