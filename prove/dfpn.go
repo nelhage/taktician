@@ -330,8 +330,8 @@ func (d *DFPNSolver) selectChild(children []dfpnChild,
 		phi: bounds.delta + phi1 - pns.delta,
 		delta: min(
 			bounds.phi,
-			//			max(delta2+1, uint32(float64(delta2)*(1.0+epsilon))),
-			delta2+1,
+			max(delta2+1, uint32(float64(delta2)*(1.0+epsilon))),
+			// delta2+1,
 		),
 	}
 }
