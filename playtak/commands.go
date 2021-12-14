@@ -11,7 +11,7 @@ type Commands struct {
 }
 
 func (c *Commands) SendClient(name string) {
-	c.SendCommand("client", name)
+	c.SendCommand("Client", name)
 }
 
 func (c *Commands) Login(user, pass string) error {
