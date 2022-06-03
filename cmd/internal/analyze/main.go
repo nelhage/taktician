@@ -45,6 +45,7 @@ type Command struct {
 
 	/* MCTS options */
 	dumpTree string
+	c        float64
 
 	/* PN options */
 	maxNodes uint64
@@ -89,6 +90,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	c.mmopt.AddFlags(flags)
 
 	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree to PATH (MCTS and PN only)")
+	flags.Float64Var(&c.c, "mcts.c", 0.7, "MCTS explore/exploit tradeoff constant")
 
 	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
 	flags.IntVar(&c.maxDepth, "max-depth", 0, "Maximum depth to consider in PN search")
