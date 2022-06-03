@@ -27,6 +27,10 @@ func (mc *MonteCarloAI) dumpTreeNode(f io.Writer, t *tree) {
 	parent := 1
 	if t.parent != nil {
 		parent = t.parent.simulations
+		if t.parent.proven != 0 && t.proven == 0 {
+			return
+		}
+
 	}
 	label := fmt.Sprintf("n=%d p=%d v=%.0f+%.0f",
 		t.simulations,
@@ -36,17 +40,20 @@ func (mc *MonteCarloAI) dumpTreeNode(f io.Writer, t *tree) {
 
 	fmt.Fprintf(f, `  n%p [label="%s"]`, t, label)
 	fmt.Fprintln(f)
-	if t.children == nil || t.simulations < mc.cfg.InitialVisits {
+	if t.children == nil {
 		return
 	}
 
 	for _, c := range t.children {
-		if c.simulations < mc.cfg.InitialVisits {
+		if t.proven > 0 && c.proven >= 0 {
 			continue
 		}
 		fmt.Fprintf(f, `  n%p -> n%p [label="%s"]`,
 			t, c, ptn.FormatMove(c.move))
 		fmt.Fprintln(f)
 		mc.dumpTreeNode(f, c)
+		if c.proven < 0 {
+			break
+		}
 	}
 }
