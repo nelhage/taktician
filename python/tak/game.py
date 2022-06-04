@@ -179,7 +179,7 @@ class Position(object):
     else:
       self._move_place(m, delta)
 
-    return attr.assoc(self, **delta)
+    return attr.evolve(self, **delta)
 
   def _move_place(self, m, delta):
     if self.ply < 2 and m.type != moves.MoveType.PLACE_FLAT:
@@ -201,7 +201,7 @@ class Position(object):
     cs = self.stones[color.value]
     if getattr(cs, slot) <= 0:
       raise IllegalMove("not enough stones")
-    newstones = attr.assoc(cs, **{slot: getattr(cs, slot) - 1})
+    newstones = attr.evolve(cs, **{slot: getattr(cs, slot) - 1})
 
     if color == pieces.Color.WHITE:
       delta['stones'] = (newstones, self.stones[1])
