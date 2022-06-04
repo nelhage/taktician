@@ -8,7 +8,7 @@ rot = np.array(
     [-1, 0, 1],
     [0, 0, 1]
   ],
-  dtype=np.int,
+  dtype=int,
 )
 flip = np.array(
   [
@@ -16,19 +16,19 @@ flip = np.array(
     [0, 1, 0],
     [0, 0, 1],
   ],
-  dtype=np.int,
+  dtype=int,
 )
 
 SYMMETRIES = [
   np.matmul(l,r) for
   l in [
-    np.identity(3, dtype=np.int),
+    np.identity(3, dtype=int),
     rot,
     np.matmul(rot, rot),
     np.matmul(np.matmul(rot, rot), rot),
   ]
   for r in [
-      np.identity(3, dtype=np.int),
+      np.identity(3, dtype=int),
       flip
   ]
 ]
@@ -41,7 +41,7 @@ def transform_position(sym, pos):
     np.tile(np.arange(pos.size), pos.size),
     (pos.size-1)*np.ones(pos.size*pos.size)
   ], axis=-1)
-  ix = np.transpose(np.matmul(sym, np.transpose(ix))).astype(np.int)
+  ix = np.transpose(np.matmul(sym, np.transpose(ix))).astype(int)
   ix = ix.reshape((pos.size, pos.size, 3))
 
   sqs = list(pos.board)
