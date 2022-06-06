@@ -213,14 +213,16 @@ func (mc *MonteCarloAI) printdbg(t *tree) {
 }
 
 func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
-	_, v, _ := mc.mm.Analyze(ctx, t.position)
-	if v > ai.WinThreshold {
-		t.proven = 1
-		return
-	} else if v < -ai.WinThreshold {
-		t.proven = -1
-		return
-	}
+	/*
+		_, v, _ := mc.mm.Analyze(ctx, t.position)
+		if v > ai.WinThreshold {
+			t.proven = 1
+			return
+		} else if v < -ai.WinThreshold {
+			t.proven = -1
+			return
+		}
+	*/
 
 	moves := t.position.AllMoves(nil)
 	t.children = make([]*tree, 0, len(moves))
