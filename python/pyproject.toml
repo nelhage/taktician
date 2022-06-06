@@ -1,0 +1,7 @@
+[pycodestyle]
+ignore = "D100,D111,D102"
+
+[tool.black]
+extend-exclude='''
+^/tak/proto/
+'''
