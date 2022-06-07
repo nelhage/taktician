@@ -1,6 +1,7 @@
 import attr
 import enum
 
+
 @enum.unique
 class MoveType(enum.Enum):
     PLACE_FLAT = 1
@@ -36,15 +37,10 @@ RDIRECTIONS = dict((v, k) for (k, v) in DIRECTIONS.items())
 
 @attr.s(frozen=True, slots=True)
 class Move(object):
-    x = attr.ib(validator=attr.validators.instance_of(int))
-    y = attr.ib(validator=attr.validators.instance_of(int))
-    type = attr.ib(
-        validator=attr.validators.instance_of(MoveType), default=MoveType.PLACE_FLAT
-    )
-    slides = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(tuple)),
-        default=None,
-    )
+    x = attr.ib()
+    y = attr.ib()
+    type = attr.ib(default=MoveType.PLACE_FLAT)
+    slides = attr.ib(default=None)
 
 
 ALL_SLIDES = [() for i in range(9)]
@@ -82,5 +78,6 @@ def enumerate_moves(size):
                     if len(slide) <= l:
                         out.append(Move(x, y, d, slide))
     return out
+
 
 __all__ = ["MoveType", "Move", "ALL_SLIDES", "enumerate_moves"]
