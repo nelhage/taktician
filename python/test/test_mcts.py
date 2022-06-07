@@ -5,7 +5,7 @@ def test_mcts():
     engine = mcts.MCTS(
         config=mcts.Config(
             time_limit=0,
-            position_limit=5,
+            simulation_limit=5,
             seed=1,
         )
     )

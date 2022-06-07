@@ -2,15 +2,14 @@ from dataclasses import dataclass
 import math
 import random
 import typing as T
-from . import game
-from .moves import Move
+from . import game, ptn, moves
 import time
 
 
 @dataclass
 class Config:
     time_limit: float = 1.0
-    position_limit: int = 0
+    simulation_limit: int = 0
     max_rollout: int = 1_000_000
     C: float = 0.7
     seed: T.Optional[int] = None
@@ -21,7 +20,7 @@ class Config:
 @dataclass
 class Node:
     position: game.Position
-    move: T.Optional[Move]
+    move: T.Optional[moves.Move]
 
     simulations: int = 0
     value: float = 0
@@ -36,10 +35,22 @@ class Node:
         )
 
 
-Elem = T.TypeVar('Elem')
-Key = T.TypeVar('Key')
+def extract_pv(node):
+    pv = []
+    while node.children is not None:
+        best = max(node.children, key=lambda n: n.simulations)
+        pv.append(best)
+        node = best
+    return pv
 
-def max_tiebreak(seq: T.Iterable[Elem], key: T.Callable[[Elem], Key], random=random) -> Elem:
+
+Elem = T.TypeVar("Elem")
+Key = T.TypeVar("Key")
+
+
+def max_tiebreak(
+    seq: T.Iterable[Elem], key: T.Callable[[Elem], Key], random=random
+) -> Elem:
     i = 0
     seq = iter(seq)
     best = next(seq)
@@ -62,7 +73,7 @@ class MCTS:
         self.config = config
         self.random = random.Random(config.seed)
 
-    def get_move(self, p: game.Position):
+    def analyze(self, p: game.Position) -> Node:
         tree = Node(
             position=p,
             move=None,
@@ -73,11 +84,11 @@ class MCTS:
             deadline = start + self.config.time_limit
         else:
             deadline = float("inf")
-        position_limit = self.config.position_limit
+        simulation_limit = self.config.simulation_limit
 
         while True:
             if time.monotonic() > deadline or (
-                position_limit > 0 and tree.simulations > position_limit
+                simulation_limit > 0 and tree.simulations >= simulation_limit
             ):
                 break
 
@@ -86,6 +97,19 @@ class MCTS:
             value = self.evaluate(path[-1])
             self.update(path, value)
 
+        return tree
+
+    def print_tree(self, tree: Node):
+        for child in sorted(tree.children, key=lambda c: -c.simulations):
+            print(
+                f"{ptn.format_move(child.move):>4}"
+                f" visit={child.simulations:>3d}"
+                f" value={-child.value/child.simulations:+5.2f}"
+                f" ucb={child.ucb(self.config.C, tree.simulations):0.3f}"
+            )
+
+    def get_move(self, p: game.Position) -> moves.Move:
+        tree = self.analyze(p)
         return self.select_root_move(tree)
 
     def descend(self, tree: Node) -> list[Node]:
@@ -119,7 +143,6 @@ class MCTS:
             )
 
             if color is not None:
-                child_node.simulations = 1_000_000
                 if color == child.to_move():
                     child_node.value = 1
                 else:
@@ -148,7 +171,7 @@ class MCTS:
             else:
                 return -1.0
         # todo: scoring heuristic
-        return 0.
+        return 0.0
 
     def select_rollout_move(self, pos: game.Position):
         moves = pos.all_moves()
@@ -166,7 +189,7 @@ class MCTS:
             node.simulations += 1
             val = -val
 
-    def select_root_move(self, tree: Node) -> Move:
-        return max_tiebreak(tree.children,
-                            key=lambda c: c.simulations,
-                            random=self.random).move
+    def select_root_move(self, tree: Node) -> moves.Move:
+        return max_tiebreak(
+            tree.children, key=lambda c: c.simulations, random=self.random
+        ).move
