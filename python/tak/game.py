@@ -4,6 +4,8 @@ import enum
 from . import moves
 from . import pieces
 
+import typing as T
+
 
 @attr.s(frozen=True, slots=True)
 class Config(object):
@@ -100,7 +102,7 @@ class Position(object):
     def in_bounds(self, x, y):
         return x >= 0 and x < self.size and y >= 0 and y < self.size
 
-    def winner(self):
+    def winner(self) -> T.Tuple[T.Optional[pieces.Color], T.Optional[WinReason]]:
         color = self.has_road()
         if color is not None:
             return (color, WinReason.ROAD)
@@ -263,6 +265,34 @@ class Position(object):
 
             newboard[i] = carry[-drop:] + orig
             carry = carry[:-drop]
+
+    def all_moves(self) -> list[moves.Move]:
+        to_move = self.to_move()
+        has_cap = self.stones[to_move.value].caps > 0
+        out = []
+        for x in range(self.size):
+            for y in range(self.size):
+                sq = self[(x, y)]
+                if len(sq) == 0:
+                    out.append(moves.Move(x, y, moves.MoveType.PLACE_FLAT))
+                    out.append(moves.Move(x, y, moves.MoveType.PLACE_STANDING))
+                    if has_cap:
+                        out.append(moves.Move(x, y, moves.MoveType.PLACE_CAPSTONE))
+                    continue
+                if sq[0].color != to_move:
+                    continue
+
+                dirs = [
+                    (moves.MoveType.SLIDE_LEFT, x),
+                    (moves.MoveType.SLIDE_RIGHT, self.size - x - 1),
+                    (moves.MoveType.SLIDE_DOWN, y),
+                    (moves.MoveType.SLIDE_UP, self.size - y - 1),
+                ]
+                for slide in moves.ALL_SLIDES[self.size]:
+                    for d, l in dirs:
+                        if len(slide) <= l and len(slide) <= len(sq):
+                            out.append(moves.Move(x, y, d, slide))
+        return out
 
 
 class IllegalMove(Exception):

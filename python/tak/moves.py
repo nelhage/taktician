@@ -1,7 +1,6 @@
 import attr
 import enum
 
-
 @enum.unique
 class MoveType(enum.Enum):
     PLACE_FLAT = 1
@@ -83,6 +82,5 @@ def enumerate_moves(size):
                     if len(slide) <= l:
                         out.append(Move(x, y, d, slide))
     return out
-
 
 __all__ = ["MoveType", "Move", "ALL_SLIDES", "enumerate_moves"]
