@@ -4,4 +4,4 @@ pytest-cov
 numpy
 grpcio
 grpcio-tools
-tensorflow==2.4.0
+tensorflow==2.9.1

@@ -1,0 +1,33 @@
+on:
+  pull_request: {}
+  push: {}
+
+name: Continuous integration
+
+jobs:
+  ci-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.18.3'
+      - name: go test
+        run: |
+          go test ./...
+  ci-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '^3.9.1'
+          architecture: x64
+          cache: pip
+      - name: pip install
+        run: |
+          pip install -r python/requirements.txt
+          pip install -e python/
+      - name: pytest
+        run: |
+          cd python && pytest
