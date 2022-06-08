@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eu
+
+root=$(dirname "$0")/../
+cd "$root"
+target=$1
+path=${2-'~/code/taktician'}
+
+
+exec rsync -Pax \
+     --exclude='__pycache__' \
+     --exclude='/python/notebooks/' \
+     --exclude='/.git' \
+     --exclude='/.direnv' \
+     --exclude='*.test' \
+     --exclude='wandb' \
+     . "$target:$path"
