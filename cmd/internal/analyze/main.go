@@ -4,8 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
-	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -25,8 +23,6 @@ type Command struct {
 	quiet      bool
 	monteCarlo bool
 	prove      bool
-	cpuProfile string
-	memProfile string
 
 	/* Options to select which position(s) to analyze */
 	move      int
@@ -75,9 +71,6 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.prove, "prove", false, "Use the PN prover")
 	flags.BoolVar(&c.dfpn, "dfpn", false, "Use the DFPN prover")
 
-	flags.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
-	flags.StringVar(&c.memProfile, "memprofile", "", "write memory profile")
-
 	flags.IntVar(&c.move, "move", 0, "PTN move number to analyze")
 	flags.BoolVar(&c.all, "all", false, "analyze all positions in the PTN")
 	flags.BoolVar(&c.black, "black", false, "only analyze black's move")
@@ -114,26 +107,6 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		color = tak.Black
 	case c.move != 0:
 		color = tak.White
-	}
-
-	if c.cpuProfile != "" {
-		f, e := os.OpenFile(c.cpuProfile, os.O_WRONLY|os.O_CREATE, 0644)
-		if e != nil {
-			log.Fatalf("open cpu-profile: %s: %v", c.cpuProfile, e)
-		}
-		pprof.StartCPUProfile(f)
-		defer f.Close()
-		defer pprof.StopCPUProfile()
-	}
-	if c.memProfile != "" {
-		f, e := os.OpenFile(c.memProfile, os.O_WRONLY|os.O_CREATE, 0644)
-		if e != nil {
-			log.Fatalf("open memory profile: %s: %v", c.cpuProfile, e)
-		}
-		defer func() {
-			pprof.Lookup("allocs").WriteTo(f, 0)
-			f.Close()
-		}()
 	}
 
 	if !c.all {
