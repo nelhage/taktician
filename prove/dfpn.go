@@ -128,7 +128,7 @@ func (d *DFPNSolver) Prove(g *tak.Position) (ProofResult, DFPNStats) {
 
 	d.stack = nil
 	start := time.Now()
-	entry, work := d.mid(g, proofNumbers{phi: INFINITY - 100, delta: INFINITY - 100}, entry{
+	entry, work := d.mid(g, proofNumbers{phi: INFINITY / 2, delta: INFINITY / 2}, entry{
 		hash:   g.Hash(),
 		work:   0,
 		bounds: proofNumbers{phi: 1, delta: 1},
@@ -372,7 +372,10 @@ func (d *DFPNSolver) selectChild(children []dfpnChild,
 		phi: bounds.delta + phi1 - pns.delta,
 		delta: min(
 			bounds.phi,
-			max(delta2+1, uint32(float64(delta2)*(1.0+epsilon))),
+			min(
+				max(delta2+1, uint32(float64(delta2)*(1.0+epsilon))),
+				INFINITY,
+			),
 			// delta2+1,
 		),
 	}
@@ -389,5 +392,6 @@ func computePNs(children []dfpnChild) proofNumbers {
 			out.phi = ch.data.bounds.delta
 		}
 	}
+
 	return out
 }
