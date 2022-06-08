@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-
 from . import game, pieces
+
+import torch
 
 MAX_RESERVES = 50
 MAX_CAPSTONES = 2
@@ -76,3 +77,20 @@ def encode(p: game.Position) -> list[int]:
                 else Token.BLACK_FLAT
             )
     return data
+
+
+def encode_batch(positions) -> (torch.Tensor, torch.Tensor):
+    lens = torch.empty((len(positions),), dtype=torch.int)
+    out = torch.zeros((len(positions), 0), dtype=torch.uint8)
+    for (i, p) in enumerate(positions):
+        encoded = encode(p)
+        if len(encoded) > out.size(1):
+            tmp = torch.zeros((out.size(0), len(encoded)), dtype=out.dtype)
+            tmp[:, : out.size(1)] = out
+            out = tmp
+        out[i, : len(encoded)] = torch.tensor(encoded, dtype=out.dtype)
+        lens[i] = len(encoded)
+    mask = torch.zeros_like(out, dtype=torch.bool)
+    for i, l in enumerate(lens):
+        mask[i, :l] = 1
+    return out, mask
