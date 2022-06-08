@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
@@ -29,6 +30,9 @@ type Command struct {
 	depth   int
 	threads int
 
+	limit time.Duration
+	prove bool
+
 	stats  bool
 	output string
 }
@@ -45,6 +49,9 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.games, "games", 100, "games to generate")
 	flags.Int64Var(&c.seed, "seed", 0, "Random seed")
 	flags.IntVar(&c.threads, "threads", runtime.NumCPU(), "Number of threads")
+
+	flags.BoolVar(&c.prove, "prove", false, "Use the DFPN prover")
+	flags.DurationVar(&c.limit, "limit", 5*time.Second, "Minimax time limit when scoring")
 
 	flags.BoolVar(&c.stats, "stats", false, "compute and print stats")
 	flags.IntVar(&c.depth, "depth", 2, "minimax depth")
@@ -166,10 +173,19 @@ func (c *Command) evaluate(positions map[uint64]*tak.Position, results chan<- en
 	})
 	for i := 0; i < c.threads; i++ {
 		grp.Go(func() error {
-			prover := prove.NewDFPN(&prove.DFPNConfig{
-				// Attacker: tak.White,
-				TableMem: 100 * 1 << 20,
-			})
+			var prover *prove.DFPNSolver
+			var mm *ai.MinimaxAI
+			if c.prove {
+				prover = prove.NewDFPN(&prove.DFPNConfig{
+					// Attacker: tak.White,
+					TableMem: 100 * 1 << 20,
+				})
+			} else {
+				mm = ai.NewMinimax(ai.MinimaxConfig{
+					Size:     c.size,
+					TableMem: 100 * 1 << 20,
+				})
+			}
 			/*
 				proveBlack := prove.NewDFPN(&prove.DFPNConfig{
 					Attacker: tak.Black,
@@ -177,25 +193,39 @@ func (c *Command) evaluate(positions map[uint64]*tak.Position, results chan<- en
 				})
 			*/
 			for p := range input {
-				var value float64
-				res, _ := prover.Prove(p)
-				if res.Result == prove.EvalUnknown {
-					log.Printf("unprovable! %q bounds=%d,%d",
-						ptn.FormatTPS(p),
-						res.Proof,
-						res.Disproof,
-					)
-					continue
-				} else if res.Result == prove.EvalTrue {
-					value = 1.0
+				ent := entry{pos: p}
+				if c.prove {
+					res, _ := prover.Prove(p)
+					if res.Result == prove.EvalUnknown {
+						log.Printf("unprovable! %q bounds=%d,%d",
+							ptn.FormatTPS(p),
+							res.Proof,
+							res.Disproof,
+						)
+						continue
+					} else if res.Result == prove.EvalTrue {
+						ent.value = 1.0
+					} else {
+						ent.value = -1.0
+					}
+					ent.move = res.Move
 				} else {
-					value = -1.0
-				}
-
-				ent := entry{
-					pos:   p,
-					move:  res.Move,
-					value: value,
+					ctx, cancel := context.WithTimeout(context.Background(), c.limit)
+					pv, val, _ := mm.Analyze(
+						ctx,
+						p,
+					)
+					cancel()
+					ent.move = pv[0]
+					if val > ai.WinThreshold {
+						ent.value = 1.0
+					} else if val < -ai.WinThreshold {
+						ent.value = -1.0
+					} else if val > 0 {
+						ent.value = 0.5
+					} else if val < 0 {
+						ent.value = 0.5
+					}
 				}
 
 				results <- ent
