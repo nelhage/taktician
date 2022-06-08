@@ -18,6 +18,8 @@ class Config:
     initializer_range: float = 0.02
     positional_encoding: str = "sin"
 
+    autoregressive_mask: bool = True
+
     @cached_property
     def d_mlp(self):
         return 4 * self.d_model
@@ -45,6 +47,8 @@ class Resblock(nn.Module):
         self.mlp_act = nn.ReLU()
         self.mlp_down = nn.Linear(cfg.d_mlp, cfg.d_model, dtype=dtype, device=device)
 
+        self.config = cfg
+
     def init_weights(self, cfg: Config):
         std = cfg.initializer_range / math.sqrt(cfg.n_layer)
         self.attn_ln.reset_parameters()
@@ -63,7 +67,9 @@ class Resblock(nn.Module):
             attn_ln,
             attn_ln,
             attn_ln,
-            attn_mask=self.ar_mask(n_ctx, dtype=resid.dtype, device=resid.device),
+            attn_mask=self.ar_mask(n_ctx, dtype=resid.dtype, device=resid.device)
+            if self.config.autoregressive_mask
+            else None,
         )
         resid = resid + attn_out
 
@@ -122,6 +128,7 @@ class Transformer(nn.Module):
     def __init__(self, cfg, dtype=None, device=None):
         super().__init__()
         self.cfg = cfg
+        self.device = device
         self.embedding = nn.Embedding(
             cfg.n_vocab, cfg.d_model, dtype=dtype, device=device
         )
@@ -133,6 +140,8 @@ class Transformer(nn.Module):
             self.positional_encoding = LearnedPositionalEncoding(
                 d_model=cfg.d_model, max_n_ctx=cfg.n_ctx, dtype=dtype, device=device
             )
+        elif cfg.positional_encoding == "none":
+            self.positional_encoding = lambda acts: acts
         else:
             raise ValueError(
                 f"Unknown positional encoding type: {cfg.positional_encoding!r}"
