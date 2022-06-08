@@ -142,13 +142,7 @@ func (c *Command) generateGames(ctx context.Context, games chan<- *game) {
 	grp, ctx := errgroup.WithContext(ctx)
 	for i := 0; i < c.threads; i++ {
 		grp.Go(func() error {
-			for {
-				id := atomic.AddInt64(&todo, -1)
-				if id <= 0 {
-					break
-				}
-				games <- c.generateOne(ctx, id)
-			}
+			c.generateWorker(ctx, games, &todo, i)
 			return nil
 		})
 	}
@@ -157,39 +151,44 @@ func (c *Command) generateGames(ctx context.Context, games chan<- *game) {
 
 const prime = 1099511628211
 
-func (c *Command) generateOne(ctx context.Context, id int64) *game {
-	rng := rand.New(rand.NewSource(prime*c.seed + id))
+func (c *Command) generateWorker(ctx context.Context, games chan<- *game, todo *int64, id int) {
+	rng := rand.New(rand.NewSource(prime*c.seed + int64(id)))
 	mm := ai.NewMinimax(ai.MinimaxConfig{
 		Size:  c.size,
 		Seed:  rng.Int63(),
 		Depth: c.depth,
 	})
 	rnd := ai.NewRandom(rng.Int63())
-
-	pos := tak.New(tak.Config{Size: c.size})
-	g := game{positions: []*tak.Position{pos}}
 	for {
-		if done, _ := pos.GameOver(); done {
-			break
+		gid := atomic.AddInt64(todo, -1)
+		if gid < 0 {
+			return
 		}
-		var player ai.TakPlayer
-		if rng.Float64() < c.epsilon {
-			player = rnd
-		} else {
-			player = mm
-		}
-
+		pos := tak.New(tak.Config{Size: c.size})
+		g := game{positions: []*tak.Position{pos}}
 		for {
-			m := player.GetMove(ctx, pos)
-			child, err := pos.Move(m)
-			if err != nil {
-				continue
+			if done, _ := pos.GameOver(); done {
+				break
 			}
-			g.positions = append(g.positions, child)
-			g.moves = append(g.moves, m)
-			pos = child
-			break
+			var player ai.TakPlayer
+			if rng.Float64() < c.epsilon {
+				player = rnd
+			} else {
+				player = mm
+			}
+
+			for {
+				m := player.GetMove(ctx, pos)
+				child, err := pos.Move(m)
+				if err != nil {
+					continue
+				}
+				g.positions = append(g.positions, child)
+				g.moves = append(g.moves, m)
+				pos = child
+				break
+			}
 		}
+		games <- &g
 	}
-	return &g
 }
