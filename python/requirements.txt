@@ -1,3 +1,4 @@
+--index-url https://pypi.python.org/simple/
 attrs
 pytest
 pytest-cov
@@ -6,3 +7,7 @@ grpcio
 grpcio-tools
 black>=22.3.0
 python-lsp-server>=1.4.1
+zstandard
+py-spy
+torch>=1.11.0
+wandb
