@@ -27,7 +27,10 @@ def fwd_and_loss(model, xent, record):
     batch = record["positions"].to(device=model.device, dtype=torch.long)
     logits = model(batch[:, :-1])
     targets = batch[:, 1:]
-    loss = (xent(logits.permute(0, 2, 1), targets) * record["mask"][:, :-1]).mean()
+    loss = (
+        xent(logits.permute(0, 2, 1), targets)
+        * record["mask"].to(device=model.device)[:, :-1]
+    ).mean()
     return loss
 
 
