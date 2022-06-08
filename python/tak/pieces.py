@@ -1,5 +1,5 @@
+from attrs import define
 import enum
-import attr
 
 
 class Color(enum.Enum):
@@ -19,10 +19,10 @@ class Kind(enum.Enum):
         return self == Kind.FLAT or self == Kind.CAPSTONE
 
 
-@attr.s(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class Piece(object):
-    color = attr.ib(validator=attr.validators.instance_of(Color))
-    kind = attr.ib(validator=attr.validators.instance_of(Kind))
+    color: Color
+    kind: Kind
 
     def is_road(self):
         return self.kind.is_road()

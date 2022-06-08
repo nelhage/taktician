@@ -1,4 +1,6 @@
-import attr
+from attrs import define
+import attrs
+
 import enum
 
 from . import moves
@@ -7,17 +9,11 @@ from . import pieces
 import typing as T
 
 
-@attr.s(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class Config(object):
-    size = attr.ib(validator=attr.validators.instance_of(int))
-    pieces = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(int)),
-        default=None,
-    )
-    capstones = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(int)),
-        default=None,
-    )
+    size: int
+    pieces: T.Optional[int] = None
+    capstones: T.Optional[int] = None
 
     @property
     def flat_count(self):
@@ -35,10 +31,10 @@ class Config(object):
     DEFAULT_CAPS = [0, 0, 0, 0, 0, 1, 1, 1, 2]
 
 
-@attr.s(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class StoneCounts(object):
-    stones = attr.ib()
-    caps = attr.ib()
+    stones: int
+    caps: int
 
 
 class WinReason(enum.Enum):
@@ -46,12 +42,12 @@ class WinReason(enum.Enum):
     FLATS = 2
 
 
-@attr.s(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class Position(object):
-    size = attr.ib()
-    stones = attr.ib()
-    ply = attr.ib()
-    board = attr.ib()
+    size: int
+    stones: T.Tuple[StoneCounts, StoneCounts]
+    ply: int
+    board: list[list[pieces.Piece]]
 
     @classmethod
     def from_config(cls, config):
@@ -192,7 +188,7 @@ class Position(object):
         else:
             self._move_place(m, delta)
 
-        return attr.evolve(self, **delta)
+        return attrs.evolve(self, **delta)
 
     def _move_place(self, m, delta):
         if self.ply < 2 and m.type != moves.MoveType.PLACE_FLAT:
@@ -214,7 +210,7 @@ class Position(object):
         cs = self.stones[color.value]
         if getattr(cs, slot) <= 0:
             raise IllegalMove("not enough stones")
-        newstones = attr.evolve(cs, **{slot: getattr(cs, slot) - 1})
+        newstones = attrs.evolve(cs, **{slot: getattr(cs, slot) - 1})
 
         if color == pieces.Color.WHITE:
             delta["stones"] = (newstones, self.stones[1])
