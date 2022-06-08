@@ -52,6 +52,7 @@ type Command struct {
 	maxDepth int
 	pn2      bool
 	dfpn     bool
+	attacker string
 }
 
 func (*Command) Name() string     { return "analyze" }
@@ -95,6 +96,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
 	flags.IntVar(&c.maxDepth, "max-depth", 0, "Maximum depth to consider in PN search")
 	flags.BoolVar(&c.pn2, "pn2", false, "Use PN² search")
+	flags.StringVar(&c.attacker, "attacker", "", "Set the DFPN attacker")
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

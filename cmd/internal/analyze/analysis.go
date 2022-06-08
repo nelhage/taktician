@@ -157,9 +157,20 @@ type dfpnAnalysis struct {
 }
 
 func (a *dfpnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	var attacker tak.Color
+	if a.cmd.attacker == "white" {
+		attacker = tak.White
+	} else if a.cmd.attacker == "black" {
+		attacker = tak.Black
+	} else if a.cmd.attacker == "" {
+		attacker = tak.NoColor
+	} else {
+		log.Fatalf("Cannot parse attacker: %q", a.cmd.attacker)
+	}
 	prover := prove.NewDFPN(&prove.DFPNConfig{
 		Debug:    a.cmd.mmopt.Debug,
 		TableMem: a.cmd.mmopt.TableMem,
+		Attacker: attacker,
 	})
 
 	if !a.cmd.quiet {

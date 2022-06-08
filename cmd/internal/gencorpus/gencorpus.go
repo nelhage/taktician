@@ -2,6 +2,7 @@ package gencorpus
 
 import (
 	"context"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"log"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
+	"github.com/nelhage/taktician/prove"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/tak"
 	"golang.org/x/sync/errgroup"
@@ -66,6 +68,12 @@ func growslice[T any](sl []T, newlen int) []T {
 	return newsl
 }
 
+type entry struct {
+	pos   *tak.Position
+	move  tak.Move
+	value float64
+}
+
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	var byLength []int
 	var posCount []map[uint64]int
@@ -115,12 +123,15 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			}
 			idx = 9 + int(rng.Int31n(int32(npos)-9))
 		}
-		if idx >= len(g.positions) {
+		if idx >= len(g.positions)-1 {
 			continue
 		}
 		pos := g.positions[idx]
 		positions[pos.Hash()] = pos
 	}
+
+	results := make(chan entry)
+	go c.evaluate(positions, results)
 
 	fh, err := os.Create(c.output)
 	if err != nil {
@@ -128,11 +139,72 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		return subcommands.ExitFailure
 	}
 	defer fh.Close()
-	for _, p := range positions {
-		fmt.Fprintf(fh, "%s\n", ptn.FormatTPS(p))
+	wr := csv.NewWriter(fh)
+	defer wr.Flush()
+
+	for e := range results {
+		wr.Write([]string{
+			ptn.FormatTPS(e.pos),
+			ptn.FormatMove(e.move),
+			fmt.Sprintf("%+f", e.value),
+		})
 	}
 
 	return subcommands.ExitSuccess
+}
+
+func (c *Command) evaluate(positions map[uint64]*tak.Position, results chan<- entry) {
+	defer close(results)
+	input := make(chan *tak.Position)
+	grp := errgroup.Group{}
+	grp.Go(func() error {
+		defer close(input)
+		for _, p := range positions {
+			input <- p
+		}
+		return nil
+	})
+	for i := 0; i < c.threads; i++ {
+		grp.Go(func() error {
+			prover := prove.NewDFPN(&prove.DFPNConfig{
+				// Attacker: tak.White,
+				TableMem: 100 * 1 << 20,
+			})
+			/*
+				proveBlack := prove.NewDFPN(&prove.DFPNConfig{
+					Attacker: tak.Black,
+					TableMem: 100 * 1 << 20,
+				})
+			*/
+			for p := range input {
+				var value float64
+				res, _ := prover.Prove(p)
+				if res.Result == prove.EvalUnknown {
+					log.Printf("unprovable! %q bounds=%d,%d",
+						ptn.FormatTPS(p),
+						res.Proof,
+						res.Disproof,
+					)
+					continue
+				} else if res.Result == prove.EvalTrue {
+					value = 1.0
+				} else {
+					value = -1.0
+				}
+
+				ent := entry{
+					pos:   p,
+					move:  res.Move,
+					value: value,
+				}
+
+				results <- ent
+
+			}
+			return nil
+		})
+	}
+	grp.Wait()
 }
 
 func (c *Command) generateGames(ctx context.Context, games chan<- *game) {

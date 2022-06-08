@@ -128,7 +128,7 @@ func (d *DFPNSolver) Prove(g *tak.Position) (ProofResult, DFPNStats) {
 
 	d.stack = nil
 	start := time.Now()
-	entry, work := d.mid(g, proofNumbers{phi: INFINITY / 2, delta: INFINITY / 2}, entry{
+	entry, work := d.mid(g, proofNumbers{phi: INFINITY - 100, delta: INFINITY - 100}, entry{
 		hash:   g.Hash(),
 		work:   0,
 		bounds: proofNumbers{phi: 1, delta: 1},
@@ -218,6 +218,7 @@ func (d *DFPNSolver) mid(g *tak.Position, bounds proofNumbers, current entry) (e
 			return current, 0
 		}
 	*/
+
 	if d.checkRepetition() {
 		d.stats.Repetition++
 		current.bounds = d.terminalBounds(g, tak.NoColor)
