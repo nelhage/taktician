@@ -13,5 +13,6 @@ exec rsync -Pax \
      --exclude='/.git' \
      --exclude='/.direnv' \
      --exclude='*.test' \
+     --exclude='/data' \
      --exclude='wandb' \
      . "$target:$path"
