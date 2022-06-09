@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 
-@pytest.skip("deprecated due to needing data")
+@pytest.mark.skip("deprecated due to needing data")
 def test_pile():
     ds = data.PileDataset(
         os.path.join(os.path.dirname(__file__), "../data/pile/train/00.jsonl.zst"),
