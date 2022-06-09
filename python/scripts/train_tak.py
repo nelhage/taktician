@@ -67,7 +67,7 @@ def main():
     parser.add_argument("--wandb", action="store_true", default=False)
     parser.add_argument("--no-wandb", action="store_false", dest="wandb")
 
-    parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
+    parser.add_argument("--lr", type=float, default=5e-4, help="learning rate")
     parser.add_argument("--steps", type=int, default=None)
     parser.add_argument("--profile-steps", type=str, default=None)
     parser.add_argument("--positions", type=int, default=None)
@@ -92,7 +92,7 @@ def main():
         batch_size=args.minibatch,
         pin_memory=True,
         num_workers=1,
-        shuffle=True,
+        # shuffle=True,
         generator=torch.Generator().manual_seed(0x12345678),
     )
 
