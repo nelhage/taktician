@@ -134,6 +134,7 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 			if _, ok := seen[pos.Hash()]; ok {
 				continue
 			}
+			seen[pos.Hash()] = struct{}{}
 			positions <- pos
 		}
 
