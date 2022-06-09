@@ -62,6 +62,8 @@ def main():
         "--device", type=str, choices=("cpu", "cuda"), default="cuda", help="device"
     )
 
+    parser.add_argument("--job-name", type=str, default=None, help="job name for wandb")
+    parser.add_argument("--group", type=str, default=None, help="wandb group name")
     parser.add_argument("--wandb", action="store_true", default=False)
     parser.add_argument("--no-wandb", action="store_false", dest="wandb")
 
@@ -84,12 +86,14 @@ def main():
         cfg.positional_encoding = args.pe
 
     train_ds = Dataset(args.data + "-train.pt")
+
     loader = torch.utils.data.DataLoader(
         train_ds,
         batch_size=args.minibatch,
         pin_memory=True,
         num_workers=1,
         shuffle=True,
+        generator=torch.Generator().manual_seed(0x12345678),
     )
 
     test_ds = Dataset(args.data + "-test.pt")
@@ -112,7 +116,10 @@ def main():
     data = iter(loader)
 
     if args.wandb:
-        run = wandb.init()  # noqa
+        job_name = args.job_name
+        if job_name is not None and "{rand}" in job_name:
+            job_name = job_name.format(rand=wandb.util.generate_id())
+        run = wandb.init(project="taktician", name=job_name, group=args.group)  # noqa
         wandb.watch(model, log_freq=100, log="gradients")
         wandb.config.update(args)
         wandb.config.update({"n_parameters": cfg.n_parameters})
@@ -170,23 +177,30 @@ def main():
             print(
                 f"[step={step_i:06d} t={now-start:.1f}s positions={positions:08d}] loss={avg_loss:2.2f} ms_per_step={1000*(now-step_start):.0f}"
             )
-            if args.wandb:
-                wandb.log(
-                    {
-                        "positions": positions,
-                        "elapsed_time": now - start,
-                        "train_loss": avg_loss,
-                    },
-                    step=step_i,
-                )
-            if args.positions is not None and positions >= args.positions:
-                break
 
             if step_i % args.test_freq == 0:
                 test_loss = torch.tensor(
                     [fwd_and_loss(model, xent, b).item() for b in test_batches]
                 ).mean()
                 print(f"[step={step_i:06d}] test_loss={test_loss:4.2f}")
+                if args.wandb:
+                    wandb.log(
+                        {"test_loss": test_loss.item()},
+                        commit=False,
+                    )
+
+            if args.wandb:
+                wandb.log(
+                    {
+                        "positions": positions,
+                        "elapsed_time": now - start,
+                        "train_loss": avg_loss,
+                        "lr": args.lr,
+                    },
+                    step=step_i,
+                )
+            if args.positions is not None and positions >= args.positions:
+                break
 
 
 if __name__ == "__main__":
