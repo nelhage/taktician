@@ -1,4 +1,4 @@
-from tak import encoding
+from tak.model import encoding
 
 
 def test_encoding_invariants():
