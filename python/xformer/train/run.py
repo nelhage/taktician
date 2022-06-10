@@ -18,13 +18,6 @@ class LossFunction:
 
 
 @define
-class Profile:
-    extra_steps: set[int]
-    every: int
-    output_root: str = "profile/"
-
-
-@define
 class Stats:
     step: int = 0
     sequences: int = 0
@@ -76,7 +69,6 @@ class Run:
     stop: Trigger
 
     optimizer: Optimizer = field(factory=Optimizer)
-    profile: T.Optional[Profile] = None
 
     hooks: list[Hook] = field(factory=list)
 
@@ -87,7 +79,6 @@ __all__ = [
     "Hook",
     "LossFunction",
     "Optimizer",
-    "Profile",
     "Run",
     "Stats",
     "StopTrigger",

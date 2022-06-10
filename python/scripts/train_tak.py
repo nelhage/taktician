@@ -118,6 +118,12 @@ def main():
                 config=args,
             )
         )
+    if args.profile_steps:
+        extra_hooks.append(
+            hooks.Profile(
+                extra_steps=set(map(int, args.profile_steps.split(","))),
+            )
+        )
 
     run = train.Run(
         model=model,
@@ -143,27 +149,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-def dumping_ground():
-    ##########
-
-    from torch.profiler import profile, ProfilerAction
-
-    profile_steps = set()
-    if args.profile_steps is not None:
-        profile_steps = set(int(s) for s in args.profile_steps.split(","))
-
-    def schedule(step):
-        if step in profile_steps:
-            print(f"Profiling step {step}...")
-            return ProfilerAction.RECORD_AND_SAVE
-        if step + 1 in profile_steps:
-            return ProfilerAction.WARMUP
-        return ProfilerAction.NONE
-
-    def save_profile(prof):
-        os.makedirs("profile", 0o755, True)
-        prof.export_chrome_trace(f"profile/step_{step_i}.pt.trace.json")
-
-    profiler = profile(schedule=schedule, with_stack=True, on_trace_ready=save_profile)
