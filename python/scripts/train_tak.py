@@ -1,5 +1,7 @@
 import xformer
-import xformer.data
+from xformer import train
+
+from attrs import define, field
 
 import os
 import torch
@@ -7,34 +9,89 @@ import time
 import itertools
 import argparse
 import wandb
-from contextlib import nullcontext
+
+import typing as T
 
 from torch.profiler import profile, ProfilerAction
 
 
+@define
 class Dataset:
-    def __init__(self, path):
-        self.data = torch.load(path)
+    path: str
+    batch_size: int
+    device: str = "cpu"
+    seed: int = 0x12345678
+
+    data: dict[str, torch.Tensor] = field(init=False)
+    generator: torch.Generator = field(init=False)
+
+    def __attrs_post_init__(self):
+        self.data = torch.load(self.path)
+        for (k, v) in self.data.items():
+            if v.dtype == torch.uint8:
+                self.data[k] = v.long()
+
+        self.generator = torch.Generator().manual_seed(self.seed)
 
     def __len__(self):
         return len(next(iter(self.data.values())))
 
-    def __getitem__(self, i):
-        return {k: v[i] for (k, v) in self.data.items()}
+    def pin(self, tensor):
+        if self.device.startswith("cuda"):
+            return tensor.pin_memory()
+        return tensor
+
+    def __iter__(self):
+        perm = torch.randperm(len(self), generator=self.generator)
+        shuffled = {k: self.pin(v[perm]) for (k, v) in self.data.items()}
+        for i in range(0, len(self), self.batch_size):
+            yield PositionBatch(
+                {
+                    k: v[i : i + self.batch_size].to(self.device)
+                    for (k, v) in shuffled.items()
+                }
+            )
 
 
-def fwd_and_loss(model, xent, record):
-    batch = record["positions"].to(device=model.device, dtype=torch.long)
-    logits = model(batch[:, :-1])
-    targets = batch[:, 1:]
-    loss = (
-        xent(logits.permute(0, 2, 1), targets)
-        * record["mask"].to(device=model.device)[:, :-1]
-    ).mean()
-    return loss
+@define
+class PositionBatch:
+    data: dict[str, torch.Tensor]
+
+    @property
+    def inputs(self):
+        return self.data["positions"][:, :-1]
+
+    @property
+    def targets(self):
+        return self.data["positions"][:, 1:]
+
+    @property
+    def mask(self):
+        return self.data["mask"][:, :-1]
 
 
-def main():
+class MaskedARLoss:
+    def __init__(self):
+        self.xent = torch.nn.CrossEntropyLoss(reduction="none")
+
+    def __call__(self, batch, logits):
+        return (self.xent(logits.permute(0, 2, 1), batch.targets) * batch.mask).mean()
+
+
+@define
+class StopTrigger:
+    steps: T.Optional[int]
+    sequences: T.Optional[int]
+
+    def __call__(self, stats: train.Stats):
+        if self.steps is not None and stats.step >= self.steps:
+            return True
+        if self.sequences is not None and stats.sequences >= self.sequences:
+            return True
+        return False
+
+
+def parse_args():
     parser = argparse.ArgumentParser(description="Train a transformer")
     parser.add_argument("--layers", type=int, default=2, help="Number of layers")
     parser.add_argument("--d_model", type=int, default=None, help="embedding dimension")
@@ -48,11 +105,10 @@ def main():
 
     parser.add_argument("--data", type=str, default="data/positions", help="datasource")
 
-    parser.add_argument("--batch", type=int, default=64, help="batch size")
-    parser.add_argument("--minibatch", type=int, default=4, help="minibatch")
+    parser.add_argument("--batch", type=int, default=4, help="batch size")
 
     parser.add_argument(
-        "--test-batches", type=int, default=16, help="number of test minibatches"
+        "--test-batches", type=int, default=16, help="number of test batches"
     )
     parser.add_argument(
         "--test-freq", type=int, default=1000, help="measure test loss every N steps"
@@ -72,7 +128,11 @@ def main():
     parser.add_argument("--profile-steps", type=str, default=None)
     parser.add_argument("--positions", type=int, default=None)
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
 
     cfg = xformer.Config(
         n_layer=args.layers,
@@ -85,17 +145,43 @@ def main():
     if args.pe is not None:
         cfg.positional_encoding = args.pe
 
-    train_ds = Dataset(args.data + "-train.pt")
-
-    loader = torch.utils.data.DataLoader(
-        train_ds,
-        batch_size=args.minibatch,
-        pin_memory=True,
-        num_workers=1,
-        # shuffle=True,
-        generator=torch.Generator().manual_seed(0x12345678),
+    train_ds = Dataset(
+        args.data + "-train.pt",
+        batch_size=args.batch,
+        device=args.device,
     )
 
+    model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
+
+    run = train.Run(
+        model=model,
+        dataset=train_ds,
+        loss=MaskedARLoss(),
+        logging=train.Logging(
+            wandb=args.wandb,
+            job_name=args.job_name,
+            group=args.group,
+            config=args,
+        ),
+        optimizer=train.Optimizer(lr=args.lr),
+        stop=StopTrigger(steps=args.steps, sequences=args.positions),
+    )
+
+    print(
+        f"Training a {cfg.n_layer}L model with {cfg.n_parameters:,} non-embedding parameters..."
+    )
+    param_bytes = sum(t.numel() * t.element_size() for t in model.parameters())
+    print(f" Model params use {param_bytes/1024**3:.2f}GiB on device")
+
+    trainer = train.Trainer(run)
+    trainer.train()
+
+
+if __name__ == "__main__":
+    main()
+
+
+def dumping_ground():
     test_ds = Dataset(args.data + "-test.pt")
     test_loader = torch.utils.data.DataLoader(
         test_ds,
@@ -105,39 +191,7 @@ def main():
     )
     test_batches = list(itertools.islice(test_loader, args.test_batches))
 
-    model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
-
-    xent = torch.nn.CrossEntropyLoss(reduction="none")
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
-
-    assert args.batch % args.minibatch == 0, "minibatch must divide batch"
-    steps_per_batch = args.batch // args.minibatch
-
-    data = iter(loader)
-
-    if args.wandb:
-        job_name = args.job_name
-        if job_name is not None and "{rand}" in job_name:
-            job_name = job_name.format(rand=wandb.util.generate_id())
-        run = wandb.init(project="taktician", name=job_name, group=args.group)  # noqa
-        wandb.watch(model, log_freq=100, log="gradients")
-        wandb.config.update(args)
-        wandb.config.update({"n_parameters": cfg.n_parameters})
-
-    model.init_weights()
-    param_bytes = 0
-    for p in model.parameters():
-        param_bytes += p.numel() * p.element_size()
-
-    print(
-        f"Training a {cfg.n_layer}L model with {cfg.n_parameters:,} non-embedding parameters..."
-    )
-    print(f" Model params use {param_bytes/1024**3:.2f}GiB on device")
-
-    start = time.time()
-    positions = 0
-
-    steps = range(args.steps) if args.steps is not None else itertools.count()
+    ##########
 
     profile_steps = set()
     if args.profile_steps is not None:
@@ -157,51 +211,15 @@ def main():
 
     profiler = profile(schedule=schedule, with_stack=True, on_trace_ready=save_profile)
 
-    with profiler:
-        for step_i in steps:
-            step_start = time.time()
+    #############
 
-            avg_loss = torch.zeros((), device=args.device)
-            opt.zero_grad(set_to_none=True)
-            for _ in range(steps_per_batch):
-                batch = next(data)
-                loss = fwd_and_loss(model, xent, batch)
-                avg_loss += loss
-                positions += batch["positions"].size(0)
-                (loss / steps_per_batch).backward()
-            opt.step()
-            profiler.step()
-
-            now = time.time()
-            avg_loss = (avg_loss / steps_per_batch).item()
-            print(
-                f"[step={step_i:06d} t={now-start:.1f}s positions={positions:08d}] loss={avg_loss:2.2f} ms_per_step={1000*(now-step_start):.0f}"
+    if step_i % args.test_freq == 0:
+        test_loss = torch.tensor(
+            [fwd_and_loss(model, xent, b).item() for b in test_batches]
+        ).mean()
+        print(f"[step={step_i:06d}] test_loss={test_loss:4.2f}")
+        if args.wandb:
+            wandb.log(
+                {"test_loss": test_loss.item()},
+                commit=False,
             )
-
-            if step_i % args.test_freq == 0:
-                test_loss = torch.tensor(
-                    [fwd_and_loss(model, xent, b).item() for b in test_batches]
-                ).mean()
-                print(f"[step={step_i:06d}] test_loss={test_loss:4.2f}")
-                if args.wandb:
-                    wandb.log(
-                        {"test_loss": test_loss.item()},
-                        commit=False,
-                    )
-
-            if args.wandb:
-                wandb.log(
-                    {
-                        "positions": positions,
-                        "elapsed_time": now - start,
-                        "train_loss": avg_loss,
-                        "lr": args.lr,
-                    },
-                    step=step_i,
-                )
-            if args.positions is not None and positions >= args.positions:
-                break
-
-
-if __name__ == "__main__":
-    main()
