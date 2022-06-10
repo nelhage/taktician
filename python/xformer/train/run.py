@@ -18,14 +18,6 @@ class LossFunction:
 
 
 @define
-class Logging:
-    wandb: bool = False
-    job_name: T.Optional[str] = None
-    group: T.Optional[str] = None
-    config: T.Any = None
-
-
-@define
 class Profile:
     extra_steps: set[int]
     every: int
@@ -70,7 +62,6 @@ class Run:
 
     stop: Trigger
 
-    logging: Logging = field(factory=Logging)
     optimizer: Optimizer = field(factory=Optimizer)
     profile: T.Optional[Profile] = None
 
@@ -81,7 +72,6 @@ __all__ = [
     "Batch",
     "Dataset",
     "Hook",
-    "Logging",
     "LossFunction",
     "Optimizer",
     "Profile",

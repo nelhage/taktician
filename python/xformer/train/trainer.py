@@ -1,10 +1,7 @@
-import attrs
-import wandb
 import time
 import torch
 
 from . import run
-from .. import model
 
 
 class Trainer:
@@ -17,23 +14,9 @@ class Trainer:
         self.run = training_run
         self.stats = run.Stats()
 
-    def config_to_log(self):
-        return self.run.logging.config
-
     def train(self):
         self.start_time = time.time()
         self.epoch = iter(self.run.dataset)
-
-        if self.run.logging.wandb:
-            job_name = self.run.logging.job_name
-            if job_name is not None and "{rand}" in job_name:
-                job_name = job_name.format(rand=wandb.util.generate_id())
-            wandb.init(
-                project=self.run.logging.project,
-                name=job_name,
-                group=self.run.logging.group,
-            )
-            wandb.config.update(self.config_to_log())
 
         self.run.model.init_weights()
 
@@ -51,6 +34,7 @@ class Trainer:
     def one_step(self):
         step_start = time.time()
         self.stats.step += 1
+        self.stats.metrics.clear()
 
         for hook in self.run.hooks:
             hook.before_step(self.run, self.stats)
@@ -87,9 +71,6 @@ class Trainer:
             f" loss={stats.train_loss:2.2f}"
             f" ms_per_step={1000*(stats.step_time):.0f}"
         )
-
-        if self.run.logging.wandb:
-            wandb.log(self.stats.__dict__, step=self.stats.step)
 
 
 __all__ = ["Trainer"]

@@ -1,14 +1,13 @@
 import xformer
+import xformer.train.wandb
+
 from xformer import train
 
 from attrs import define, field
 
 import os
 import torch
-import time
-import itertools
 import argparse
-import wandb
 
 import typing as T
 
@@ -186,21 +185,27 @@ def main():
 
     model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
+    extra_hooks = []
+    if args.wandb:
+        extra_hooks.append(
+            train.wandb.WandbHook(
+                project="taktician",
+                job_name=args.job_name,
+                group=args.group,
+                config=args,
+            )
+        )
+
     run = train.Run(
         model=model,
         dataset=train_ds,
         loss=MaskedARLoss(),
-        logging=train.Logging(
-            wandb=args.wandb,
-            job_name=args.job_name,
-            group=args.group,
-            config=args,
-        ),
         optimizer=train.Optimizer(lr=args.lr),
         stop=StopTrigger(steps=args.steps, sequences=args.positions),
         hooks=[
             TestLossHook(test_ds, args.test_freq),
-        ],
+        ]
+        + extra_hooks,
     )
 
     print(
