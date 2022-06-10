@@ -1,7 +1,8 @@
 import xformer
-import xformer.train.wandb
+
 
 from xformer import data, train
+from xformer.train import hooks
 
 from attrs import define
 
@@ -50,29 +51,6 @@ class StopTrigger:
         if self.sequences is not None and stats.sequences >= self.sequences:
             return True
         return False
-
-
-class TestLossHook(train.Hook):
-    def __init__(self, dataset, freq: int):
-        self.dataset = dataset
-        self.frequency = freq
-
-    def after_step(self, run: train.Run, stats: train.Stats):
-        if stats.step % self.frequency != 0:
-            return
-
-        test_loss = (
-            torch.tensor(
-                [
-                    run.loss(batch, run.model(batch.inputs)).item()
-                    for batch in self.dataset
-                ]
-            )
-            .mean()
-            .item()
-        )
-        print(f"[step={stats.step:06d}] test_loss={test_loss:4.2f}")
-        stats.metrics["test_loss"] = test_loss
 
 
 def parse_args():
@@ -148,7 +126,7 @@ def main():
     extra_hooks = []
     if args.wandb:
         extra_hooks.append(
-            train.wandb.WandbHook(
+            hooks.Wandb(
                 project="taktician",
                 job_name=args.job_name,
                 group=args.group,
@@ -163,7 +141,7 @@ def main():
         optimizer=train.Optimizer(lr=args.lr),
         stop=StopTrigger(steps=args.steps, sequences=args.positions),
         hooks=[
-            TestLossHook(test_ds, args.test_freq),
+            hooks.TestLoss(test_ds, args.test_freq),
         ]
         + extra_hooks,
     )
