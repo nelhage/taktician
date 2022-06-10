@@ -1,9 +1,9 @@
 import xformer
 import xformer.train.wandb
 
-from xformer import train
+from xformer import data, train
 
-from attrs import define, field
+from attrs import define
 
 import os
 import torch
@@ -12,48 +12,6 @@ import argparse
 import typing as T
 
 from torch.profiler import profile, ProfilerAction
-
-
-@define
-class Dataset:
-    path: str
-    batch_size: int
-    batches: T.Optional[int] = None
-    device: str = "cpu"
-    seed: int = 0x12345678
-
-    data: dict[str, torch.Tensor] = field(init=False)
-    generator: torch.Generator = field(init=False)
-
-    def __attrs_post_init__(self):
-        self.data = torch.load(self.path)
-        for (k, v) in self.data.items():
-            if v.dtype == torch.uint8:
-                v = v.long()
-            if self.batches is not None:
-                v = v[: self.batches * self.batch_size]
-            self.data[k] = v
-
-        self.generator = torch.Generator().manual_seed(self.seed)
-
-    def __len__(self):
-        return len(next(iter(self.data.values())))
-
-    def pin(self, tensor):
-        if self.device.startswith("cuda"):
-            return tensor.pin_memory()
-        return tensor
-
-    def __iter__(self):
-        perm = torch.randperm(len(self), generator=self.generator)
-        shuffled = {k: self.pin(v[perm]) for (k, v) in self.data.items()}
-        for i in range(0, len(self), self.batch_size):
-            yield PositionBatch(
-                {
-                    k: v[i : i + self.batch_size].to(self.device)
-                    for (k, v) in shuffled.items()
-                }
-            )
 
 
 @define
@@ -171,16 +129,18 @@ def main():
     if args.pe is not None:
         cfg.positional_encoding = args.pe
 
-    train_ds = Dataset(
+    train_ds = data.Dataset(
         args.data + "-train.pt",
         batch_size=args.batch,
         device=args.device,
+        batch_class=PositionBatch,
     )
-    test_ds = Dataset(
+    test_ds = data.Dataset(
         args.data + "-test.pt",
         batch_size=args.batch,
         device=args.device,
         batches=args.test_batches,
+        batch_class=PositionBatch,
     )
 
     model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
