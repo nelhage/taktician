@@ -12,8 +12,6 @@ import argparse
 
 import typing as T
 
-from torch.profiler import profile, ProfilerAction
-
 
 @define
 class PositionBatch:
@@ -38,19 +36,6 @@ class MaskedARLoss:
 
     def __call__(self, batch, logits):
         return (self.xent(logits.permute(0, 2, 1), batch.targets) * batch.mask).mean()
-
-
-@define
-class StopTrigger:
-    steps: T.Optional[int]
-    sequences: T.Optional[int]
-
-    def __call__(self, stats: train.Stats):
-        if self.steps is not None and stats.step >= self.steps:
-            return True
-        if self.sequences is not None and stats.sequences >= self.sequences:
-            return True
-        return False
 
 
 def parse_args():
@@ -139,7 +124,7 @@ def main():
         dataset=train_ds,
         loss=MaskedARLoss(),
         optimizer=train.Optimizer(lr=args.lr),
-        stop=StopTrigger(steps=args.steps, sequences=args.positions),
+        stop=train.StopTrigger(steps=args.steps, sequences=args.positions),
         hooks=[
             hooks.TestLoss(test_ds, args.test_freq),
         ]
@@ -162,6 +147,8 @@ if __name__ == "__main__":
 
 def dumping_ground():
     ##########
+
+    from torch.profiler import profile, ProfilerAction
 
     profile_steps = set()
     if args.profile_steps is not None:

@@ -1,7 +1,7 @@
 from attrs import define
 import attrs
 
-from .run import Hook, Run, Stats
+from ..run import Hook, Run, Stats
 
 import typing as T
 
@@ -30,29 +30,3 @@ class Wandb(Hook):
 
     def after_step(self, run: Run, stats: Stats):
         run.wandb.log(attrs.asdict(stats), step=stats.step)
-
-
-class TestLoss(Hook):
-    def __init__(self, dataset, freq: int):
-        self.dataset = dataset
-        self.frequency = freq
-
-    def after_step(self, run: Run, stats: Stats):
-        if stats.step % self.frequency != 0:
-            return
-
-        test_loss = (
-            torch.cat(
-                [
-                    run.loss(batch, run.model(batch.inputs)).item()
-                    for batch in self.dataset
-                ]
-            )
-            .mean()
-            .item()
-        )
-        print(f"[step={stats.step:06d}] test_loss={test_loss:4.2f}")
-        stats.metrics["test_loss"] = test_loss
-
-
-__all__ = ["Wandb", "TestLoss"]

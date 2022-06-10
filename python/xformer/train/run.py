@@ -43,6 +43,19 @@ class Optimizer:
 Trigger = T.Callable[[Stats], bool]
 
 
+@define
+class StopTrigger:
+    steps: T.Optional[int]
+    sequences: T.Optional[int]
+
+    def __call__(self, stats: Stats):
+        if self.steps is not None and stats.step >= self.steps:
+            return True
+        if self.sequences is not None and stats.sequences >= self.sequences:
+            return True
+        return False
+
+
 class Hook:
     def before_run(self, run: "Run"):
         pass
@@ -77,4 +90,5 @@ __all__ = [
     "Profile",
     "Run",
     "Stats",
+    "StopTrigger",
 ]
