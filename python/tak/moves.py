@@ -1,5 +1,7 @@
-import attr
+from attrs import define, field
 import enum
+
+import typing as T
 
 
 @enum.unique
@@ -35,12 +37,12 @@ DIRECTIONS = {
 RDIRECTIONS = dict((v, k) for (k, v) in DIRECTIONS.items())
 
 
-@attr.s(frozen=True, slots=True)
+@define(frozen=True)
 class Move(object):
-    x = attr.ib()
-    y = attr.ib()
-    type = attr.ib(default=MoveType.PLACE_FLAT)
-    slides = attr.ib(default=None)
+    x: int
+    y: int
+    type: MoveType = field(default=MoveType.PLACE_FLAT)
+    slides: T.Optional[tuple[int]] = None
 
 
 ALL_SLIDES = [() for i in range(9)]

@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+from tak import ptn
+from tak.model import encoding
+import torch
+
+import argparse
+import csv
+
+from itertools import islice
+
+import os.path
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output",
+        dest="output",
+        help="output base",
+        metavar="SECONDS",
+    )
+    parser.add_argument(
+        "--test-frac",
+        dest="test_frac",
+        type=float,
+        default=0.05,
+    )
+    parser.add_argument(
+        "-n",
+        dest="n",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--analysis",
+        action="store_true",
+        dest="analysis",
+        default=False,
+        help="Encode analysis",
+    )
+    parser.add_argument(
+        "corpus",
+        help="Input corpus",
+    )
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    output = args.output
+    if output is None:
+        base, ext = os.path.splitext(args.corpus)
+        if ext != ".csv":
+            raise ValueError("can't autodetect an output path!")
+        output = base
+
+    with open(args.corpus) as fh:
+        reader = csv.reader(fh)
+        if args.n is not None:
+            reader = islice(reader, args.n)
+        records = list(reader)
+
+    data = {}
+
+    positions = [ptn.parse_tps(row[0]) for row in records]
+    data["positions"], data["mask"] = encoding.encode_batch(positions)
+
+    if args.analysis:
+        size = positions[0].size
+        data["value"] = torch.tensor([float(row[2]) for row in records])
+        moves = [ptn.parse_move(row[1]) for row in records]
+        data["moves"], data["moves_mask"] = encoding.encode_moves_batch(size, moves)
+
+    if args.test_frac == 0:
+        torch.save(data, output + ".pt")
+    else:
+        n_test = int(args.test_frac * len(positions))
+        perm = torch.randperm(len(positions))
+
+        torch.save(
+            {k: v[perm[:n_test]] for (k, v) in data.items()}, output + "-test.pt"
+        )
+        torch.save(
+            {k: v[perm[n_test:]] for (k, v) in data.items()}, output + "-train.pt"
+        )
+
+
+if __name__ == "__main__":
+    main()

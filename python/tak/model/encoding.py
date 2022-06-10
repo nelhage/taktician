@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from . import game, pieces
+from .. import game, pieces, moves
 
 import torch
 
@@ -79,11 +79,13 @@ def encode(p: game.Position) -> list[int]:
     return data
 
 
-def encode_batch(positions) -> (torch.Tensor, torch.Tensor):
-    lens = torch.empty((len(positions),), dtype=torch.int)
-    out = torch.zeros((len(positions), 0), dtype=torch.uint8)
-    for (i, p) in enumerate(positions):
-        encoded = encode(p)
+def _encode_batch(
+    inputs, encode_one, dtype=torch.float
+) -> (torch.Tensor, torch.Tensor):
+    lens = torch.empty((len(inputs),), dtype=torch.int)
+    out = torch.zeros((len(inputs), 0), dtype=dtype)
+    for (i, p) in enumerate(inputs):
+        encoded = encode_one(p)
         if len(encoded) > out.size(1):
             tmp = torch.zeros((out.size(0), len(encoded)), dtype=out.dtype)
             tmp[:, : out.size(1)] = out
@@ -94,3 +96,20 @@ def encode_batch(positions) -> (torch.Tensor, torch.Tensor):
     for i, l in enumerate(lens):
         mask[i, :l] = 1
     return out, mask
+
+
+def encode_batch(positions) -> (torch.Tensor, torch.Tensor):
+    return _encode_batch(positions, encode, dtype=torch.uint8)
+
+
+def encode_move(size: int, m: moves.Move) -> list[int]:
+    data = []
+    data.append(size * m.y + m.x)
+    data.append(m.type.value)
+    if m.type.is_slide():
+        data.append(moves.ALL_SLIDES[size].index(m.slides))
+    return data
+
+
+def encode_moves_batch(size, moves) -> (torch.Tensor, torch.Tensor):
+    return _encode_batch(moves, lambda m: encode_move(size, m), dtype=torch.long)
