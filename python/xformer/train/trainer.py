@@ -37,7 +37,8 @@ class Trainer:
 
         self.run.model.init_weights()
 
-        # TODO: profiler
+        for hook in self.run.hooks:
+            hook.before_run(self.run)
 
         self.opt = torch.optim.AdamW(
             self.run.model.parameters(), lr=self.run.optimizer.lr
@@ -48,9 +49,12 @@ class Trainer:
                 break
 
     def one_step(self):
+        step_start = time.time()
         self.stats.step += 1
 
-        step_start = time.time()
+        for hook in self.run.hooks:
+            hook.before_step(self.run, self.stats)
+
         self.opt.zero_grad(set_to_none=True)
         batch = next(self.epoch)
 
@@ -68,6 +72,9 @@ class Trainer:
         step_done = time.time()
         self.stats.step_time = step_done - step_start
         self.stats.elapsed_time = step_done - self.start_time
+
+        for hook in self.run.hooks:
+            hook.after_step(self.run, self.stats)
 
         self.log_step()
 

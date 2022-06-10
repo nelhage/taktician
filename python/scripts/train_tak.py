@@ -19,6 +19,7 @@ from torch.profiler import profile, ProfilerAction
 class Dataset:
     path: str
     batch_size: int
+    batches: T.Optional[int] = None
     device: str = "cpu"
     seed: int = 0x12345678
 
@@ -29,7 +30,10 @@ class Dataset:
         self.data = torch.load(self.path)
         for (k, v) in self.data.items():
             if v.dtype == torch.uint8:
-                self.data[k] = v.long()
+                v = v.long()
+            if self.batches is not None:
+                v = v[: self.batches * self.batch_size]
+            self.data[k] = v
 
         self.generator = torch.Generator().manual_seed(self.seed)
 
@@ -91,6 +95,29 @@ class StopTrigger:
         return False
 
 
+class TestLossHook(train.Hook):
+    def __init__(self, dataset, freq: int):
+        self.dataset = dataset
+        self.frequency = freq
+
+    def after_step(self, run: train.Run, stats: train.Stats):
+        if stats.step % self.frequency != 0:
+            return
+
+        test_loss = (
+            torch.tensor(
+                [
+                    run.loss(batch, run.model(batch.inputs)).item()
+                    for batch in self.dataset
+                ]
+            )
+            .mean()
+            .item()
+        )
+        print(f"[step={stats.step:06d}] test_loss={test_loss:4.2f}")
+        stats.metrics["test_loss"] = test_loss
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a transformer")
     parser.add_argument("--layers", type=int, default=2, help="Number of layers")
@@ -150,6 +177,12 @@ def main():
         batch_size=args.batch,
         device=args.device,
     )
+    test_ds = Dataset(
+        args.data + "-test.pt",
+        batch_size=args.batch,
+        device=args.device,
+        batches=args.test_batches,
+    )
 
     model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
@@ -165,6 +198,9 @@ def main():
         ),
         optimizer=train.Optimizer(lr=args.lr),
         stop=StopTrigger(steps=args.steps, sequences=args.positions),
+        hooks=[
+            TestLossHook(test_ds, args.test_freq),
+        ],
     )
 
     print(
@@ -182,15 +218,6 @@ if __name__ == "__main__":
 
 
 def dumping_ground():
-    test_ds = Dataset(args.data + "-test.pt")
-    test_loader = torch.utils.data.DataLoader(
-        test_ds,
-        batch_size=args.minibatch,
-        pin_memory=True,
-        num_workers=1,
-    )
-    test_batches = list(itertools.islice(test_loader, args.test_batches))
-
     ##########
 
     profile_steps = set()
@@ -210,16 +237,3 @@ def dumping_ground():
         prof.export_chrome_trace(f"profile/step_{step_i}.pt.trace.json")
 
     profiler = profile(schedule=schedule, with_stack=True, on_trace_ready=save_profile)
-
-    #############
-
-    if step_i % args.test_freq == 0:
-        test_loss = torch.tensor(
-            [fwd_and_loss(model, xent, b).item() for b in test_batches]
-        ).mean()
-        print(f"[step={step_i:06d}] test_loss={test_loss:4.2f}")
-        if args.wandb:
-            wandb.log(
-                {"test_loss": test_loss.item()},
-                commit=False,
-            )

@@ -51,6 +51,17 @@ class Optimizer:
 Trigger = T.Callable[[Stats], bool]
 
 
+class Hook:
+    def before_run(self, run: "Run"):
+        pass
+
+    def before_step(self, run: "Run", stats: Stats):
+        pass
+
+    def after_step(self, run: "Run", stats: Stats):
+        pass
+
+
 @define(slots=False)
 class Run:
     model: nn.Module
@@ -63,14 +74,17 @@ class Run:
     optimizer: Optimizer = field(factory=Optimizer)
     profile: T.Optional[Profile] = None
 
+    hooks: list[Hook] = field(factory=list)
+
 
 __all__ = [
     "Batch",
     "Dataset",
-    "LossFunction",
+    "Hook",
     "Logging",
-    "Profile",
-    "Stats",
+    "LossFunction",
     "Optimizer",
+    "Profile",
     "Run",
+    "Stats",
 ]
