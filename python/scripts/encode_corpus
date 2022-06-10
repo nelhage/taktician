@@ -46,6 +46,18 @@ def parse_args():
     return parser.parse_args()
 
 
+class map_with_len:
+    def __init__(self, fn, iter):
+        self.fn = fn
+        self.iter = iter
+
+    def __len__(self):
+        return len(self.iter)
+
+    def __iter__(self):
+        return map(self.fn, self.iter)
+
+
 def main():
     args = parse_args()
 
@@ -64,13 +76,13 @@ def main():
 
     data = {}
 
-    positions = [ptn.parse_tps(row[0]) for row in records]
+    positions = map_with_len(lambda row: ptn.parse_tps(row[0]), records)
     data["positions"], data["mask"] = encoding.encode_batch(positions)
 
     if args.analysis:
-        size = positions[0].size
+        size = next(iter(positions)).size
         data["value"] = torch.tensor([float(row[2]) for row in records])
-        moves = [ptn.parse_move(row[1]) for row in records]
+        moves = map_with_len(lambda row: ptn.parse_move(row[1]), records)
         data["moves"], data["moves_mask"] = encoding.encode_moves_batch(size, moves)
 
     if args.test_frac == 0:
