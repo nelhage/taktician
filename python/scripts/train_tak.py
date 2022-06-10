@@ -38,6 +38,22 @@ class MaskedARLoss:
         return (self.xent(logits.permute(0, 2, 1), batch.targets) * batch.mask).mean()
 
 
+@define
+class LRSchedule:
+    warmup_steps: int
+    cooldown_steps: int
+    cooldown_start: int
+
+    def __call__(self, stats):
+        if stats.step < self.warmup_steps:
+            return stats.step / self.warmup_steps
+        if stats.step > self.cooldown_start:
+            end = self.cooldown_start + self.cooldown_steps
+            remaining = end - stats.step
+            return (remaining + 1) / self.cooldown_steps
+        return 1.0
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a transformer")
     parser.add_argument("--layers", type=int, default=2, help="Number of layers")
@@ -58,7 +74,7 @@ def parse_args():
         "--test-batches", type=int, default=16, help="number of test batches"
     )
     parser.add_argument(
-        "--test-freq", type=int, default=1000, help="measure test loss every N steps"
+        "--test-freq", type=int, default=100, help="measure test loss every N steps"
     )
 
     parser.add_argument(
@@ -125,11 +141,22 @@ def main():
             )
         )
 
+    if args.steps:
+        warmup_frac = 0.05
+        cooldown_frac = 0.8
+        schedule = LRSchedule(
+            warmup_steps=int(warmup_frac * args.steps),
+            cooldown_start=int((1 - cooldown_frac) * args.steps),
+            cooldown_steps=int(cooldown_frac * args.steps),
+        )
+    else:
+        schedule = None
+
     run = train.Run(
         model=model,
         dataset=train_ds,
         loss=MaskedARLoss(),
-        optimizer=train.Optimizer(lr=args.lr),
+        optimizer=train.Optimizer(lr=args.lr, lr_schedule=schedule),
         stop=train.StopTrigger(steps=args.steps, sequences=args.positions),
         hooks=[
             hooks.TestLoss(test_ds, args.test_freq),

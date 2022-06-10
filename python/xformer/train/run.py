@@ -25,12 +25,14 @@ class Stats:
     train_loss: float = 0
     step_time: float = 0
     elapsed_time: float = 0
+
     metrics: dict[str, object] = field(factory=dict)
 
 
 @define
 class Optimizer:
     lr: float = 5e-4
+    lr_schedule: T.Optional[T.Callable[[Stats], float]] = None
 
 
 Trigger = T.Callable[[Stats], bool]

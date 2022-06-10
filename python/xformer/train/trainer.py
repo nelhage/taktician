@@ -50,6 +50,13 @@ class Trainer:
         loss = self.run.loss(batch, logits)
         self.stats.train_loss = loss.item()
         loss.backward()
+
+        if self.run.optimizer.lr_schedule:
+            new_lr = self.run.optimizer.lr * self.run.optimizer.lr_schedule(self.stats)
+            for g in self.opt.param_groups:
+                g["lr"] = new_lr
+            self.stats.metrics["lr"] = new_lr
+
         self.opt.step()
 
         # self.profiler.step()
@@ -64,6 +71,7 @@ class Trainer:
 
     def log_step(self):
         stats = self.stats
+
         print(
             f"[step={stats.step:06d}"
             f" t={stats.elapsed_time:.1f}s"
@@ -71,6 +79,9 @@ class Trainer:
             f" loss={stats.train_loss:2.2f}"
             f" ms_per_step={1000*(stats.step_time):.0f}"
         )
+        if stats.metrics:
+            for (k, v) in stats.metrics.items():
+                print(f"    {k}={v}")
 
 
 __all__ = ["Trainer"]
