@@ -15,4 +15,6 @@ exec rsync -Pax \
      --exclude='*.test' \
      --exclude='/data' \
      --exclude='wandb' \
+     --exclude='/.envrc' \
+     --exclude='python/tak.egg-info' \
      . "$target:$path"
