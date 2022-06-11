@@ -35,8 +35,13 @@ def parse_args():
         "--analysis",
         action="store_true",
         dest="analysis",
-        default=False,
+        default=True,
         help="Encode analysis",
+    )
+    parser.add_argument(
+        "--no-analysis",
+        action="store_false",
+        dest="analysis",
     )
     parser.add_argument(
         "corpus",

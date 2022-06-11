@@ -37,6 +37,8 @@ class Token:
 
     FIRST_RESERVES_VALUE = RESERVES[0]
 
+    OUTPUT_SENTINEL = 256
+
     # [to_play
     #   my_reserves my_caps
     #   their_reserves their_caps
@@ -54,8 +56,11 @@ TOP_PIECES = {
 }
 
 
-def encode(p: game.Position) -> list[int]:
+def encode(p: game.Position, include_sentinel: bool = True) -> list[int]:
     data = []
+    if include_sentinel:
+        data.append(Token.OUTPUT_SENTINEL)
+
     if p.to_move() == pieces.Color.WHITE:
         data.append(Token.WHITE_TO_PLAY)
     else:
@@ -99,8 +104,12 @@ def _encode_batch(
     return out, mask
 
 
-def encode_batch(positions) -> (torch.Tensor, torch.Tensor):
-    return _encode_batch(positions, encode, dtype=torch.uint8)
+def encode_batch(
+    positions, include_sentinel: bool = True
+) -> (torch.Tensor, torch.Tensor):
+    return _encode_batch(
+        positions, lambda p: encode(p, include_sentinel), dtype=torch.uint8
+    )
 
 
 def encode_move(size: int, m: moves.Move) -> list[int]:
