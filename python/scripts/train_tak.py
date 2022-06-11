@@ -1,133 +1,20 @@
 import xformer
 
-from tak.model import encoding
+from tak.model import heads, batches, losses
 
 from xformer import data, train, model
 from xformer.train import hooks
 
+import attrs
 from attrs import define
 
 import torch
-from torch import nn
-from torch.nn import functional as F
 import argparse
+import yaml
+import json
+import os.path
 
 import typing as T  # noqa
-
-
-@define
-class PositionBatch:
-    data: dict[str, torch.Tensor]
-
-    @property
-    def inputs(self):
-        return self.data["positions"][:, :-1]
-
-    @property
-    def targets(self):
-        return self.data["positions"][:, 1:]
-
-    @property
-    def mask(self):
-        return self.data["mask"][:, :-1]
-
-
-class MaskedARLoss:
-    def __init__(self):
-        self.xent = torch.nn.CrossEntropyLoss(reduction="none")
-
-    def train_and_metrics(self, batch, logits):
-        return (
-            (self.xent(logits.permute(0, 2, 1), batch.targets) * batch.mask).mean(),
-            {},
-        )
-
-
-OUTPUT_SENTINEL = 256
-
-
-@define
-class PositionValuePolicyBatch:
-    data: dict[str, torch.Tensor]
-
-    @property
-    def inputs(self):
-        return F.pad(self.data["positions"], (0, 1), value=OUTPUT_SENTINEL)
-
-    @property
-    def moves(self):
-        return self.data["moves"]
-
-    @property
-    def moves_mask(self):
-        return self.data["moves_mask"]
-
-    @property
-    def values(self):
-        return self.data["values"]
-
-
-class PolicyValueLoss:
-    v_weight: float = 1.0
-    policy_weight: float = 1.0
-
-    def __init__(self):
-        self.xent = torch.nn.CrossEntropyLoss(reduction="none")
-
-    def loss_and_metrics(self, batch, logits):
-        v_logits = logits["values"]
-        m_logits = logits["moves"]
-
-        # breakpoint()
-
-        with torch.no_grad():
-            argmax = torch.max(m_logits, dim=-1).indices
-            match = torch.where(
-                batch.moves_mask != 0,
-                (argmax == batch.moves),
-                torch.ones_like(argmax, dtype=torch.bool),
-            )
-            all_match = torch.prod(match, dim=-1).float().mean()
-
-        v_error = F.mse_loss(v_logits, batch.values)
-
-        return (
-            self.v_weight * v_error
-            + self.policy_weight
-            * (
-                self.xent(m_logits.permute(0, 2, 1), batch.moves) * batch.moves_mask
-            ).mean()
-        ), {
-            "v_error": v_error.item(),
-            "acc@1": all_match.mean().item(),
-        }
-
-
-class PolicyValueHead(nn.Module):
-    def __init__(self, cfg, dtype=None, device=None):
-        super().__init__()
-        self.final_ln = nn.LayerNorm(
-            normalized_shape=(cfg.d_model,), dtype=dtype, device=device
-        )
-        self.v_proj = nn.Linear(cfg.d_model, 1, dtype=dtype, device=device)
-        self.move_proj = nn.Linear(
-            cfg.d_model, 3 * encoding.MAX_SLIDES, dtype=dtype, device=device
-        )
-
-    def init_weights(self, cfg):
-        pass
-
-    def forward(self, acts):
-        acts = self.final_ln(acts)[:, -1]
-
-        v = torch.tanh(self.v_proj(acts))
-
-        moves = self.move_proj(acts).reshape(-1, 3, encoding.MAX_SLIDES)
-
-        return {
-            "values": v.squeeze(-1),
-            "moves": moves,
-        }
 
 
 @define
@@ -226,7 +113,7 @@ def main():
         n_ctx=args.n_ctx,
         n_vocab=257,
         autoregressive_mask=False,
-        output_head=PolicyValueHead,
+        output_head=heads.PolicyValue,
     )
     if args.pe is not None:
         cfg.positional_encoding = args.pe
@@ -235,14 +122,14 @@ def main():
         args.data + "-train.pt",
         batch_size=args.batch,
         device=args.device,
-        batch_class=PositionValuePolicyBatch,
+        batch_class=batches.PositionValuePolicy,
     )
     test_ds = data.Dataset(
         args.data + "-test.pt",
         batch_size=args.batch,
         device=args.device,
         batches=args.test_batches,
-        batch_class=PositionValuePolicyBatch,
+        batch_class=batches.PositionValuePolicy,
     )
 
     extra_hooks = []
@@ -284,7 +171,7 @@ def main():
         model=model.Transformer(cfg, dtype=torch.float32, device=args.device),
         dataset=train_ds,
         # loss=MaskedARLoss(),
-        loss=PolicyValueLoss(),
+        loss=losses.PolicyValue(),
         optimizer=train.Optimizer(lr=args.lr, lr_schedule=schedule),
         stop=train.StopTrigger(steps=args.steps, sequences=args.positions),
         hooks=[
