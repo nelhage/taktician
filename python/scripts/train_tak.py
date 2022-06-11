@@ -99,14 +99,9 @@ class PolicyValueLoss:
         }
 
 
-class PolicyValueTransformer(nn.Module):
+class PolicyValueHead(nn.Module):
     def __init__(self, cfg, dtype=None, device=None):
         super().__init__()
-        self.cfg = cfg
-
-        self.embedding = model.TextEmbedding(cfg, dtype=dtype, device=device)
-        self.torso = model.Torso(cfg, dtype=dtype, device=device)
-
         self.final_ln = nn.LayerNorm(
             normalized_shape=(cfg.d_model,), dtype=dtype, device=device
         )
@@ -115,15 +110,10 @@ class PolicyValueTransformer(nn.Module):
             cfg.d_model, 3 * encoding.MAX_SLIDES, dtype=dtype, device=device
         )
 
-    def init_weights(self):
-        self.embedding.init_weights(self.cfg)
-        self.torso.init_weights(self.cfg)
-        # self.unembedding.init_weights(self.cfg)
+    def init_weights(self, cfg):
+        pass
 
-    def forward(self, input):
-        acts = self.embedding(input)
-        acts = self.torso(acts)
-
+    def forward(self, acts):
         acts = self.final_ln(acts)[:, -1]
 
         v = torch.tanh(self.v_proj(acts))
@@ -202,6 +192,7 @@ def main():
         n_ctx=args.n_ctx,
         n_vocab=257,
         autoregressive_mask=False,
+        output_head=PolicyValueHead,
     )
     if args.pe is not None:
         cfg.positional_encoding = args.pe
@@ -249,7 +240,7 @@ def main():
         schedule = None
 
     run = train.Run(
-        model=PolicyValueTransformer(cfg, dtype=torch.float32, device=args.device),
+        model=model.Transformer(cfg, dtype=torch.float32, device=args.device),
         dataset=train_ds,
         # loss=MaskedARLoss(),
         loss=PolicyValueLoss(),

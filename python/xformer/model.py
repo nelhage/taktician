@@ -8,6 +8,24 @@ from dataclasses import dataclass
 from functools import cached_property, lru_cache
 
 
+class TextUnembedding(nn.Module):
+    def __init__(self, cfg, dtype=None, device=None):
+        super().__init__()
+
+        self.final_ln = nn.LayerNorm(cfg.d_model, dtype=dtype, device=device)
+        self.unembedding = nn.Linear(
+            cfg.d_model, cfg.n_vocab, dtype=dtype, device=device
+        )
+
+    def init_weights(self, cfg):
+        self.final_ln.reset_parameters()
+        self.unembedding.weight.data.normal_(mean=0.0, std=cfg.initializer_range)
+
+    def forward(self, acts):
+        acts = self.final_ln(acts)
+        return self.unembedding(acts)
+
+
 @dataclass
 class Config:
     n_vocab: int
@@ -17,6 +35,8 @@ class Config:
     n_ctx: int = 1024
     initializer_range: float = 0.02
     positional_encoding: str = "sin"
+
+    output_head: type = TextUnembedding
 
     autoregressive_mask: bool = True
 
@@ -179,24 +199,6 @@ class TextEmbedding(nn.Module):
         return acts
 
 
-class TextUnembedding(nn.Module):
-    def __init__(self, cfg, dtype=None, device=None):
-        super().__init__()
-
-        self.final_ln = nn.LayerNorm(cfg.d_model, dtype=dtype, device=device)
-        self.unembedding = nn.Linear(
-            cfg.d_model, cfg.n_vocab, dtype=dtype, device=device
-        )
-
-    def init_weights(self, cfg):
-        self.final_ln.reset_parameters()
-        self.unembedding.weight.data.normal_(mean=0.0, std=cfg.initializer_range)
-
-    def forward(self, acts):
-        acts = self.final_ln(acts)
-        return self.unembedding(acts)
-
-
 class Transformer(nn.Module):
     def __init__(self, cfg, dtype=None, device=None):
         super().__init__()
@@ -204,12 +206,13 @@ class Transformer(nn.Module):
 
         self.embedding = TextEmbedding(cfg, dtype=dtype, device=device)
         self.torso = Torso(cfg, dtype=dtype, device=device)
-        self.unembedding = TextUnembedding(cfg, dtype=dtype, device=device)
+        self.unembedding = cfg.output_head(cfg, dtype=dtype, device=device)
 
     def init_weights(self):
         self.embedding.init_weights(self.cfg)
         self.torso.init_weights(self.cfg)
-        self.unembedding.init_weights(self.cfg)
+        if hasattr(self.unembedding, "init_weights"):
+            self.unembedding.init_weights(self.cfg)
 
     def forward(self, input):
         acts = self.embedding(input)
