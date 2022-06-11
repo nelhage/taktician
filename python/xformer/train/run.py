@@ -12,9 +12,12 @@ class Batch(T.Protocol):
 Dataset = T.Iterable[Batch]
 
 
-class LossFunction:
-    def compute(self, batch, output):
-        pass
+class LossFunction(T.Protocol):
+    def __call__(self, batch, output):
+        ...
+
+    def metrics(self, batch, output) -> dict[str, float]:
+        return {}
 
 
 @define

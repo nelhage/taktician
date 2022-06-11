@@ -49,6 +49,8 @@ class Trainer:
         logits = self.run.model(inputs)
         loss = self.run.loss(batch, logits)
         self.stats.train_loss = loss.item()
+        for (k, v) in self.run.loss.metrics(batch, logits).items():
+            self.stats.metrics[f"train.{k}"] = v
         loss.backward()
 
         if self.run.optimizer.lr_schedule:

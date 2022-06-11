@@ -6,6 +6,8 @@ import torch
 MAX_RESERVES = 50
 MAX_CAPSTONES = 2
 
+MAX_SLIDES = 256
+
 
 class Token:
     EMPTY = 0

@@ -1,4 +1,5 @@
 from attrs import define
+from collections import defaultdict
 
 from ..run import Dataset, Hook, Run, Stats
 
@@ -15,12 +16,17 @@ class TestLoss(Hook):
             return
 
         with torch.no_grad():
-            test_loss = (
-                torch.stack(
-                    [run.loss(batch, run.model(batch.inputs)) for batch in self.dataset]
-                )
-                .mean()
-                .item()
-            )
-        print(f"[step={stats.step:06d}] test_loss={test_loss:4.2f}")
+            losses = []
+            metrics = defaultdict(float)
+            for batch in self.dataset:
+                out = run.model(batch.inputs)
+                losses.append(run.loss(batch, out))
+                for (k, v) in run.loss.metrics(batch, out).items():
+                    metrics[k] += v
+            for (k, v) in metrics.items():
+                metrics[k] = v / len(losses)
+            test_loss = torch.stack(losses).mean().item()
+
+        for (k, v) in metrics.items():
+            stats.metrics[f"test.{k}"] = v
         stats.metrics["test_loss"] = test_loss

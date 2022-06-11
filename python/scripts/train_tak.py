@@ -1,16 +1,18 @@
 import xformer
 
+from tak.model import encoding
 
-from xformer import data, train
+from xformer import data, train, model
 from xformer.train import hooks
 
 from attrs import define
 
-import os
 import torch
+from torch import nn
+from torch.nn import functional as F
 import argparse
 
-import typing as T
+import typing as T  # noqa
 
 
 @define
@@ -36,6 +38,101 @@ class MaskedARLoss:
 
     def __call__(self, batch, logits):
         return (self.xent(logits.permute(0, 2, 1), batch.targets) * batch.mask).mean()
+
+
+OUTPUT_SENTINEL = 256
+
+
+@define
+class PositionValuePolicyBatch:
+    data: dict[str, torch.Tensor]
+
+    @property
+    def inputs(self):
+        return F.pad(self.data["positions"], (0, 1), value=OUTPUT_SENTINEL)
+
+    @property
+    def moves(self):
+        return self.data["moves"]
+
+    @property
+    def moves_mask(self):
+        return self.data["moves_mask"]
+
+    @property
+    def values(self):
+        return self.data["values"]
+
+
+class PolicyValueLoss:
+    def __init__(self):
+        self.xent = torch.nn.CrossEntropyLoss(reduction="none")
+
+    def __call__(self, batch, logits):
+        v_logits = logits["values"]
+        m_logits = logits["moves"]
+
+        # breakpoint()
+
+        return (
+            F.mse_loss(v_logits, batch.values)
+            + (
+                self.xent(m_logits.permute(0, 2, 1), batch.moves) * batch.moves_mask
+            ).mean()
+        )
+
+    def metrics(self, batch, logits) -> dict[str, float]:
+        v_logits = logits["values"]
+        m_logits = logits["moves"]
+
+        argmax = torch.max(m_logits, dim=-1).indices
+        match = torch.where(
+            batch.moves_mask != 0,
+            (argmax == batch.moves),
+            torch.ones_like(argmax, dtype=torch.bool),
+        )
+        all_match = torch.prod(match, dim=-1).float()
+        return {
+            "v_error": F.mse_loss(v_logits, batch.values),
+            "acc@1": all_match.mean(),
+        }
+
+
+class PolicyValueTransformer(nn.Module):
+    def __init__(self, cfg, dtype=None, device=None):
+        super().__init__()
+        self.cfg = cfg
+
+        self.embedding = model.TextEmbedding(cfg, dtype=dtype, device=device)
+        self.torso = model.Torso(cfg, dtype=dtype, device=device)
+
+        self.final_ln = nn.LayerNorm(
+            normalized_shape=(cfg.d_model,), dtype=dtype, device=device
+        )
+        self.v_proj = nn.Linear(cfg.d_model, 1, dtype=dtype, device=device)
+        self.move_proj = nn.Linear(
+            cfg.d_model, 3 * encoding.MAX_SLIDES, dtype=dtype, device=device
+        )
+
+    def init_weights(self):
+        self.embedding.init_weights(self.cfg)
+        self.torso.init_weights(self.cfg)
+        # self.unembedding.init_weights(self.cfg)
+
+    def forward(self, input):
+        acts = self.embedding(input)
+        acts = self.torso(acts)
+
+        acts = self.final_ln(acts)[:, -1]
+
+        v = torch.tanh(self.v_proj(acts))
+
+        moves = self.move_proj(acts).reshape(-1, 3, encoding.MAX_SLIDES)
+
+        return {
+            "values": v.squeeze(-1),
+            "moves": moves,
+        }
 
 
 @define
@@ -102,8 +199,8 @@ def main():
         d_model=args.d_model or 128 * args.layers,
         d_head=args.d_head,
         n_ctx=args.n_ctx,
-        n_vocab=256,
-        autoregressive_mask=True,
+        n_vocab=257,
+        autoregressive_mask=False,
     )
     if args.pe is not None:
         cfg.positional_encoding = args.pe
@@ -112,17 +209,15 @@ def main():
         args.data + "-train.pt",
         batch_size=args.batch,
         device=args.device,
-        batch_class=PositionBatch,
+        batch_class=PositionValuePolicyBatch,
     )
     test_ds = data.Dataset(
         args.data + "-test.pt",
         batch_size=args.batch,
         device=args.device,
         batches=args.test_batches,
-        batch_class=PositionBatch,
+        batch_class=PositionValuePolicyBatch,
     )
-
-    model = xformer.Transformer(cfg, dtype=torch.float32, device=args.device)
 
     extra_hooks = []
     if args.wandb:
@@ -153,9 +248,10 @@ def main():
         schedule = None
 
     run = train.Run(
-        model=model,
+        model=PolicyValueTransformer(cfg, dtype=torch.float32, device=args.device),
         dataset=train_ds,
-        loss=MaskedARLoss(),
+        # loss=MaskedARLoss(),
+        loss=PolicyValueLoss(),
         optimizer=train.Optimizer(lr=args.lr, lr_schedule=schedule),
         stop=train.StopTrigger(steps=args.steps, sequences=args.positions),
         hooks=[
@@ -167,7 +263,7 @@ def main():
     print(
         f"Training a {cfg.n_layer}L model with {cfg.n_parameters:,} non-embedding parameters..."
     )
-    param_bytes = sum(t.numel() * t.element_size() for t in model.parameters())
+    param_bytes = sum(t.numel() * t.element_size() for t in run.model.parameters())
     print(f" Model params use {param_bytes/1024**3:.2f}GiB on device")
 
     trainer = train.Trainer(run)
