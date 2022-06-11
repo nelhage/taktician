@@ -146,6 +146,31 @@ class LRSchedule:
         return 1.0
 
 
+@define
+class SaveHook(train.Hook):
+    save_dir: str
+    step_freq: int
+
+    def after_step(self, run, stats):
+        if stats.step % self.step_freq != 0:
+            return
+        self.save_run(run, stats)
+
+    def save_run(self, run: train.Run, stats: train.Stats):
+        run_dir = os.path.join(self.save_dir, f"step_{stats.step:06d}")
+        os.makedirs(run_dir, exist_ok=True)
+        print(f"Saving to {run_dir}...")
+        torch.save(
+            run.model.state_dict(),
+            os.path.join(run_dir, "model.pt"),
+        )
+        with open(os.path.join(run_dir, "config.yaml"), "w") as fh:
+            yaml.dump(run.model.cfg, fh)
+        with open(os.path.join(run_dir, "stats.json"), "w") as fh:
+            json.dump(attrs.asdict(stats), fh, indent=2)
+        # torch.save(os.path.join(run_dir, "model.opt.pt"), run.optimizer.state_dict())
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a transformer")
     parser.add_argument("--layers", type=int, default=2, help="Number of layers")
@@ -168,6 +193,11 @@ def parse_args():
     parser.add_argument(
         "--test-freq", type=int, default=100, help="measure test loss every N steps"
     )
+
+    parser.add_argument(
+        "--save-freq", type=int, default=100, help="save model every N steps"
+    )
+    parser.add_argument("--save-dir", type=str, help="save directory")
 
     parser.add_argument(
         "--device", type=str, choices=("cpu", "cuda"), default="cuda", help="device"
@@ -229,6 +259,13 @@ def main():
         extra_hooks.append(
             hooks.Profile(
                 extra_steps=set(map(int, args.profile_steps.split(","))),
+            )
+        )
+    if args.save_dir:
+        extra_hooks.append(
+            SaveHook(
+                save_dir=args.save_dir,
+                step_freq=args.save_freq,
             )
         )
 
