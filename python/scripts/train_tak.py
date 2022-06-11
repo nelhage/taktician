@@ -68,6 +68,9 @@ class PositionValuePolicyBatch:
 
 
 class PolicyValueLoss:
+    v_weight: float = 1.0
+    policy_weight: float = 1.0
+
     def __init__(self):
         self.xent = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -89,8 +92,9 @@ class PolicyValueLoss:
         v_error = F.mse_loss(v_logits, batch.values)
 
         return (
-            v_error
-            + (
+            self.v_weight * v_error
+            + self.policy_weight
+            * (
                 self.xent(m_logits.permute(0, 2, 1), batch.moves) * batch.moves_mask
             ).mean()
         ), {
