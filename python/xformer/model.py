@@ -124,11 +124,28 @@ class LearnedPositionalEncoding(nn.Module):
         return x
 
 
-class Transformer(nn.Module):
+class Torso(nn.Module):
     def __init__(self, cfg, dtype=None, device=None):
         super().__init__()
-        self.cfg = cfg
-        self.device = device
+
+        self.layers = nn.ModuleList(
+            [Resblock(cfg, dtype=dtype, device=device) for _ in range(cfg.n_layer)]
+        )
+
+    def forward(self, acts):
+        for layer in self.layers:
+            acts = layer(acts)
+        return acts
+
+    def init_weights(self, cfg):
+        for layer in self.layers:
+            layer.init_weights(cfg)
+
+
+class TextEmbedding(nn.Module):
+    def __init__(self, cfg, dtype=None, device=None):
+        super().__init__()
+
         self.embedding = nn.Embedding(
             cfg.n_vocab, cfg.d_model, dtype=dtype, device=device
         )
@@ -146,34 +163,55 @@ class Transformer(nn.Module):
             raise ValueError(
                 f"Unknown positional encoding type: {cfg.positional_encoding!r}"
             )
-        self.layers = nn.ModuleList(
-            [Resblock(cfg, dtype=dtype, device=device) for _ in range(cfg.n_layer)]
+
+    def init_weights(self, cfg):
+        self.embedding.weight.data.normal_(
+            mean=0.0, std=cfg.initializer_range * math.sqrt(cfg.d_model)
         )
+        if isinstance(self.positional_encoding, LearnedPositionalEncoding):
+            self.positional_encoding.pe.data.normal_(
+                mean=0.0, std=cfg.initializer_range
+            )
+
+    def forward(self, tokens):
+        acts = self.embedding(tokens)
+        acts = self.positional_encoding(acts)
+        return acts
+
+
+class TextUnembedding(nn.Module):
+    def __init__(self, cfg, dtype=None, device=None):
+        super().__init__()
+
         self.final_ln = nn.LayerNorm(cfg.d_model, dtype=dtype, device=device)
         self.unembedding = nn.Linear(
             cfg.d_model, cfg.n_vocab, dtype=dtype, device=device
         )
 
-    def init_weights(self):
-        self.embedding.weight.data.normal_(
-            mean=0.0, std=self.cfg.initializer_range * math.sqrt(self.cfg.d_model)
-        )
+    def init_weights(self, cfg):
         self.final_ln.reset_parameters()
-        self.unembedding.weight.data.normal_(mean=0.0, std=self.cfg.initializer_range)
-        for layer in self.layers:
-            layer.init_weights(self.cfg)
+        self.unembedding.weight.data.normal_(mean=0.0, std=cfg.initializer_range)
 
-        if isinstance(self.positional_encoding, LearnedPositionalEncoding):
-            self.positional_encoding.pe.data.normal_(
-                mean=0.0, std=self.cfg.initializer_range
-            )
+    def forward(self, acts):
+        acts = self.final_ln(acts)
+        return self.unembedding(acts)
 
-    def forward(self, tokens):
-        resid = self.embedding(tokens)
-        resid = self.positional_encoding(resid)
-        for layer in self.layers:
-            resid = layer(resid)
 
-        normed = self.final_ln(resid)
-        logits = self.unembedding(normed)
-        return logits
+class Transformer(nn.Module):
+    def __init__(self, cfg, dtype=None, device=None):
+        super().__init__()
+        self.cfg = cfg
+
+        self.embedding = TextEmbedding(cfg, dtype=dtype, device=device)
+        self.torso = Torso(cfg, dtype=dtype, device=device)
+        self.unembedding = TextUnembedding(cfg, dtype=dtype, device=device)
+
+    def init_weights(self):
+        self.embedding.init_weights(self.cfg)
+        self.torso.init_weights(self.cfg)
+        self.unembedding.init_weights(self.cfg)
+
+    def forward(self, input):
+        acts = self.embedding(input)
+        acts = self.torso(acts)
+        return self.unembedding(acts)
