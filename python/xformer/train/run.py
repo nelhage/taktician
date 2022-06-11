@@ -56,6 +56,9 @@ class Hook:
     def before_run(self, run: "Run"):
         pass
 
+    def after_run(self, run: "Run", stats: Stats):
+        pass
+
     def before_step(self, run: "Run", stats: Stats):
         pass
 

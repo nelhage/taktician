@@ -43,6 +43,9 @@ class SaveHook(train.Hook):
             return
         self.save_run(run, stats)
 
+    def after_run(self, run, stats):
+        self.save_run(run, stats)
+
     def save_run(self, run: train.Run, stats: train.Stats):
         run_dir = os.path.join(self.save_dir, f"step_{stats.step:06d}")
         os.makedirs(run_dir, exist_ok=True)
