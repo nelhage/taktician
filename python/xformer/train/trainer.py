@@ -52,9 +52,9 @@ class Trainer:
         self.stats.tokens += inputs.numel()
 
         logits = self.run.model(inputs)
-        loss = self.run.loss(batch, logits)
+        loss, metrics = self.run.loss.loss_and_metrics(batch, logits)
         self.stats.train_loss = loss.item()
-        for (k, v) in self.run.loss.metrics(batch, logits).items():
+        for (k, v) in metrics.items():
             self.stats.metrics[f"train.{k}"] = v
         loss.backward()
 

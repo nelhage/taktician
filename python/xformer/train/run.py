@@ -13,11 +13,8 @@ Dataset = T.Iterable[Batch]
 
 
 class LossFunction(T.Protocol):
-    def __call__(self, batch, output):
+    def loss_and_metrics(self, batch, output) -> tuple[torch.Tensor, dict[str, float]]:
         ...
-
-    def metrics(self, batch, output) -> dict[str, float]:
-        return {}
 
 
 @define
