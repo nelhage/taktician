@@ -40,7 +40,12 @@ class Trainer:
             hook.before_step(self.run, self.stats)
 
         self.opt.zero_grad(set_to_none=True)
-        batch = next(self.epoch)
+        try:
+            batch = next(self.epoch)
+        except StopIteration:
+            self.stats.epoch += 1
+            self.epoch = iter(self.run.dataset)
+            batch = next(self.epoch)
 
         inputs = batch.inputs
         self.stats.sequences += inputs.size(0)

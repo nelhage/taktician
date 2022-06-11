@@ -23,6 +23,7 @@ class LossFunction(T.Protocol):
 @define
 class Stats:
     step: int = 0
+    epoch: int = 0
     sequences: int = 0
     tokens: int = 0
     train_loss: float = 0
