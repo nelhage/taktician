@@ -32,7 +32,7 @@ class Trainer:
                 break
 
         for hook in self.run.hooks:
-            hook.after_step(self.run, self.stats)
+            hook.after_run(self.run, self.stats)
 
     def one_step(self):
         step_start = time.time()
