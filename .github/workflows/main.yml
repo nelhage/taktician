@@ -32,4 +32,4 @@ jobs:
         run: |
           cd python && pytest
         env:
-          - TEST_WANDB: true
+          TEST_WANDB: true
