@@ -114,7 +114,7 @@ def main():
         d_model=args.d_model or 128 * args.layers,
         d_head=args.d_head,
         n_ctx=args.n_ctx,
-        n_vocab=257,
+        n_vocab=256,
         autoregressive_mask=False,
         output_head=heads.PolicyValue,
     )

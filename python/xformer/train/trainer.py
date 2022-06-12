@@ -54,7 +54,7 @@ class Trainer:
         self.stats.sequences += inputs.size(0)
         self.stats.tokens += inputs.numel()
 
-        logits = self.run.model(inputs)
+        logits = self.run.model(inputs, *batch.extra_inputs)
         loss, metrics = self.run.loss.loss_and_metrics(batch, logits)
         self.stats.train_loss = loss.item()
         for (k, v) in metrics.items():

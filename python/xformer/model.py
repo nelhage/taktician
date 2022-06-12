@@ -78,7 +78,7 @@ class Resblock(nn.Module):
         self.mlp_up.weight.data.normal_(mean=0, std=std)
         self.mlp_down.weight.data.normal_(mean=0, std=std)
 
-    def forward(self, resid):
+    def forward(self, resid, padding_mask=None):
         n_batch, n_ctx, d_model = resid.shape
 
         attn_ln = self.attn_ln(resid)
@@ -90,6 +90,7 @@ class Resblock(nn.Module):
             attn_mask=self.ar_mask(n_ctx, dtype=resid.dtype, device=resid.device)
             if self.config.autoregressive_mask
             else None,
+            key_padding_mask=padding_mask,
         )
         resid = resid + attn_out
 
@@ -152,9 +153,9 @@ class Torso(nn.Module):
             [Resblock(cfg, dtype=dtype, device=device) for _ in range(cfg.n_layer)]
         )
 
-    def forward(self, acts):
+    def forward(self, acts, padding_mask=None):
         for layer in self.layers:
-            acts = layer(acts)
+            acts = layer(acts, padding_mask)
         return acts
 
     def init_weights(self, cfg):
@@ -214,7 +215,7 @@ class Transformer(nn.Module):
         if hasattr(self.unembedding, "init_weights"):
             self.unembedding.init_weights(self.cfg)
 
-    def forward(self, input):
+    def forward(self, input, padding_mask: torch.Tensor = None):
         acts = self.embedding(input)
-        acts = self.torso(acts)
+        acts = self.torso(acts, padding_mask)
         return self.unembedding(acts)

@@ -7,6 +7,7 @@ import typing as T
 
 class Batch(T.Protocol):
     inputs: torch.Tensor
+    extra_inputs: tuple[torch.Tensor] = ()
 
 
 Dataset = T.Iterable[Batch]

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 from .. import game, pieces, moves
 
-from functools import lru_cache
-
 import torch
 
 MAX_RESERVES = 50
@@ -27,7 +25,7 @@ class Token:
     WHITE_TO_PLAY = 9
     BLACK_TO_PLAY = 10
 
-    LAST_CAPSTONE_VALUE = 255
+    LAST_CAPSTONE_VALUE = 254
     CAPSTONES = list(
         range(LAST_CAPSTONE_VALUE - MAX_CAPSTONES + 1, LAST_CAPSTONE_VALUE + 1)
     )
@@ -39,7 +37,7 @@ class Token:
 
     FIRST_RESERVES_VALUE = RESERVES[0]
 
-    OUTPUT_SENTINEL = 256
+    OUTPUT_SENTINEL = 255
 
     # [to_play
     #   my_reserves my_caps

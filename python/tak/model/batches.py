@@ -12,6 +12,10 @@ class Position:
         return self.data["positions"][:, :-1]
 
     @property
+    def extra_inputs(self):
+        return (~self.mask,)
+
+    @property
     def targets(self):
         return self.data["positions"][:, 1:]
 
@@ -27,6 +31,14 @@ class PositionValuePolicy:
     @property
     def inputs(self):
         return self.data["positions"]
+
+    @property
+    def mask(self):
+        return self.data["mask"]
+
+    @property
+    def extra_inputs(self):
+        return (~self.mask,)
 
     @property
     def moves(self):

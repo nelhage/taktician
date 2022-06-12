@@ -19,7 +19,7 @@ class TestLoss(Hook):
             losses = []
             metrics = defaultdict(float)
             for batch in self.dataset:
-                out = run.model(batch.inputs)
+                out = run.model(batch.inputs, *batch.extra_inputs)
                 loss, batch_metrics = run.loss.loss_and_metrics(batch, out)
                 losses.append(loss)
                 for (k, v) in batch_metrics.items():
