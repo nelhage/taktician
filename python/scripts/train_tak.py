@@ -3,30 +3,13 @@ import xformer
 from tak.model import heads, batches, losses
 
 from xformer import data, train, model
-from xformer.train import hooks
+from xformer.train import hooks, lr_schedules
 
-from attrs import define
-
-import torch
 import argparse
 
 import typing as T  # noqa
 
-
-@define
-class LRSchedule:
-    warmup_steps: int
-    cooldown_steps: int
-    cooldown_start: int
-
-    def __call__(self, stats):
-        if stats.step < self.warmup_steps:
-            return stats.step / self.warmup_steps
-        if stats.step > self.cooldown_start:
-            end = self.cooldown_start + self.cooldown_steps
-            remaining = end - stats.step
-            return (remaining + 1) / self.cooldown_steps
-        return 1.0
+import torch
 
 
 def parse_args():
@@ -130,7 +113,7 @@ def main():
     if args.steps:
         warmup_frac = 0.05
         cooldown_frac = 0.8
-        schedule = LRSchedule(
+        schedule = lr_schedules.LinearWarmupCooldown(
             warmup_steps=int(warmup_frac * args.steps),
             cooldown_start=int((1 - cooldown_frac) * args.steps),
             cooldown_steps=int(cooldown_frac * args.steps),
