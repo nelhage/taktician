@@ -1,6 +1,7 @@
 import tempfile
 import torch
 import json
+import pytest
 
 import sys
 import subprocess
@@ -10,7 +11,11 @@ HERE = os.path.realpath(os.path.dirname(__file__))
 SCRIPTS = os.path.realpath(os.path.join(HERE, "../scripts/"))
 
 
-def test_pipeline():
+@pytest.mark.parametrize("wandb", [False, True])
+def test_pipeline(wandb):
+    if wandb and not os.environ.get("TEST_WANDB", "false").lower() == "true":
+        pytest.skip("Skipping WANDB (slow); set TEST_WANDB=true to test.")
+
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.check_call(
             [
@@ -34,7 +39,6 @@ def test_pipeline():
                 "--layers=1",
                 "--d_model=64",
                 "--device=cpu",
-                "--wandb",
                 "--data",
                 os.path.join(tmp, "corpus"),
                 "--steps=2",
@@ -42,7 +46,8 @@ def test_pipeline():
                 "--save-freq=2",
                 "--save-dir",
                 os.path.join(tmp, "model"),
-            ],
+            ]
+            + (["--wandb"] if wandb else []),
             cwd=tmp,
             env={"WANDB_MODE": "offline", **os.environ},
         )
