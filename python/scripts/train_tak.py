@@ -50,6 +50,19 @@ def parse_args():
     parser.add_argument("--no-wandb", action="store_false", dest="wandb")
 
     parser.add_argument("--lr", type=float, default=5e-4, help="learning rate")
+    parser.add_argument(
+        "--warmup-frac", type=float, default=0.05, help="LR warmup fraction"
+    )
+    parser.add_argument(
+        "--no-warmup", action="store_const", dest="warmup_frac", const=0.0
+    )
+    parser.add_argument(
+        "--cooldown-frac", type=float, default=0.8, help="LR cooldown fraction"
+    )
+    parser.add_argument(
+        "--no-cooldown", action="store_const", dest="cooldown_frac", const=0.0
+    )
+
     parser.add_argument("--steps", type=int, default=None)
     parser.add_argument("--profile-steps", type=str, default=None)
     parser.add_argument("--positions", type=int, default=None)
@@ -110,13 +123,11 @@ def main():
             )
         )
 
-    if args.steps:
-        warmup_frac = 0.05
-        cooldown_frac = 0.8
+    if args.steps and (args.warmup_frac or args.cooldown_frac):
         schedule = lr_schedules.LinearWarmupCooldown(
-            warmup_steps=int(warmup_frac * args.steps),
-            cooldown_start=int((1 - cooldown_frac) * args.steps),
-            cooldown_steps=int(cooldown_frac * args.steps),
+            warmup_steps=int(args.warmup_frac * args.steps),
+            cooldown_start=int((1 - args.cooldown_frac) * args.steps),
+            cooldown_steps=int(args.cooldown_frac * args.steps),
         )
     else:
         schedule = None
