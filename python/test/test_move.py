@@ -19,7 +19,7 @@ class TestMove(object):
 
 
 def test_all_moves():
-    moves = set(tak.enumerate_moves(5))
+    moves = set(tak.all_moves_for_size(5))
 
     assert tak.Move(0, 0) in moves
     assert tak.Move(0, 4) in moves

@@ -88,7 +88,7 @@ def main():
         size = next(iter(positions)).size
         data["values"] = torch.tensor([float(row[2]) for row in records])
         moves = map_with_len(lambda row: ptn.parse_move(row[1]), records)
-        data["moves"], data["moves_mask"] = encoding.encode_moves_batch(size, moves)
+        data["moves"] = encoding.encode_moves_batch(size, moves)
 
     if args.test_frac == 0:
         torch.save(data, output + ".pt")

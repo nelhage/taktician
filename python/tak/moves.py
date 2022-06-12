@@ -61,7 +61,7 @@ for s in range(1, 9):
     ALL_SLIDES[s] = _compute_slides(s)
 
 
-def enumerate_moves(size):
+def all_moves_for_size(size):
     out = []
     for x in range(size):
         for y in range(size):
@@ -82,4 +82,4 @@ def enumerate_moves(size):
     return out
 
 
-__all__ = ["MoveType", "Move", "ALL_SLIDES", "enumerate_moves"]
+__all__ = ["MoveType", "Move", "ALL_SLIDES", "all_moves_for_size"]

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from .. import game, pieces, moves
 
+from functools import lru_cache
+
 import torch
 
 MAX_RESERVES = 50
@@ -112,14 +114,20 @@ def encode_batch(
     )
 
 
-def encode_move(size: int, m: moves.Move) -> list[int]:
-    data = []
-    data.append(size * m.y + m.x)
-    data.append(m.type.value)
-    if m.type.is_slide():
-        data.append(moves.ALL_SLIDES[size].index(m.slides))
-    return data
+MOVES_BY_SIZE = [moves.all_moves_for_size(s) for s in range(7)]
+MOVES_TO_ID = [{m: i for (i, m) in enumerate(moves)} for moves in MOVES_BY_SIZE]
+
+MAX_MOVE_ID = len(MOVES_BY_SIZE[-1])
 
 
-def encode_moves_batch(size, moves) -> (torch.Tensor, torch.Tensor):
-    return _encode_batch(moves, lambda m: encode_move(size, m), dtype=torch.long)
+def encode_move(size: int, m: moves.Move) -> int:
+    return MOVES_TO_ID[size][m]
+
+
+def decode_move(size: int, m: int) -> moves.Move:
+    return MOVES_BY_SIZE[size][m]
+
+
+def encode_moves_batch(size, moves) -> torch.Tensor:
+    encode = MOVES_TO_ID[size].__getitem__
+    return torch.tensor([encode(m) for m in moves], dtype=torch.long)

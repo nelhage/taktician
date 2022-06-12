@@ -14,7 +14,7 @@ class PolicyValue(nn.Module):
         )
         self.v_proj = nn.Linear(cfg.d_model, 1, dtype=dtype, device=device)
         self.move_proj = nn.Linear(
-            cfg.d_model, 3 * encoding.MAX_SLIDES, dtype=dtype, device=device
+            cfg.d_model, encoding.MAX_MOVE_ID, dtype=dtype, device=device
         )
 
     def init_weights(self, cfg):
@@ -25,7 +25,7 @@ class PolicyValue(nn.Module):
 
         v = torch.tanh(self.v_proj(acts))
 
-        moves = self.move_proj(acts).reshape(-1, 3, encoding.MAX_SLIDES)
+        moves = self.move_proj(acts)
 
         return {
             "values": v.squeeze(-1),

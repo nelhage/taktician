@@ -33,9 +33,5 @@ class PositionValuePolicy:
         return self.data["moves"]
 
     @property
-    def moves_mask(self):
-        return self.data["moves_mask"]
-
-    @property
     def values(self):
         return self.data["values"]
