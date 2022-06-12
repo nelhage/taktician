@@ -6,8 +6,8 @@ import sys
 import subprocess
 import os.path
 
-HERE = os.path.dirname(__file__)
-SCRIPTS = os.path.join(HERE, "../scripts/")
+HERE = os.path.realpath(os.path.dirname(__file__))
+SCRIPTS = os.path.realpath(os.path.join(HERE, "../scripts/"))
 
 
 def test_pipeline():
@@ -34,6 +34,7 @@ def test_pipeline():
                 "--layers=1",
                 "--d_model=64",
                 "--device=cpu",
+                "--wandb",
                 "--data",
                 os.path.join(tmp, "corpus"),
                 "--steps=2",
@@ -41,7 +42,9 @@ def test_pipeline():
                 "--save-freq=2",
                 "--save-dir",
                 os.path.join(tmp, "model"),
-            ]
+            ],
+            cwd=tmp,
+            env={"WANDB_MODE": "offline", **os.environ},
         )
 
         assert os.listdir(os.path.join(tmp, "model")) == ["step_000002"]
