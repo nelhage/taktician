@@ -1,10 +1,12 @@
-from .. import run
-import os.path
-import torch
-from attrs import define
-import attrs
-import yaml
 import json
+import os.path
+
+import attrs
+import torch
+import yaml
+from attrs import define
+
+from .. import run
 
 
 @define

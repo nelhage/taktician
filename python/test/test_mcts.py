@@ -1,4 +1,4 @@
-from tak import mcts, game
+from tak import game, mcts
 
 
 def test_mcts():

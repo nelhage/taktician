@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-from tak import ptn
-from tak.model import encoding
-import torch
-
 import argparse
 import csv
-
+import os.path
 from itertools import islice
 
-import os.path
+import torch
+
+from tak import ptn
+from tak.model import encoding
 
 
 def parse_args():

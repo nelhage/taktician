@@ -1,5 +1,5 @@
-from tak.model import encoding
 import tak.ptn
+from tak.model import encoding
 
 
 def test_encoding_invariants():

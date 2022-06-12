@@ -1,6 +1,8 @@
 import os.path
-import yaml
+
 import torch
+import yaml
+
 from .model import Transformer
 
 

@@ -1,9 +1,9 @@
-from attrs import define
 from collections import defaultdict
 
-from ..run import Dataset, Hook, Run, Stats
-
 import torch
+from attrs import define
+
+from ..run import Dataset, Hook, Run, Stats
 
 
 @define

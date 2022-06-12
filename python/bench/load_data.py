@@ -1,6 +1,6 @@
-import tak.train
-
 import sys
+
+import tak.train
 
 
 def main(args):

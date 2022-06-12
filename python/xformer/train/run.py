@@ -1,8 +1,8 @@
-from attrs import define, field
-import torch
-from torch import nn
-
 import typing as T
+
+import torch
+from attrs import define, field
+from torch import nn
 
 
 class Batch(T.Protocol):

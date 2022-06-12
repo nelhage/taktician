@@ -1,7 +1,7 @@
+import sys
+
 import tak.ptn
 import tak.symmetry
-
-import sys
 
 
 def main(args):

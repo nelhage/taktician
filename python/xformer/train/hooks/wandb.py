@@ -1,11 +1,10 @@
-from attrs import define
-import attrs
-
-from ..run import Hook, Run, Stats
-
 import typing as T
 
+import attrs
 import torch
+from attrs import define
+
+from ..run import Hook, Run, Stats
 
 
 @define

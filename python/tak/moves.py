@@ -1,7 +1,7 @@
-from attrs import define, field
 import enum
-
 import typing as T
+
+from attrs import define, field
 
 
 @enum.unique

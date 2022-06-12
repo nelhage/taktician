@@ -1,9 +1,11 @@
-from xformer import data
-import torch
-import pytest
-import tempfile
 import os.path
 import pickle
+import tempfile
+
+import pytest
+import torch
+
+from xformer import data
 
 N_TEST = 16
 

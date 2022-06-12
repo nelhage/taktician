@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import tak
-from tak import mcts, ptn
-
 import optparse
 import sys
+
+import tak
+from tak import mcts, ptn
 
 
 class Action:

@@ -1,11 +1,11 @@
-import tempfile
-import torch
 import json
-import pytest
-
-import sys
-import subprocess
 import os.path
+import subprocess
+import sys
+import tempfile
+
+import pytest
+import torch
 
 HERE = os.path.realpath(os.path.dirname(__file__))
 SCRIPTS = os.path.realpath(os.path.join(HERE, "../scripts/"))

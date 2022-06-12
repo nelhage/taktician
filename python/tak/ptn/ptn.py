@@ -1,9 +1,10 @@
-import tak
-from . import tps
+import re
 
 import attr
 
-import re
+import tak
+
+from . import tps
 
 
 @attr.s

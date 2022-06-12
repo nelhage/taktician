@@ -1,15 +1,12 @@
-import xformer
-
-from tak.model import heads, batches, losses
-
-from xformer import data, train, model
-from xformer.train import hooks, lr_schedules
-
 import argparse
-
 import typing as T  # noqa
 
 import torch
+
+import xformer
+from tak.model import batches, heads, losses
+from xformer import data, model, train
+from xformer.train import hooks, lr_schedules
 
 
 def parse_args():

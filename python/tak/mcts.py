@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 import math
 import random
-import typing as T
-from . import game, ptn, moves
 import time
+import typing as T
+from dataclasses import dataclass
+
+from . import game, moves, ptn
 
 
 @dataclass

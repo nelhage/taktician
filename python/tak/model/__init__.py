@@ -1,3 +1,1 @@
-from . import encoding
-from . import batches
-from . import heads
+from . import batches, encoding, heads

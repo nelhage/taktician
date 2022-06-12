@@ -1,9 +1,9 @@
-from tak.model import encoding
+import typing as T  # noqa
 
 import torch
 from torch import nn
 
-import typing as T  # noqa
+from tak.model import encoding
 
 
 class PolicyValue(nn.Module):

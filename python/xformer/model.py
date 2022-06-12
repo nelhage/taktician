@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-import torch
-from torch import nn
-
 import math
-
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
+
+import torch
+from torch import nn
 
 
 class TextUnembedding(nn.Module):

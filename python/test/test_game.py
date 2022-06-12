@@ -1,5 +1,6 @@
-import tak
 import pytest
+
+import tak
 
 W = tak.Piece(tak.Color.WHITE, tak.Kind.FLAT)
 WC = tak.Piece(tak.Color.WHITE, tak.Kind.CAPSTONE)

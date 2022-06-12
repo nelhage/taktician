@@ -1,5 +1,5 @@
-import tak.symmetry
 import tak.ptn
+import tak.symmetry
 
 W = tak.Piece(tak.Color.WHITE, tak.Kind.FLAT)
 WC = tak.Piece(tak.Color.WHITE, tak.Kind.CAPSTONE)

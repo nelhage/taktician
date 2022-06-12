@@ -1,11 +1,10 @@
-from xformer import train
+import typing as T
 
 import attrs
+import torch
 from attrs import define, field
 
-import torch
-
-import typing as T
+from xformer import train
 
 
 class BatchProtocol(train.Batch, T.Protocol):

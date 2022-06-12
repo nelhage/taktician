@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from .. import game, pieces, moves
-
 import torch
+
+from .. import game, moves, pieces
 
 MAX_RESERVES = 50
 MAX_CAPSTONES = 2

@@ -1,5 +1,6 @@
-from attrs import define
 import enum
+
+from attrs import define
 
 
 class Color(enum.Enum):

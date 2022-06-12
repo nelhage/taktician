@@ -1,12 +1,10 @@
-from attrs import define
-import attrs
-
 import enum
-
-from . import moves
-from . import pieces
-
 import typing as T
+
+import attrs
+from attrs import define
+
+from . import moves, pieces
 
 
 @define(frozen=True, slots=True)

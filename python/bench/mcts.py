@@ -1,8 +1,8 @@
+import optparse
+import sys
+
 import tak
 from tak import mcts
-import optparse
-
-import sys
 
 
 def main(args):

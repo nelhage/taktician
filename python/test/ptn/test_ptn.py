@@ -1,7 +1,7 @@
+import pytest
+
 import tak
 import tak.ptn
-
-import pytest
 
 
 class TestParseMove(object):

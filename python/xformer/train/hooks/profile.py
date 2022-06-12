@@ -1,13 +1,11 @@
 import os.path
+import typing as T
 from functools import partial
 
 from attrs import define, field
-
-import typing as T
+from torch.profiler import ProfilerAction, profile
 
 from ..run import Hook, Run, Stats
-
-from torch.profiler import profile, ProfilerAction
 
 
 @define
