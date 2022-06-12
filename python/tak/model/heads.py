@@ -21,7 +21,7 @@ class PolicyValue(nn.Module):
         pass
 
     def forward(self, acts):
-        acts = self.final_ln(acts)[:, -1]
+        acts = self.final_ln(acts)[:, 0]
 
         v = torch.tanh(self.v_proj(acts))
 
