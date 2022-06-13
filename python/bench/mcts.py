@@ -6,6 +6,8 @@ from tak import mcts
 from xformer import loading
 from tak.model import wrapper
 
+import time
+
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -24,6 +26,12 @@ def main(argv):
         metavar="SIZE",
     )
     parser.add_argument(
+        "--graph",
+        action="store_true",
+        default=False,
+        help="Use CUDA graphs to run the network",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cpu",
@@ -39,15 +47,24 @@ def main(argv):
 
     p = tak.Position.from_config(tak.Config(size=args.size))
 
+    if args.graph:
+        network = wrapper.GraphedWrapper(model)
+    else:
+        network = wrapper.ModelWrapper(model, device=args.device)
+
     engine = mcts.MCTS(
         mcts.Config(
-            network=wrapper.ModelWrapper(model, device=args.device),
+            network=network,
             simulation_limit=args.simulations,
             time_limit=0,
         )
     )
 
-    engine.get_move(p)
+    start = time.time()
+    tree = engine.analyze(p)
+    end = time.time()
+
+    print(f"done simulations={tree.simulations} duration={end-start:.2f}")
 
 
 if __name__ == "__main__":
