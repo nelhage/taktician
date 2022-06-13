@@ -5,17 +5,29 @@ import typing as T
 from dataclasses import dataclass
 
 from . import game, moves, ptn
+from .model import encoding
+
+import torch
+
+
+class PolicyAndAction(T.Protocol):
+    def evaluate(self, position: game.Position) -> tuple[torch.Tensor, float]:
+        ...
 
 
 @dataclass
 class Config:
+    network: PolicyAndAction
+
     time_limit: float = 1.0
     simulation_limit: int = 0
-    max_rollout: int = 1_000_000
+
     C: float = 0.7
+    cutoff_prob: float = 1e-6
     seed: T.Optional[int] = None
 
-    evaluate: T.Optional[T.Callable[[game.Position], float]] = None
+
+ALPHA_EPSILON = 1e-3
 
 
 @dataclass
@@ -23,50 +35,62 @@ class Node:
     position: game.Position
     move: T.Optional[moves.Move]
 
-    simulations: int = 0
     value: float = 0
+    simulations: int = 0
 
+    child_probs: T.Optional[torch.Tensor] = None
     children: T.Optional[list["Node"]] = None
 
-    def ucb(self, C: float, N: int):
+    def policy_probs(self, c: float) -> torch.Tensor:
+        pi_theta = self.child_probs
+
         if self.simulations == 0:
-            return 10
-        return -(self.value / self.simulations) + C * math.sqrt(
-            math.log(N) / self.simulations
+            return pi_theta
+
+        q = torch.tensor(
+            [c.value / c.simulations if c.simulations > 0 else 0 for c in self.children]
         )
 
+        lambda_n = (
+            c * math.sqrt(self.simulations) / (self.simulations + len(self.children))
+        )
 
-def extract_pv(node):
-    pv = []
-    while node.children is not None:
-        best = max(node.children, key=lambda n: n.simulations)
-        pv.append(best)
-        node = best
-    return pv
+        alpha_min = (q + lambda_n * pi_theta).max().item()
+        alpha_max = (q + lambda_n).max().item()
+        alpha = (alpha_max + alpha_min) / 2
+
+        iters = 0
+
+        while True:
+            iters += 1
+            if iters > 32:
+                raise AssertionError("search for alpha did not terminate")
+            pi_alpha = lambda_n * pi_theta / (alpha - q)
+            sigma = pi_alpha.sum()
+
+            # print(f"i={iters} sigma={sigma:0.2f}")
+
+            if (1 - sigma).abs() <= ALPHA_EPSILON or (alpha_max - alpha_min) <= 1e-6:
+                return pi_alpha
+            if sigma > 1:
+                alpha_min = alpha
+                alpha = (alpha + alpha_max) / 2
+            else:
+                alpha_max = alpha
+                alpha = (alpha + alpha_min) / 2
+
+
+# def extract_pv(node):
+#     pv = []
+#     while node.children is not None:
+#         best = max(node.children, key=lambda n: n.simulations)
+#         pv.append(best)
+#         node = best
+#     return pv
 
 
 Elem = T.TypeVar("Elem")
 Key = T.TypeVar("Key")
-
-
-def max_tiebreak(
-    seq: T.Iterable[Elem], key: T.Callable[[Elem], Key], random=random
-) -> Elem:
-    i = 0
-    seq = iter(seq)
-    best = next(seq)
-    best_key = key(best)
-    for elem in seq:
-        elem_key = key(elem)
-        if elem_key > best_key:
-            best = elem
-            best_key = elem_key
-            i = 1
-        elif elem_key == best_key:
-            if random.randint(0, i) == 0:
-                best = elem
-            i += 1
-    return best
 
 
 class MCTS:
@@ -75,10 +99,8 @@ class MCTS:
         self.random = random.Random(config.seed)
 
     def analyze(self, p: game.Position) -> Node:
-        tree = Node(
-            position=p,
-            move=None,
-        )
+        tree = Node(position=p, move=None)
+        self.root = tree
 
         start = time.monotonic()
         if self.config.time_limit > 0:
@@ -95,18 +117,23 @@ class MCTS:
 
             path = self.descend(tree)
             self.populate(path[-1])
-            value = self.evaluate(path[-1])
-            self.update(path, value)
+            self.update(path)
 
         return tree
 
-    def print_tree(self, tree: Node):
-        for child in sorted(tree.children, key=lambda c: -c.simulations):
+    def print_tree(self, tree):
+        policy = tree.policy_probs(self.config.C)
+        for i in torch.argsort(-policy).tolist():
+            child = tree.children[i]
+            prob = policy[i]
+            if prob < 0.01:
+                continue
             print(
                 f"{ptn.format_move(child.move):>4}"
                 f" visit={child.simulations:>3d}"
                 f" value={-child.value/child.simulations:+5.2f}"
-                f" ucb={child.ucb(self.config.C, tree.simulations):0.3f}"
+                f" pi_theta[a]={tree.child_probs[i]:0.2f}"
+                f" pi[a]={prob:0.2f}"
             )
 
     def get_move(self, p: game.Position) -> moves.Move:
@@ -120,77 +147,52 @@ class MCTS:
             if tree.children is None:
                 return path
 
-            best = max_tiebreak(
-                tree.children,
-                key=lambda n: n.ucb(self.config.C, tree.simulations),
-                random=self.random,
-            )
-            tree = best
+            policy = tree.policy_probs(self.config.C)
+            child = torch.multinomial(policy, 1).item()
+            tree = tree.children[child]
 
     def populate(self, node: Node):
-        moves = node.position.all_moves()
+        winner, _ = node.position.winner()
+        if winner is not None:
+            if winner == node.position.to_move():
+                node.value = 1
+            else:
+                node.value = -1
+            return
+
+        raw_probs, node.value = self.config.network.evaluate(node.position)
+
+        sort = torch.sort(raw_probs, descending=True)
+        child_probs = []
         node.children = []
 
-        for m in moves:
+        for (mid, prob) in zip(sort.indices.numpy(), sort.values.numpy()):
+            if prob < self.config.cutoff_prob:
+                break
+            m = encoding.decode_move(node.position.size, mid)
+            if m is None:
+                continue
             try:
                 child = node.position.move(m)
             except game.IllegalMove:
                 continue
-            color, _ = child.winner()
 
-            child_node = Node(
-                position=child,
-                move=m,
-            )
+            node.children.append(Node(position=child, move=m))
+            child_probs.append(prob)
 
-            if color is not None:
-                if color == child.to_move():
-                    child_node.value = 1
-                else:
-                    child_node.value = -1
-            node.children.append(child_node)
+        child_probs = torch.tensor(child_probs)
+        child_probs /= child_probs.sum()
+        node.child_probs = child_probs
 
-    def evaluate(self, node: Node) -> float:
-        if self.config.evaluate is not None:
-            return self.config.evaluate(node)
-        return self.rollout(node)
+    def update(self, path: list[Node]):
+        value = -path[-1].value
 
-    def rollout(self, node: Node) -> float:
-        i = 0
-        pos = node.position
-        winner = None
-        while i < self.config.max_rollout:
-            (winner, _) = pos.winner()
-            if winner is not None:
-                break
-
-            (move, pos) = self.select_rollout_move(pos)
-
-        if winner is not None:
-            if winner == node.position.to_move():
-                return 1.0
-            else:
-                return -1.0
-        # todo: scoring heuristic
-        return 0.0
-
-    def select_rollout_move(self, pos: game.Position):
-        moves = pos.all_moves()
-        while True:
-            m = self.random.choice(moves)
-            try:
-                child = pos.move(m)
-                return (m, child)
-            except game.IllegalMove:
-                continue
-
-    def update(self, path: list[Node], val: float):
-        for node in reversed(path):
-            node.value += val
+        for node in reversed(path[:-1]):
+            node.value += value
             node.simulations += 1
-            val = -val
+            value = -value
 
     def select_root_move(self, tree: Node) -> moves.Move:
-        return max_tiebreak(
-            tree.children, key=lambda c: c.simulations, random=self.random
-        ).move
+        policy = tree.policy_probs(self.config.C)
+        child = torch.multinomial(policy, 1).item()
+        return tree.children[child].move

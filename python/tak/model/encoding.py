@@ -123,7 +123,10 @@ def encode_move(size: int, m: moves.Move) -> int:
 
 
 def decode_move(size: int, m: int) -> moves.Move:
-    return MOVES_BY_SIZE[size][m]
+    moves = MOVES_BY_SIZE[size]
+    if m >= len(moves):
+        return None
+    return moves[m]
 
 
 def encode_moves_batch(size, moves) -> torch.Tensor:

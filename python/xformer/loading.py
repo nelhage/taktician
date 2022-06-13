@@ -6,10 +6,10 @@ import yaml
 from .model import Transformer
 
 
-def load_model(save_dir, map_location="cpu"):
+def load_model(save_dir, device="cpu"):
     with open(os.path.join(save_dir, "config.yaml")) as fh:
         config = yaml.unsafe_load(fh)
-    state = torch.load(os.path.join(save_dir, "model.pt"), map_location=map_location)
-    model = Transformer(config)
+    state = torch.load(os.path.join(save_dir, "model.pt"), map_location=device)
+    model = Transformer(config, device=device)
     model.load_state_dict(state)
     return model
