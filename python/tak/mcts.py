@@ -48,7 +48,10 @@ class Node:
             return pi_theta
 
         q = torch.tensor(
-            [c.value / c.simulations if c.simulations > 0 else 0 for c in self.children]
+            [
+                -c.value / c.simulations if c.simulations > 0 else 0
+                for c in self.children
+            ]
         )
 
         lambda_n = (
@@ -131,7 +134,7 @@ class MCTS:
             print(
                 f"{ptn.format_move(child.move):>4}"
                 f" visit={child.simulations:>3d}"
-                f" value={-child.value/child.simulations:+5.2f}"
+                f" value={-child.value/child.simulations if child.simulations else 0:+5.2f}"
                 f" pi_theta[a]={tree.child_probs[i]:0.2f}"
                 f" pi[a]={prob:0.2f}"
             )
@@ -164,6 +167,7 @@ class MCTS:
 
         sort = torch.sort(raw_probs, descending=True)
         child_probs = []
+        node.simulations = 1
         node.children = []
 
         for (mid, prob) in zip(sort.indices.numpy(), sort.values.numpy()):
