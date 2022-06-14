@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-import optparse
+import argparse
 import sys
 
 import tak
 from tak import mcts, ptn
+
+from xformer import loading
+from tak.model import wrapper
 
 
 class Action:
@@ -77,52 +80,70 @@ class Server:
 
 
 def parse_args():
-    parser = optparse.OptionParser()
-    parser.add_option(
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
         "--time-limit",
         "-t",
         dest="time_limit",
-        type="float",
+        type=float,
         help="MCTS time limit in seconds",
         metavar="SECONDS",
     )
-    parser.add_option(
+    parser.add_argument(
         "--simulation-limit",
         "-l",
         dest="simulation_limit",
-        type="int",
+        type=int,
         metavar="POSITIONS",
     )
-    parser.add_option(
+    parser.add_argument(
+        "--model",
+        type=str,
+        metavar="MODEL",
+        required=True,
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+    )
+    parser.add_argument(
         "--debug",
         "-d",
         dest="debug",
         action="store_true",
     )
-    parser.add_option("-c", "--mcts.c", dest="C", type="float")
+    parser.add_argument("-c", "--mcts.c", dest="C", type=float)
 
     return parser.parse_args()
 
 
 def main():
-    (options, args) = parse_args()
-    config = mcts.Config()
+    args = parse_args()
 
-    if options.C is not None:
-        config.C = options.C
-    if options.time_limit is not None:
-        config.time_limit = options.time_limit
-    if options.simulation_limit is not None:
-        config.simulation_limit = options.simulation_limit
+    model = loading.load_model(args.model, args.device)
+    if args.device == "cuda":
+        network = wrapper.GraphedWrapper(model)
+    else:
+        network = wrapper.ModelWrapper(model, device=args.device)
+
+    config = mcts.Config(network=network)
+
+    if args.C is not None:
+        config.C = args.C
+    if args.time_limit is not None:
+        config.time_limit = args.time_limit
+    if args.simulation_limit is not None:
+        config.simulation_limit = args.simulation_limit
 
     srv = Server(config)
     while True:
         line = sys.stdin.readline()
-        if options.debug:
+        if args.debug:
             print(f"[TEI] recv: {line!r}", file=sys.stderr)
         for cmd in srv.receive(line):
             if isinstance(cmd, str):
-                if options.debug:
+                if args.debug:
                     print(f"[TEI] send: {cmd!r}", file=sys.stderr)
                 sys.stdout.write(cmd + "\n")
                 sys.stdout.flush()
