@@ -35,6 +35,7 @@ class Node:
     position: game.Position
     move: T.Optional[moves.Move]
 
+    v_zero: float = 0
     value: float = 0
     simulations: int = 0
 
@@ -49,7 +50,7 @@ class Node:
 
         q = torch.tensor(
             [
-                -c.value / c.simulations if c.simulations > 0 else 0
+                -c.value / c.simulations if c.simulations > 0 else self.v_zero
                 for c in self.children
             ]
         )
@@ -124,7 +125,10 @@ class MCTS:
 
         return tree
 
-    def print_tree(self, tree):
+    def print_tree(self, tree: Node):
+        print(
+            f"node visits={tree.simulations} v0={tree.v_zero:+0.2f} value={tree.value/tree.simulations:+0.2f}"
+        )
         policy = tree.policy_probs(self.config.C)
         for i in torch.argsort(-policy).tolist():
             child = tree.children[i]
@@ -132,9 +136,9 @@ class MCTS:
             if prob < 0.01:
                 continue
             print(
-                f"{ptn.format_move(child.move):>4}"
+                f"  {ptn.format_move(child.move):>4}"
                 f" visit={child.simulations:>3d}"
-                f" value={-child.value/child.simulations if child.simulations else 0:+5.2f}"
+                f" value={-child.value/child.simulations if child.simulations else child.v_zero:+5.2f}"
                 f" pi_theta[a]={tree.child_probs[i]:0.2f}"
                 f" pi[a]={prob:0.2f}"
             )
@@ -163,11 +167,10 @@ class MCTS:
                 node.value = -1
             return
 
-        raw_probs, node.value = self.config.network.evaluate(node.position)
+        raw_probs, node.v_zero = self.config.network.evaluate(node.position)
 
         sort = torch.sort(raw_probs, descending=True)
         child_probs = []
-        node.simulations = 1
         node.children = []
 
         for (mid, prob) in zip(sort.indices.numpy(), sort.values.numpy()):
@@ -189,9 +192,9 @@ class MCTS:
         node.child_probs = child_probs
 
     def update(self, path: list[Node]):
-        value = -path[-1].value
+        value = path[-1].v_zero
 
-        for node in reversed(path[:-1]):
+        for node in reversed(path):
             node.value += value
             node.simulations += 1
             value = -value
