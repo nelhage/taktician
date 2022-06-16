@@ -4,7 +4,7 @@ import sys
 import tak
 from tak import mcts
 from xformer import loading
-from tak.model import wrapper
+from tak.model import wrapper, grpc
 import torch
 
 import time
@@ -44,22 +44,36 @@ def main(argv):
         default="cpu",
     )
     parser.add_argument(
-        "model",
+        "--model",
         type=str,
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5001,
     )
 
     args = parser.parse_args(argv)
 
-    model = loading.load_model(args.model, args.device)
-    if args.fp16:
-        model = model.to(torch.float16)
+    if (args.model and args.host) or not (args.model or args.host):
+        raise ValueError("Must specify either --host or --model, not both")
+    if args.model:
+        model = loading.load_model(args.model, args.device)
+        if args.fp16:
+            model = model.to(torch.float16)
+
+        if args.graph:
+            network = wrapper.GraphedWrapper(model)
+        else:
+            network = wrapper.ModelWrapper(model, device=args.device)
+    else:
+        network = grpc.GRPCNetwork(host=args.host, port=args.port)
 
     p = tak.Position.from_config(tak.Config(size=args.size))
-
-    if args.graph:
-        network = wrapper.GraphedWrapper(model)
-    else:
-        network = wrapper.ModelWrapper(model, device=args.device)
 
     engine = mcts.MCTS(
         mcts.Config(

@@ -8,7 +8,7 @@ service Analysis {
 }
 
 message EvaluateRequest {
-    repeated float features = 1;
+    repeated int32 position = 1;
 
 }
 

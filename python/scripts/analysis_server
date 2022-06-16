@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+import sys
+
+from xformer import loading
+
+from tak.proto import analysis_pb2_grpc
+from tak.proto import analysis_pb2
+import argparse
+
+import torch
+from torch import nn
+
+from attrs import define
+
+import grpc
+import asyncio
+
+
+@define
+class Server(analysis_pb2_grpc.AnalysisServicer):
+    model: nn.Module
+    device: str = "cpu"
+
+    async def Evaluate(self, request, context):
+        position = torch.tensor(
+            [request.position], device=self.device, dtype=torch.long
+        )
+        out = self.model(position)
+        return analysis_pb2.EvaluateResponse(
+            move_probs=torch.softmax(out["moves"], dim=-1)[0].tolist(),
+            value=out["values"][0].item(),
+        )
+
+
+async def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--graph",
+        action="store_true",
+        default=False,
+        help="Use CUDA graphs to run the network",
+    )
+    parser.add_argument(
+        "--fp16",
+        action="store_true",
+        default=False,
+        help="Run model in float16",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="localhost",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5001,
+    )
+    parser.add_argument(
+        "model",
+        type=str,
+    )
+
+    args = parser.parse_args(argv)
+
+    model = loading.load_model(args.model, args.device)
+    if args.fp16:
+        model = model.to(torch.float16)
+
+    server = grpc.aio.server()
+    server.add_insecure_port(f"{args.host}:{args.port}")
+    analysis_pb2_grpc.add_AnalysisServicer_to_server(
+        Server(model=model, device=args.device),
+        server,
+    )
+    await server.start()
+    await server.wait_for_termination()
+
+
+if __name__ == "__main__":
+    asyncio.run(main(sys.argv[1:]))
