@@ -5,6 +5,7 @@ import tak
 from tak import mcts
 from xformer import loading
 from tak.model import wrapper
+import torch
 
 import time
 
@@ -32,6 +33,12 @@ def main(argv):
         help="Use CUDA graphs to run the network",
     )
     parser.add_argument(
+        "--fp16",
+        action="store_true",
+        default=False,
+        help="Run model in float16",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cpu",
@@ -44,6 +51,8 @@ def main(argv):
     args = parser.parse_args(argv)
 
     model = loading.load_model(args.model, args.device)
+    if args.fp16:
+        model = model.to(torch.float16)
 
     p = tak.Position.from_config(tak.Config(size=args.size))
 
