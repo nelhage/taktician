@@ -13,8 +13,11 @@ ai/feature_string.go: ai/evaluate.go
 protoc: $(GOPROTOSRC) $(PYPROTOSRC)
 
 $(GOPROTOSRC) $(PYPROTOSRC): $(PROTOS)
-	protoc -I proto/ \
-	       --python_out=python/ --go_out=. \
+	python -m grpc_tools.protoc\
+	       -I proto/ \
+	       --python_out=python/ \
+	       --grpc_python_out=python/ \
+	       --go_out=. \
 	       --go_opt="module=$(PREFIX)" \
 	       --go-grpc_out=. \
 	       --go-grpc_opt="module=$(PREFIX)" \
