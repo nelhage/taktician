@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import logging
 
 from xformer import loading
 
@@ -30,6 +31,9 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
             move_probs=torch.softmax(out["moves"], dim=-1)[0].tolist(),
             value=out["values"][0].item(),
         )
+
+
+_cleanup_coroutines = []
 
 
 async def main(argv):
@@ -79,8 +83,25 @@ async def main(argv):
         server,
     )
     await server.start()
+
+    async def server_graceful_shutdown():
+        logging.info("Starting graceful shutdown...")
+        # Shuts down the server with 5 seconds of grace period. During the
+        # grace period, the server won't accept new connections and allow
+        # existing RPCs to continue within the grace period.
+        await server.stop(5)
+
+    _cleanup_coroutines.append(server_graceful_shutdown())
+
     await server.wait_for_termination()
 
 
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1:]))
+    logging.basicConfig(level=logging.INFO)
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main(sys.argv[1:]))
+    finally:
+        for co in _cleanup_coroutines:
+            loop.run_until_complete(co)
+        loop.close()
