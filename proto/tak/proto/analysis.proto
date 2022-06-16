@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package tak.proto;
+option go_package="github.com/nelhage/taktician/pb/";
+
+service Analysis {
+    rpc Evaluate(EvaluateRequest) returns (EvaluateResponse) {}
+}
+
+message EvaluateRequest {
+    repeated float features = 1;
+
+}
+
+message EvaluateResponse {
+    repeated float move_probs = 1;
+    float value = 2;
+}
