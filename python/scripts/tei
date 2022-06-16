@@ -6,7 +6,7 @@ import tak
 from tak import mcts, ptn
 
 from xformer import loading
-from tak.model import wrapper
+from tak.model import wrapper, grpc
 
 
 class Action:
@@ -100,12 +100,20 @@ def parse_args():
         "--model",
         type=str,
         metavar="MODEL",
-        required=True,
     )
     parser.add_argument(
         "--device",
         type=str,
         default="cpu",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5001,
     )
     parser.add_argument(
         "--debug",
@@ -121,11 +129,17 @@ def parse_args():
 def main():
     args = parse_args()
 
-    model = loading.load_model(args.model, args.device)
-    if args.device == "cuda":
-        network = wrapper.GraphedWrapper(model)
+    if (args.model and args.host) or not (args.model or args.host):
+        raise ValueError("Must specify either --host or --model, not both")
+    if args.model:
+        model = loading.load_model(args.model, args.device)
+
+        if args.device == "cuda":
+            network = wrapper.GraphedWrapper(model)
+        else:
+            network = wrapper.ModelWrapper(model, device=args.device)
     else:
-        network = wrapper.ModelWrapper(model, device=args.device)
+        network = grpc.GRPCNetwork(host=args.host, port=args.port)
 
     config = mcts.Config(network=network)
 
