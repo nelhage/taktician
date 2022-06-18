@@ -162,9 +162,9 @@ class MCTS:
         winner, _ = node.position.winner()
         if winner is not None:
             if winner == node.position.to_move():
-                node.value = 1
+                node.v_zero = 1
             else:
-                node.value = -1
+                node.v_zero = -1
             return
 
         raw_probs, node.v_zero = self.config.network.evaluate(node.position)
