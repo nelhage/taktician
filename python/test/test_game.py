@@ -780,7 +780,7 @@ class TestGameOver(object):
                     [B],
                     [W],
                 ],
-                (tak.Color.BLACK, tak.WinReason.FLATS),
+                (None, tak.WinReason.FLATS),
             ),
         ]
         for i, tc in enumerate(cases):
