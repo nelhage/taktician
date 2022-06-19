@@ -159,12 +159,14 @@ class MCTS:
             tree = tree.children[child]
 
     def populate(self, node: Node):
-        winner, _ = node.position.winner()
-        if winner is not None:
+        winner, why = node.position.winner()
+        if why is not None:
             if winner == node.position.to_move():
                 node.v_zero = 1
-            else:
+            elif winner == node.position.to_move().flip():
                 node.v_zero = -1
+            else:
+                node.v_zero = 0
             return
 
         raw_probs, node.v_zero = self.config.network.evaluate(node.position)

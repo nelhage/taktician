@@ -170,7 +170,7 @@ class Position(object):
             return pieces.Color.WHITE
         if w < b:
             return pieces.Color.BLACK
-        return self.to_move().flip()
+        return None
 
     def __getitem__(self, pos):
         x, y = pos
