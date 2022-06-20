@@ -135,7 +135,7 @@ async def main(argv):
     server.add_insecure_port(f"{args.host}:{args.port}")
 
     analysis = Server(model=model, device=args.device)
-    asyncio.create_task(analysis.worker_loop())
+    worker = asyncio.create_task(analysis.worker_loop())
 
     analysis_pb2_grpc.add_AnalysisServicer_to_server(
         analysis,
@@ -149,6 +149,7 @@ async def main(argv):
         # grace period, the server won't accept new connections and allow
         # existing RPCs to continue within the grace period.
         await server.stop(2)
+        worker.cancel()
 
     _cleanup_coroutines.append(server_graceful_shutdown())
 
