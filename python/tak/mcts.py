@@ -1,5 +1,4 @@
 import math
-import random
 import time
 import typing as T
 from dataclasses import dataclass
@@ -24,7 +23,6 @@ class Config:
 
     C: float = 0.7
     cutoff_prob: float = 1e-6
-    seed: T.Optional[int] = None
 
 
 ALPHA_EPSILON = 1e-3
@@ -100,12 +98,13 @@ Key = T.TypeVar("Key")
 class MCTS:
     def __init__(self, config: Config):
         self.config = config
-        self.random = random.Random(config.seed)
 
     def analyze(self, p: game.Position) -> Node:
         tree = Node(position=p, move=None)
-        self.root = tree
 
+        return self.analyze_tree(tree)
+
+    def analyze_tree(self, tree):
         start = time.monotonic()
         if self.config.time_limit > 0:
             deadline = start + self.config.time_limit
@@ -200,6 +199,9 @@ class MCTS:
             node.value += value
             node.simulations += 1
             value = -value
+
+    def tree_probs(self, tree: Node) -> torch.Tensor:
+        return tree.policy_probs(self.config.C)
 
     def select_root_move(self, tree: Node) -> moves.Move:
         policy = tree.policy_probs(self.config.C)
