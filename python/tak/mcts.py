@@ -7,6 +7,7 @@ from . import game, moves, ptn
 from .model import encoding
 
 import torch
+import numpy as np
 
 
 class PolicyAndAction(T.Protocol):
@@ -41,12 +42,12 @@ class Node:
     children: T.Optional[list["Node"]] = None
 
     def policy_probs(self, c: float) -> torch.Tensor:
-        pi_theta = self.child_probs
+        pi_theta = self.child_probs.numpy()
 
         if self.simulations == 0:
             return pi_theta
 
-        q = torch.tensor(
+        q = np.array(
             [
                 -c.value / c.simulations if c.simulations > 0 else self.v_zero
                 for c in self.children
@@ -72,8 +73,8 @@ class Node:
 
             # print(f"i={iters} sigma={sigma:0.2f}")
 
-            if (1 - sigma).abs() <= ALPHA_EPSILON or (alpha_max - alpha_min) <= 1e-6:
-                return pi_alpha
+            if np.abs(1 - sigma) <= ALPHA_EPSILON or (alpha_max - alpha_min) <= 1e-6:
+                return torch.from_numpy(pi_alpha)
             if sigma > 1:
                 alpha_min = alpha
                 alpha = (alpha + alpha_max) / 2
