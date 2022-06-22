@@ -161,7 +161,7 @@ class Torso(nn.Module):
 
     def forward(self, acts, padding_mask=None):
         if hasattr(self, "autoregressive_mask"):
-            n_ctx = acts.size(0)
+            n_ctx = acts.size(1)
             attn_mask = self.autoregressive_mask[:n_ctx, :n_ctx]
         else:
             attn_mask = None
