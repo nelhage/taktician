@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import math
 from dataclasses import dataclass
-from functools import cached_property, lru_cache
+from functools import cached_property
+from typing import Optional
 
 import torch
 from torch import nn
@@ -66,8 +67,6 @@ class Resblock(nn.Module):
         self.mlp_act = nn.ReLU()
         self.mlp_down = nn.Linear(cfg.d_mlp, cfg.d_model, dtype=dtype, device=device)
 
-        self.config = cfg
-
     def init_weights(self, cfg: Config):
         std = cfg.initializer_range / math.sqrt(cfg.n_layer)
         self.attn_ln.reset_parameters()
@@ -77,7 +76,12 @@ class Resblock(nn.Module):
         self.mlp_up.weight.data.normal_(mean=0, std=std)
         self.mlp_down.weight.data.normal_(mean=0, std=std)
 
-    def forward(self, resid, padding_mask=None):
+    def forward(
+        self,
+        resid,
+        attn_mask: Optional[torch.Tensor] = None,
+        padding_mask: Optional[torch.Tensor] = None,
+    ):
         n_batch, n_ctx, d_model = resid.shape
 
         attn_ln = self.attn_ln(resid)
@@ -86,9 +90,7 @@ class Resblock(nn.Module):
             attn_ln,
             attn_ln,
             attn_ln,
-            attn_mask=self.ar_mask(n_ctx, dtype=resid.dtype, device=resid.device)
-            if self.config.autoregressive_mask
-            else None,
+            attn_mask=attn_mask,
             key_padding_mask=padding_mask,
         )
         resid = resid + attn_out
@@ -97,11 +99,11 @@ class Resblock(nn.Module):
         mlp_out = self.mlp_down(self.mlp_act(self.mlp_up(mlp_ln)))
         return resid + mlp_out
 
-    @lru_cache
-    def ar_mask(self, n_ctx, dtype, device):
-        return torch.triu(
-            torch.ones((n_ctx, n_ctx), dtype=torch.bool, device=device), diagonal=1
-        )
+
+def ar_mask(n_ctx: int, dtype: torch.dtype, device: torch.device):
+    return torch.triu(
+        torch.ones((n_ctx, n_ctx), dtype=torch.bool, device=device), diagonal=1
+    )
 
 
 class PositionalEncoding(nn.Module):
@@ -145,16 +147,27 @@ class LearnedPositionalEncoding(nn.Module):
 
 
 class Torso(nn.Module):
-    def __init__(self, cfg, dtype=None, device=None):
+    autoregressive_mask: torch.Tensor
+
+    def __init__(self, cfg: Config, dtype=None, device=None):
         super().__init__()
+
+        if cfg.autoregressive_mask:
+            self.autoregressive_mask = ar_mask(cfg.n_ctx, dtype=dtype, device=device)
 
         self.layers = nn.ModuleList(
             [Resblock(cfg, dtype=dtype, device=device) for _ in range(cfg.n_layer)]
         )
 
     def forward(self, acts, padding_mask=None):
+        if hasattr(self, "autoregressive_mask"):
+            n_ctx = acts.size(0)
+            attn_mask = self.autoregressive_mask[:n_ctx, :n_ctx]
+        else:
+            attn_mask = None
+
         for layer in self.layers:
-            acts = layer(acts, padding_mask)
+            acts = layer(acts, attn_mask, padding_mask)
         return acts
 
     def init_weights(self, cfg):
