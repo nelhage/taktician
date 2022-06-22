@@ -39,16 +39,23 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
     queue: asyncio.Queue = field(factory=lambda: asyncio.Queue(MAX_QUEUE_DEPTH))
 
     async def worker_loop(self):
-        loop = asyncio.get_running_loop()
+        # loop = asyncio.get_running_loop()
 
         while True:
             batch = []
             batch.append(await self.queue.get())
             while True:
-                try:
-                    batch.append(self.queue.get_nowait())
-                except asyncio.QueueEmpty:
-                    break
+                if len(batch) >= 8:
+                    try:
+                        batch.append(self.queue.get_nowait())
+                    except asyncio.QueueEmpty:
+                        break
+                else:
+                    try:
+                        elem = await asyncio.wait_for(self.queue.get(), 1.0 / 1000)
+                        batch.append(elem)
+                    except asyncio.TimeoutError:
+                        break
             # we have a batch
 
             positions = torch.zeros(
@@ -65,8 +72,8 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
                 return (probs, out["values"].cpu())
 
             start = time.perf_counter()
-            (probs, values) = await loop.run_in_executor(None, run_model)
-            # (probs, values) = run_model()
+            # (probs, values) = await loop.run_in_executor(None, run_model)
+            (probs, values) = run_model()
             end = time.perf_counter()
             logging.info(
                 f"did batch len={positions.size(0)} dur={1000*(end-start):0.1f}ms"
