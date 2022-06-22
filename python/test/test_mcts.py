@@ -19,7 +19,6 @@ def test_mcts():
         config=mcts.Config(
             time_limit=0,
             simulation_limit=5,
-            seed=1,
             network=wrapper.ModelWrapper(model),
         )
     )
