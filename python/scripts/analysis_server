@@ -137,6 +137,7 @@ async def main(argv):
     model = loading.load_model(args.model, args.device)
     if args.fp16:
         model = model.to(torch.float16)
+    model = torch.jit.script(model)
 
     server = grpc.aio.server()
     server.add_insecure_port(f"{args.host}:{args.port}")
