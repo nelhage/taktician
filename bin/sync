@@ -12,6 +12,8 @@ exec rsync -Pax \
      --exclude='/python/notebooks/' \
      --exclude='/python/build/' \
      --exclude='/python/dist/' \
+     --exclude='/python/.pytest_cache/' \
+     --exclude='/python/*.so' \
      --exclude='/.git' \
      --exclude='/.direnv' \
      --exclude='*.test' \

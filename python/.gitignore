@@ -5,6 +5,7 @@ __pycache__
 htmlcov/
 .pytest_cache
 *.pyc
+*.so
 _feat
 /build
 /dist/

@@ -77,7 +77,9 @@ def solve_policy_python(pi_theta, q, lambda_n):
         pi_alpha = lambda_n * pi_theta / (alpha - q)
         sigma = pi_alpha.sum()
 
-        # print(f"i={iters} sigma={sigma:0.2f}")
+        # print(
+        #     f"python i={iters} alpha_bounds={alpha_min:0.2f},{alpha_max:0.2f} alpha={alpha:0.2f} sigma={sigma:0.2f}"
+        # )
 
         if np.abs(1 - sigma) <= ALPHA_EPSILON or (alpha_max - alpha_min) <= 1e-6:
             return pi_alpha
@@ -87,15 +89,6 @@ def solve_policy_python(pi_theta, q, lambda_n):
         else:
             alpha_max = alpha
             alpha = (alpha + alpha_min) / 2
-
-
-# def extract_pv(node):
-#     pv = []
-#     while node.children is not None:
-#         best = max(node.children, key=lambda n: n.simulations)
-#         pv.append(best)
-#         node = best
-#     return pv
 
 
 Elem = T.TypeVar("Elem")

@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <stdio.h>
+
 using std::min;
 using std::max;
 using std::abs;
@@ -15,10 +17,10 @@ torch::Tensor solve_policy(torch::Tensor pi_theta, torch::Tensor q, float lambda
     auto pi_theta_a = pi_theta.accessor<float, 1>();
     auto q_a = q.accessor<float, 1>();
 
-    float alpha_min = std::numeric_limits<float>::infinity();
+    float alpha_min = -std::numeric_limits<float>::infinity();
     float alpha_max = -std::numeric_limits<float>::infinity();
     for (int i = 0; i < pi_theta_a.size(0); i++) {
-        alpha_min = min(alpha_min, q_a[i] + lambda_n * pi_theta_a[i]);
+        alpha_min = max(alpha_min, q_a[i] + lambda_n * pi_theta_a[i]);
         alpha_max = max(alpha_max, q_a[i] + lambda_n);
     }
 
@@ -29,6 +31,14 @@ torch::Tensor solve_policy(torch::Tensor pi_theta, torch::Tensor q, float lambda
         for (int i = 0; i < pi_theta_a.size(0); i++) {
             sum += lambda_n * pi_theta_a[i] / (alpha - q_a[i]);
         }
+        /*
+        printf("c++ i=%d alpha_bounds=%.2f,%.2f alpha=%.2f sigma=%.2f\n",
+               loops,
+               alpha_min,
+               alpha_max,
+               alpha,
+               sum);
+        */
         float error = sum - 1.0;
         if (abs(error) <= SIGMA_EPSILON or sum == last_sum) {
             return lambda_n * pi_theta / (alpha - q);
