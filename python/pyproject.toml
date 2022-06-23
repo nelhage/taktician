@@ -1,3 +1,9 @@
+[project]
+name = "tak"
+description = "An implementation of Tak"
+license = {text = "MIT"}
+dynamic = ["version"]
+
 [pycodestyle]
 ignore = "D100,D111,D102"
 
@@ -5,3 +11,13 @@ ignore = "D100,D111,D102"
 extend-exclude='''
 ^/tak/proto/
 '''
+
+[build-system]
+requires = ["setuptools", "torch ~= 1.11.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["tak", "xformer"]
+
+[tool.setuptools.dynamic]
+version = {attr = "tak.VERSION"}

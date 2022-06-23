@@ -10,6 +10,8 @@ path=${2-'~/code/taktician'}
 exec rsync -Pax \
      --exclude='__pycache__' \
      --exclude='/python/notebooks/' \
+     --exclude='/python/build/' \
+     --exclude='/python/dist/' \
      --exclude='/.git' \
      --exclude='/.direnv' \
      --exclude='*.test' \

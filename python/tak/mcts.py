@@ -7,6 +7,8 @@ from . import game, moves, ptn
 from .model import encoding
 
 import torch
+
+import tak_ext
 import numpy as np
 
 
@@ -42,12 +44,12 @@ class Node:
     children: T.Optional[list["Node"]] = None
 
     def policy_probs(self, c: float) -> torch.Tensor:
-        pi_theta = self.child_probs.numpy()
+        pi_theta = self.child_probs
 
         if self.simulations == 0:
             return pi_theta
 
-        q = np.array(
+        q = torch.tensor(
             [
                 -c.value / c.simulations if c.simulations > 0 else self.v_zero
                 for c in self.children
@@ -58,29 +60,33 @@ class Node:
             c * math.sqrt(self.simulations) / (self.simulations + len(self.children))
         )
 
-        alpha_min = (q + lambda_n * pi_theta).max().item()
-        alpha_max = (q + lambda_n).max().item()
-        alpha = (alpha_max + alpha_min) / 2
+        return tak_ext.solve_policy(pi_theta, q, lambda_n)
 
-        iters = 0
 
-        while True:
-            iters += 1
-            if iters > 32:
-                raise AssertionError("search for alpha did not terminate")
-            pi_alpha = lambda_n * pi_theta / (alpha - q)
-            sigma = pi_alpha.sum()
+def solve_policy_python(pi_theta, q, lambda_n):
+    alpha_min = (q + lambda_n * pi_theta).max().item()
+    alpha_max = (q + lambda_n).max().item()
+    alpha = (alpha_max + alpha_min) / 2
 
-            # print(f"i={iters} sigma={sigma:0.2f}")
+    iters = 0
 
-            if np.abs(1 - sigma) <= ALPHA_EPSILON or (alpha_max - alpha_min) <= 1e-6:
-                return torch.from_numpy(pi_alpha)
-            if sigma > 1:
-                alpha_min = alpha
-                alpha = (alpha + alpha_max) / 2
-            else:
-                alpha_max = alpha
-                alpha = (alpha + alpha_min) / 2
+    while True:
+        iters += 1
+        if iters > 32:
+            raise AssertionError("search for alpha did not terminate")
+        pi_alpha = lambda_n * pi_theta / (alpha - q)
+        sigma = pi_alpha.sum()
+
+        # print(f"i={iters} sigma={sigma:0.2f}")
+
+        if np.abs(1 - sigma) <= ALPHA_EPSILON or (alpha_max - alpha_min) <= 1e-6:
+            return pi_alpha
+        if sigma > 1:
+            alpha_min = alpha
+            alpha = (alpha + alpha_max) / 2
+        else:
+            alpha_max = alpha
+            alpha = (alpha + alpha_min) / 2
 
 
 # def extract_pv(node):
