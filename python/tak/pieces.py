@@ -20,6 +20,9 @@ class Kind(enum.Enum):
         return self == Kind.FLAT or self == Kind.CAPSTONE
 
 
+_piece_cache = [[None for k in Kind] for c in Color]
+
+
 @define(frozen=True, slots=True)
 class Piece(object):
     color: Color
@@ -29,15 +32,16 @@ class Piece(object):
         return self.kind.is_road()
 
     @classmethod
-    def __call__(cls, color, kind):
+    def _init_cache(cls):
+        for c in Color:
+            for k in Kind:
+                _piece_cache[c.value][k.value] = cls(c, k)
+
+    @classmethod
+    def cached(self, color, kind):
         return _piece_cache[color.value][kind.value]
 
 
-_piece_cache = [[Piece(c, p) for p in Kind] for c in Color]
-
-
-def Piece(color, kind):
-    return _piece_cache[color.value][kind.value]
-
+Piece._init_cache()
 
 __all__ = ["Color", "Kind", "Piece"]

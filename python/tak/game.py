@@ -216,7 +216,7 @@ class Position(object):
             delta["stones"] = (self.stones[0], newstones)
 
         newboard = list(self.board)
-        newboard[m.x + m.y * self.size] = [pieces.Piece(color=color, kind=kind)]
+        newboard[m.x + m.y * self.size] = [pieces.Piece.cached(color=color, kind=kind)]
         delta["board"] = newboard
 
     def _move_slide(self, m, delta):
@@ -255,7 +255,7 @@ class Position(object):
             if len(orig) > 0 and orig[0].kind == pieces.Kind.STANDING:
                 if carry[0].kind != pieces.Kind.CAPSTONE or len(carry) != 1:
                     raise IllegalMove("slide onto a standing stone")
-                orig = [pieces.Piece(orig[0].color, pieces.Kind.FLAT)] + orig[1:]
+                orig = [pieces.Piece.cached(orig[0].color, pieces.Kind.FLAT)] + orig[1:]
 
             newboard[i] = carry[-drop:] + orig
             carry = carry[:-drop]

@@ -39,14 +39,14 @@ def parse_row(rtext):
         stack = []
         for c in b:
             if c == "1":
-                stack.append(tak.Piece(tak.Color.WHITE, tak.Kind.FLAT))
+                stack.append(tak.Piece.cached(tak.Color.WHITE, tak.Kind.FLAT))
             elif c == "2":
-                stack.append(tak.Piece(tak.Color.BLACK, tak.Kind.FLAT))
+                stack.append(tak.Piece.cached(tak.Color.BLACK, tak.Kind.FLAT))
             elif c in ("C", "S"):
                 if not stack:
                     raise IllegalTPS("bare capstone or standing")
                 typ = tak.Kind.CAPSTONE if c == "C" else tak.Kind.STANDING
-                stack[-1] = tak.Piece(stack[-1].color, typ)
+                stack[-1] = tak.Piece.cached(stack[-1].color, typ)
             else:
                 raise IllegalTPS("bad character: " + c)
 
