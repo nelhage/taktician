@@ -13,6 +13,8 @@ import torch
 
 import time
 
+RESIGNATION_THRESHOLD = 0.95
+
 
 @define
 class Transcript:
@@ -29,6 +31,9 @@ def self_play(engine, size=3):
     tree = mcts.Node(position=p, move=None)
 
     while True:
+        if abs(tree.v_zero) >= RESIGNATION_THRESHOLD:
+            break
+
         color, over = tree.position.winner()
         if over is not None:
             break
