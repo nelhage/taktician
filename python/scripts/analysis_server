@@ -72,8 +72,8 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
                 return (probs, out["values"].cpu())
 
             start = time.perf_counter()
-            # (probs, values) = await loop.run_in_executor(None, run_model)
-            (probs, values) = run_model()
+            (probs, values) = await loop.run_in_executor(None, run_model)
+            # (probs, values) = run_model()
             end = time.perf_counter()
             logging.info(
                 f"did batch len={positions.size(0)} dur={1000*(end-start):0.1f}ms"
