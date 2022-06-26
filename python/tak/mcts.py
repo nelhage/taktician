@@ -170,13 +170,12 @@ class MCTS:
 
         raw_probs, node.v_zero = self.config.network.evaluate(node.position)
 
-        sort = torch.sort(raw_probs, descending=True)
         child_probs = []
         node.children = []
 
-        for (mid, prob) in zip(sort.indices.numpy(), sort.values.numpy()):
-            if prob < self.config.cutoff_prob:
-                break
+        (indices,) = torch.nonzero(raw_probs >= self.config.cutoff_prob, as_tuple=True)
+        for mid in indices.numpy():
+            prob = raw_probs[mid]
             m = encoding.decode_move(node.position.size, mid)
             if m is None:
                 continue
