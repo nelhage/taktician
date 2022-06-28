@@ -25,16 +25,19 @@ class PolicyValue:
         v_logits = logits["values"]
         m_logits = logits["moves"]
 
-        with torch.no_grad():
-            argmax = torch.max(m_logits, dim=-1).indices
-            match = argmax == batch.moves
-
         v_error = F.mse_loss(v_logits, batch.values)
+
+        metrics = {
+            "v_error": v_error.item(),
+        }
+
+        if batch.moves.ndim == 1:
+            with torch.no_grad():
+                argmax = torch.max(m_logits, dim=-1).indices
+                match = argmax == batch.moves
+                metrics["acc@01"] = (match.float().mean().item(),)
 
         return (
             self.v_weight * v_error
             + self.policy_weight * self.xent(m_logits, batch.moves)
-        ), {
-            "v_error": v_error.item(),
-            "acc@1": match.float().mean().item(),
-        }
+        ), metrics
