@@ -86,6 +86,7 @@ def main():
         if args.pe is not None:
             cfg.positional_encoding = args.pe
         train_model = model.Transformer(cfg, dtype=torch.float32, device=args.device)
+        train_model.init_weights()
 
     train_ds = data.Dataset(
         args.data + "-train.pt",

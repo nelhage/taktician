@@ -19,8 +19,6 @@ class Trainer:
         self.start_time = time.time()
         self.epoch = iter(self.run.dataset)
 
-        self.run.model.init_weights()
-
         for hook in self.run.hooks:
             hook.before_run(self.run)
 
