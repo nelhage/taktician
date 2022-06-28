@@ -11,3 +11,4 @@ zstandard
 py-spy
 torch>=1.11.0
 wandb
+tqdm

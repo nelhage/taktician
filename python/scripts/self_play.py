@@ -7,6 +7,7 @@ import tak
 from tak import mcts
 from tak.model import grpc, encoding
 from attrs import define, field
+import tqdm
 
 import queue
 from torch import multiprocessing
@@ -113,14 +114,11 @@ def run_job(job: Job, id: int):
         )
     )
 
-    logs = []
-
     while True:
         if not job.sema.acquire(block=False):
             break
-        logs.append(self_play(engine, job.size))
-
-    job.queue.put(logs)
+        log = self_play(engine, job.size)
+        job.queue.put(log)
 
 
 def main(argv):
@@ -181,23 +179,23 @@ def main(argv):
     for p in processes:
         p.start()
 
-    results = []
-    while len(results) < args.threads:
-        try:
-            result = job.queue.get(block=True, timeout=1)
-            results.append(result)
-        except queue.Empty:
-            for p in processes:
-                if p.exitcode not in [0, None]:
-                    raise RuntimeError("Process crashed!")
+    logs = []
+    with tqdm.tqdm(total=args.games) as pbar:
+        while len(logs) < args.games:
+            try:
+                log = job.queue.get(block=True, timeout=1)
+                logs.append(log)
+                pbar.update()
+            except queue.Empty:
+                for p in processes:
+                    if p.exitcode not in [0, None]:
+                        raise RuntimeError("Process crashed!")
 
     job.shutdown.set()
 
     for p in processes:
         p.join()
     end = time.time()
-
-    logs = [l for r in results for l in r]
 
     print(
         f"done games={len(logs)} plies={sum(len(l.positions) for l in logs)} threads={args.threads} duration={end-start:.2f} games/s={args.games/(end-start):.1f}"
