@@ -5,12 +5,13 @@ import torch
 
 import xformer
 from tak.model import batches, heads, losses
-from xformer import data, model, train
+from xformer import data, model, train, loading
 from xformer.train import hooks, lr_schedules
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a transformer")
+    parser.add_argument("--load-model", type=str, help="Initial model to load")
     parser.add_argument("--layers", type=int, default=2, help="Number of layers")
     parser.add_argument("--d_model", type=int, default=None, help="embedding dimension")
     parser.add_argument("--d_head", type=int, default=32, help="head dimension")
@@ -70,17 +71,21 @@ def parse_args():
 def main():
     args = parse_args()
 
-    cfg = xformer.Config(
-        n_layer=args.layers,
-        d_model=args.d_model or 128 * args.layers,
-        d_head=args.d_head,
-        n_ctx=args.n_ctx,
-        n_vocab=256,
-        autoregressive_mask=False,
-        output_head=heads.PolicyValue,
-    )
-    if args.pe is not None:
-        cfg.positional_encoding = args.pe
+    if args.load_model:
+        train_model = loading.load_model(args.load_model, device=args.device)
+    else:
+        cfg = xformer.Config(
+            n_layer=args.layers,
+            d_model=args.d_model or 128 * args.layers,
+            d_head=args.d_head,
+            n_ctx=args.n_ctx,
+            n_vocab=256,
+            autoregressive_mask=False,
+            output_head=heads.PolicyValue,
+        )
+        if args.pe is not None:
+            cfg.positional_encoding = args.pe
+        train_model = model.Transformer(cfg, dtype=torch.float32, device=args.device)
 
     train_ds = data.Dataset(
         args.data + "-train.pt",
@@ -130,9 +135,8 @@ def main():
         schedule = None
 
     run = train.Run(
-        model=model.Transformer(cfg, dtype=torch.float32, device=args.device),
+        model=train_model,
         dataset=train_ds,
-        # loss=MaskedARLoss(),
         loss=losses.PolicyValue(),
         optimizer=train.Optimizer(lr=args.lr, lr_schedule=schedule),
         stop=train.StopTrigger(steps=args.steps, sequences=args.positions),
@@ -143,7 +147,7 @@ def main():
     )
 
     print(
-        f"Training a {cfg.n_layer}L model with {cfg.n_parameters:,} non-embedding parameters..."
+        f"Training a model with {sum(p.numel() for p in run.model.parameters()):,} parameters..."
     )
     param_bytes = sum(t.numel() * t.element_size() for t in run.model.parameters())
     print(f" Model params use {param_bytes/1024**3:.2f}GiB on device")
