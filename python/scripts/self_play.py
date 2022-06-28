@@ -1,10 +1,11 @@
 import argparse
 import sys
 import traceback
+from typing import Optional
 
 import tak
 from tak import mcts
-from tak.model import grpc
+from tak.model import grpc, encoding
 from attrs import define, field
 
 import queue
@@ -23,6 +24,23 @@ class Transcript:
     positions: list[tak.Position] = field(factory=list)
     moves: list[list[tak.Move]] = field(factory=list)
     probs: list[np.ndarray] = field(factory=list)
+    values: list[float] = field(factory=list)
+    result: Optional[tak.Color] = None
+
+    @property
+    def logits(self):
+        logits = torch.zeros((len(self.moves), encoding.MAX_MOVE_ID))
+        size = self.positions[0].size
+        for i in range(logits.size(0)):
+            for (j, mid) in enumerate(self.moves[i]):
+                logits[i, encoding.encode_move(size, mid)] = float(self.probs[i][j])
+        return logits
+
+    @property
+    def results(self):
+        if self.result is None:
+            return [0] * len(self.positions)
+        return [1.0 if p.to_move() == self.result else -1.0 for p in self.positions]
 
 
 def self_play(engine, size=3):
@@ -34,10 +52,15 @@ def self_play(engine, size=3):
 
     while True:
         if abs(tree.v_zero) >= RESIGNATION_THRESHOLD:
+            if tree.v_zero >= RESIGNATION_THRESHOLD:
+                log.result = tree.position.to_move()
+            else:
+                log.result = tree.position.to_move().flip()
             break
 
         color, over = tree.position.winner()
         if over is not None:
+            tree.result = color
             break
 
         tree = engine.analyze_tree(tree)
@@ -46,6 +69,7 @@ def self_play(engine, size=3):
         log.positions.append(tree.position)
         log.moves.append([c.move for c in tree.children])
         log.probs.append(probs.numpy())
+        log.values.append(tree.value / tree.simulations)
 
         tree = tree.children[torch.multinomial(probs, 1).item()]
 
@@ -67,6 +91,7 @@ class Job:
 
 
 def entrypoint(job: Job, id: int):
+    torch.manual_seed(id)
     try:
         run_job(job, id)
         job.queue.close()
@@ -134,6 +159,7 @@ def main(argv):
         type=int,
         default=1,
     )
+    parser.add_argument("--write_games", type=str, metavar="FILE")
 
     args = parser.parse_args(argv)
 
@@ -176,6 +202,25 @@ def main(argv):
     print(
         f"done games={len(logs)} plies={sum(len(l.positions) for l in logs)} threads={args.threads} duration={end-start:.2f} games/s={args.games/(end-start):.1f}"
     )
+
+    if args.write_games:
+        all_positions = [p for tr in logs for p in tr.positions]
+        all_values = [v for tr in logs for v in tr.values]
+        all_move_probs = torch.cat([tr.logits for tr in logs])
+        all_results = [r for tr in logs for r in tr.results]
+        encoded, mask = encoding.encode_batch(all_positions)
+        torch.save(
+            dict(
+                positions=encoded,
+                mask=mask,
+                moves=all_move_probs,
+                values=torch.tensor(all_values),
+                results=torch.tensor(all_results),
+            ),
+            args.write_games,
+        )
+
+        pass
 
 
 if __name__ == "__main__":
