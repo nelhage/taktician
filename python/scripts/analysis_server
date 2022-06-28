@@ -8,6 +8,7 @@ from tak.proto import analysis_pb2_grpc
 from tak.proto import analysis_pb2
 import argparse
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -66,6 +67,7 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
                 positions[i, : len(b.position)] = b.position
                 mask[i, len(b.position) :].fill_(1)
 
+            @torch.inference_mode()
             def run_model():
                 out = self.model(positions.to(self.device), mask.to(self.device))
                 probs = torch.softmax(out["moves"], dim=-1).cpu()
@@ -84,14 +86,17 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
                 b.ready.set()
 
     async def Evaluate(self, request, context):
-        position = torch.tensor(request.position, device=self.device, dtype=torch.long)
+        position = torch.tensor(request.position, dtype=torch.long)
+        # position = torch.from_numpy(
+        #     np.frombuffer(request.position_bytes, dtype=np.int32)
+        # )
 
         req = QueueRequest(position=position)
         await self.queue.put(req)
         await req.ready.wait()
 
         return analysis_pb2.EvaluateResponse(
-            move_probs=req.probs.tolist(), value=req.value
+            move_probs_bytes=req.probs.float().numpy().tobytes(), value=req.value
         )
 
 

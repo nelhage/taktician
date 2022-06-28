@@ -9,10 +9,10 @@ service Analysis {
 
 message EvaluateRequest {
     repeated int32 position = 1;
-
 }
 
 message EvaluateResponse {
     repeated float move_probs = 1;
     float value = 2;
+    bytes move_probs_bytes = 3;
 }

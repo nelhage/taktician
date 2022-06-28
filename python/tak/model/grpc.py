@@ -1,6 +1,7 @@
 from . import encoding
 from attrs import define, field
 
+import numpy as np
 import torch
 
 from tak.proto import analysis_pb2, analysis_pb2_grpc
@@ -21,4 +22,7 @@ class GRPCNetwork:
         with torch.no_grad():
             encoded = encoding.encode(pos)
             out = self.stub.Evaluate(analysis_pb2.EvaluateRequest(position=encoded))
-            return torch.tensor(out.move_probs), out.value
+            move_probs = torch.from_numpy(
+                np.frombuffer(out.move_probs_bytes, dtype=np.float32).copy()
+            )
+            return move_probs, out.value
