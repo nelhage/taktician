@@ -1,4 +1,4 @@
-import argparse
+import secrets
 import sys
 import traceback
 from typing import Optional, Callable
@@ -124,7 +124,7 @@ def run_job(job: WorkerJob, id: int):
 
 
 def entrypoint(job: WorkerJob, id: int):
-    torch.manual_seed(id)
+    torch.manual_seed(secrets.randbits(64))
     try:
         run_job(job, id)
         job.queue.close()
