@@ -135,7 +135,7 @@ def entrypoint(job: WorkerJob, id: int):
         traceback.print_exc(file=sys.stderr)
 
 
-def play_many_games(config: SelfPlayConfig, progress: bool = False):
+def play_many_games(config: SelfPlayConfig, progress: bool = False) -> list[Transcript]:
     job = WorkerJob(
         config=config,
         sema=multiprocessing.Semaphore(value=config.games),
@@ -144,7 +144,9 @@ def play_many_games(config: SelfPlayConfig, progress: bool = False):
     )
 
     processes = [
-        multiprocessing.Process(target=entrypoint, args=(job, i))
+        multiprocessing.Process(
+            target=entrypoint, args=(job, i), name=f"selfplay-worker-{i}"
+        )
         for i in range(config.workers)
     ]
     for p in processes:

@@ -173,21 +173,22 @@ class MCTS:
         child_probs = []
         node.children = []
 
+        raw_probs = raw_probs[: encoding.n_moves_for_size(node.position.size)]
+
         (indices,) = torch.nonzero(raw_probs >= self.config.cutoff_prob, as_tuple=True)
+        valid = []
         for mid in indices.numpy():
-            prob = raw_probs[mid]
             m = encoding.decode_move(node.position.size, mid)
-            if m is None:
-                continue
+
             try:
                 child = node.position.move(m)
             except game.IllegalMove:
                 continue
 
+            valid.append(mid)
             node.children.append(Node(position=child, move=m))
-            child_probs.append(prob)
 
-        child_probs = torch.tensor(child_probs)
+        child_probs = raw_probs[valid]
         child_probs /= child_probs.sum()
         node.child_probs = child_probs
 
