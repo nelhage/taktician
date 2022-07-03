@@ -9,6 +9,6 @@ black>=22.3.0
 python-lsp-server>=1.4.1
 zstandard
 py-spy
-torch>=1.11.0
+torch==1.12.*
 wandb
 tqdm

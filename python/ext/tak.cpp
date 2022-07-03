@@ -9,17 +9,17 @@ using std::min;
 using std::max;
 using std::abs;
 
-#include <iostream>
-
 constexpr float SIGMA_EPSILON = 1e-3;
 
 torch::Tensor solve_policy(torch::Tensor pi_theta, torch::Tensor q, float lambda_n) {
     auto pi_theta_a = pi_theta.accessor<float, 1>();
     auto q_a = q.accessor<float, 1>();
 
+    auto len = pi_theta.sizes()[0];
+
     float alpha_min = -std::numeric_limits<float>::infinity();
     float alpha_max = -std::numeric_limits<float>::infinity();
-    for (int i = 0; i < pi_theta_a.size(0); i++) {
+    for (int i = 0; i < len; i++) {
         alpha_min = max(alpha_min, q_a[i] + lambda_n * pi_theta_a[i]);
         alpha_max = max(alpha_max, q_a[i] + lambda_n);
     }
@@ -28,7 +28,7 @@ torch::Tensor solve_policy(torch::Tensor pi_theta, torch::Tensor q, float lambda
     float last_sum = std::numeric_limits<float>::infinity();
     for (int loops = 0; loops < 32; loops++) {
         float sum = 0.0;
-        for (int i = 0; i < pi_theta_a.size(0); i++) {
+        for (int i = 0; i < len; i++) {
             sum += lambda_n * pi_theta_a[i] / (alpha - q_a[i]);
         }
         /*
