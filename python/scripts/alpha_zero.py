@@ -99,7 +99,7 @@ def main():
     srv = model_process.create_server(model=train_model, config=config)
     srv.start()
 
-    config = self_play.SelfPlayConfig(
+    rollout_config = self_play.SelfPlayConfig(
         size=config.size,
         games=config.rollouts_per_step,
         workers=config.rollout_workers,
@@ -112,12 +112,8 @@ def main():
 
     start = time.time()
 
-    logs = self_play.play_many_games(config, progress=True)
+    logs = self_play.play_many_games(rollout_config, progress=True)
     plies = sum(len(l.positions) for l in logs)
-    # replay_buffer.append(logs)
-
-    srv.stop()
-
     end = time.time()
 
     print(
@@ -126,6 +122,12 @@ def main():
         f" in {end-start:0.2f}s"
         f" ply/s={plies/(end-start):.1f}s"
     )
+
+    batch = self_play.encode_games(logs)
+    batch["positions"] = batch["positions"].to(torch.long)
+    srv.train_step({k: v.share_memory_() for (k, v) in batch.items()})
+
+    srv.stop()
 
 
 if __name__ == "__main__":
