@@ -17,6 +17,7 @@ from tak.model import batches, heads, losses
 import tak.model.server
 from tak import self_play
 from tak.alphazero import model_process
+from tak import alphazero
 
 
 def parse_args():
@@ -36,11 +37,6 @@ def parse_args():
     parser.add_argument("--batch", type=int, default=64, help="batch size")
 
     parser.add_argument(
-        "--save-freq", type=int, default=100, help="save model every N steps"
-    )
-    parser.add_argument("--save-dir", type=str, help="save directory")
-
-    parser.add_argument(
         "--device", type=str, choices=("cpu", "cuda"), default="cuda", help="device"
     )
 
@@ -51,14 +47,14 @@ def parse_args():
 
     parser.add_argument("--lr", type=float, default=5e-4, help="learning rate")
 
-    parser.add_argument("--games-per-step", type=int, default=1000)
+    parser.add_argument("--rollouts-per-step", type=int, default=1000)
     parser.add_argument("--replay-buffer-steps", type=int, default=4)
     parser.add_argument("--train-positions", type=int, default=1024)
 
     parser.add_argument("--size", type=int, default=3)
 
-    parser.add_argument("--selfplay-workers", type=int, default=50)
-    parser.add_argument("--selfplay-simulations", type=int, default=25)
+    parser.add_argument("--rollout-workers", type=int, default=50)
+    parser.add_argument("--rollout-simulations", type=int, default=25)
 
     return parser.parse_args()
 
@@ -85,20 +81,32 @@ def main():
         train_model = model.Transformer(cfg, dtype=torch.float32, device=args.device)
         train_model.init_weights()
 
-    replay_buffer = []
+    config = alphazero.Config(
+        device=args.device,
+        server_port=5001,
+        size=args.size,
+        rollout_workers=args.rollout_workers,
+        rollout_simulations=args.rollout_simulations,
+        rollouts_per_step=args.rollouts_per_step,
+        replay_buffer_steps=args.replay_buffer_steps,
+        train_batch=args.batch,
+        train_positions=args.train_positions,
+    )
+
+    del args
 
     # run self-play to get a batch of games
-    srv = model_process.create_server(model=train_model, device=args.device)
+    srv = model_process.create_server(model=train_model, config=config)
     srv.start()
 
     config = self_play.SelfPlayConfig(
-        size=args.size,
-        games=args.games_per_step,
-        workers=args.selfplay_workers,
+        size=config.size,
+        games=config.rollouts_per_step,
+        workers=config.rollout_workers,
         engine_factory=self_play.BuildRemoteMCTS(
             host="localhost",
-            port=5001,
-            simulations=args.selfplay_simulations,
+            port=config.server_port,
+            simulations=config.rollout_simulations,
         ),
     )
 
@@ -106,14 +114,14 @@ def main():
 
     logs = self_play.play_many_games(config, progress=True)
     plies = sum(len(l.positions) for l in logs)
-    replay_buffer.append(logs)
+    # replay_buffer.append(logs)
 
     srv.stop()
 
     end = time.time()
 
     print(
-        f"generated games={args.games_per_step}"
+        f"generated games={config.rollouts_per_step}"
         f" plies={plies}"
         f" in {end-start:0.2f}s"
         f" ply/s={plies/(end-start):.1f}s"

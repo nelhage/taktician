@@ -13,18 +13,27 @@ import tak.model.server
 
 from attrs import field, define
 
+from .. import Config
+
+
+class Command:
+    pass
+
+
+class Shutdown(Command):
+    pass
+
 
 @define
 class ModelServerShared:
-    shutdown: multiprocessing.Event = field(factory=multiprocessing.Event, init=False)
     ready: multiprocessing.Event = field(factory=multiprocessing.Event, init=False)
+    cmd: multiprocessing.Queue = field(factory=multiprocessing.Queue, init=False)
 
 
 @define
 class ModelServerHandle:
     model: xformer.Transformer
-    device: str
-    port: int
+    config: Config
     process: multiprocessing.Process = field(init=False)
     shared: ModelServerShared = field(factory=ModelServerShared, init=False)
 
@@ -36,8 +45,7 @@ class ModelServerHandle:
     def _run_in_spawn(self):
         worker = ModelServerProcess(
             model=self.model,
-            device=self.device,
-            port=self.port,
+            config=self.config,
             shared=self.shared,
         )
         worker.run()
@@ -47,49 +55,52 @@ class ModelServerHandle:
         self.shared.ready.wait()
 
     def stop(self):
-        self.shared.shutdown.set()
+        self.shared.cmd.put(Shutdown())
         self.process.join()
 
 
 def create_server(
-    model: xformer.Transformer, device: str = "cpu", port: int = 5001
+    model: xformer.Transformer,
+    config: Config,
 ) -> ModelServerHandle:
     return ModelServerHandle(
         model=model,
-        device=device,
-        port=port,
+        config=config,
     )
 
 
 @define
 class ModelServerProcess:
     model: xformer.Transformer
-    device: str
-    port: int
+    config: Config
     shared: ModelServerShared
 
     loop: asyncio.BaseEventLoop = field(init=False)
     server: grpc.aio.Server = field(init=False)
+    tasks: list[asyncio.Task] = field(init=False, factory=list)
 
     def run(self):
         asyncio.run(self.run_async())
 
-    async def handle_shutdown(self):
-        await self.loop.run_in_executor(None, self.shared.shutdown.wait)
-        await self.server.stop(5)
+    async def command_loop(self):
+        while True:
+            event = await self.loop.run_in_executor(None, self.shared.cmd.get)
+            if isinstance(event, Shutdown):
+                await self.server.stop(2)
+                return
 
     async def run_async(self):
         self.loop = asyncio.get_event_loop()
 
-        model = self.model.to(device=self.device, dtype=torch.float16)
+        self.model.to(device=self.config.device, dtype=torch.float16)
 
         self.server = grpc.aio.server()
-        self.server.add_insecure_port(f"localhost:{self.port}")
+        self.server.add_insecure_port(f"localhost:{self.config.server_port}")
 
-        analysis = tak.model.server.Server(model=model, device=self.device)
-        worker = asyncio.create_task(analysis.worker_loop())
+        analysis = tak.model.server.Server(model=self.model, device=self.config.device)
 
-        asyncio.create_task(self.handle_shutdown())
+        self.tasks.append(asyncio.create_task(analysis.worker_loop()))
+        self.tasks.append(asyncio.create_task(self.command_loop()))
 
         analysis_pb2_grpc.add_AnalysisServicer_to_server(
             analysis,
@@ -98,4 +109,5 @@ class ModelServerProcess:
         await self.server.start()
         await self.loop.run_in_executor(None, self.shared.ready.set)
         await self.server.wait_for_termination()
-        worker.cancel()
+        for task in self.tasks:
+            task.cancel()
