@@ -35,7 +35,7 @@ class PolicyValue:
             with torch.no_grad():
                 argmax = torch.max(m_logits, dim=-1).indices
                 match = argmax == batch.moves
-                metrics["acc@01"] = (match.float().mean().item(),)
+                metrics["acc@01"] = match.float().mean().item()
 
         return (
             self.v_weight * v_error
