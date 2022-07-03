@@ -47,14 +47,18 @@ def parse_args():
 
     parser.add_argument("--lr", type=float, default=5e-4, help="learning rate")
 
+    parser.add_argument("--steps", type=int, default=10)
+
+    parser.add_argument("--size", type=int, default=3)
+
     parser.add_argument("--rollouts-per-step", type=int, default=1000)
     parser.add_argument("--replay-buffer-steps", type=int, default=4)
     parser.add_argument("--train-positions", type=int, default=1024)
 
-    parser.add_argument("--size", type=int, default=3)
-
     parser.add_argument("--rollout-workers", type=int, default=50)
     parser.add_argument("--rollout-simulations", type=int, default=25)
+
+    parser.add_argument("--save-dir", type=str, metavar="PATH")
 
     return parser.parse_args()
 
@@ -91,9 +95,8 @@ def main():
         replay_buffer_steps=args.replay_buffer_steps,
         train_batch=args.batch,
         train_positions=args.train_positions,
+        lr=args.lr,
     )
-
-    del args
 
     # run self-play to get a batch of games
     srv = model_process.create_server(model=train_model, config=config)
@@ -110,22 +113,25 @@ def main():
         ),
     )
 
-    start = time.time()
+    for step in range(args.steps):
+        start = time.time()
+        logs = self_play.play_many_games(rollout_config, progress=True)
+        plies = sum(len(l.positions) for l in logs)
+        end = time.time()
 
-    logs = self_play.play_many_games(rollout_config, progress=True)
-    plies = sum(len(l.positions) for l in logs)
-    end = time.time()
+        print(
+            f"generated games={config.rollouts_per_step}"
+            f" plies={plies}"
+            f" in {end-start:0.2f}s"
+            f" ply/s={plies/(end-start):.1f}s"
+        )
 
-    print(
-        f"generated games={config.rollouts_per_step}"
-        f" plies={plies}"
-        f" in {end-start:0.2f}s"
-        f" ply/s={plies/(end-start):.1f}s"
-    )
+        batch = self_play.encode_games(logs)
+        batch["positions"] = batch["positions"].to(torch.long)
+        srv.train_step({k: v.share_memory_() for (k, v) in batch.items()})
 
-    batch = self_play.encode_games(logs)
-    batch["positions"] = batch["positions"].to(torch.long)
-    srv.train_step({k: v.share_memory_() for (k, v) in batch.items()})
+    if args.save_dir:
+        srv.save_model(args.save_dir)
 
     srv.stop()
 

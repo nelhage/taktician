@@ -10,6 +10,7 @@ import grpc
 import asyncio
 
 import xformer
+import yaml
 
 from tak.proto import analysis_pb2_grpc
 import tak.model.server
@@ -39,6 +40,11 @@ class TrainStep(Command):
 
 
 @define
+class SaveSnapshot(Command):
+    snapshot_path: str
+
+
+@define
 class ModelServerShared:
     cmd: multiprocessing.Queue = field(factory=multiprocessing.Queue, init=False)
     reply: multiprocessing.Queue = field(factory=multiprocessing.Queue, init=False)
@@ -65,10 +71,6 @@ class ModelServerHandle:
         )
         worker.run()
 
-    def start(self):
-        self.process.start()
-        self.send(WaitForStartup())
-
     def send(self, cmd: Command):
         self.shared.cmd.put(cmd)
         while True:
@@ -81,12 +83,19 @@ class ModelServerHandle:
                 break
         assert got == cmd.id, "Got a reply to the wrong command!"
 
+    def start(self):
+        self.process.start()
+        self.send(WaitForStartup())
+
     def stop(self):
         self.shared.cmd.put(Shutdown())
         self.process.join()
 
     def train_step(self, batch):
         self.send(TrainStep(batch=batch))
+
+    def save_model(self, path):
+        self.send(SaveSnapshot(snapshot_path=path))
 
 
 def create_server(
@@ -139,8 +148,25 @@ class ModelServerProcess:
         loss_fn = losses.PolicyValue()
 
         full_replay_buffer = {
-            k: maybe_pin(torch.cat([d[k] for d in self.replay_buffer])) for k in batch
+            k: maybe_pin(torch.cat([d[k] for d in self.replay_buffer]))
+            for k in batch
+            if k not in ["positions", "mask"]
         }
+        npos = sum(b["positions"].size(0) for b in self.replay_buffer)
+        maxwidth = max(b["positions"].size(1) for b in self.replay_buffer)
+        positions = maybe_pin(torch.zeros((npos, maxwidth), dtype=torch.long))
+        mask = maybe_pin(torch.zeros((npos, maxwidth), dtype=torch.bool))
+
+        full_replay_buffer["positions"] = positions
+        full_replay_buffer["mask"] = mask
+
+        n = 0
+        for b in self.replay_buffer:
+            shape = b["positions"].shape
+            positions[n : n + shape[0], : shape[1]] = b["positions"]
+            mask[n : n + shape[0], : shape[1]] = b["mask"]
+            n += shape[0]
+
         perm = torch.randperm(len(next(iter(full_replay_buffer.values()))))
         for i in range(0, self.config.train_positions, self.config.train_batch):
             batch_perm = perm[i : i + self.config.train_batch]
@@ -168,6 +194,15 @@ class ModelServerProcess:
                 return
             elif isinstance(event, TrainStep):
                 self.train_step(event.batch)
+            elif isinstance(event, SaveSnapshot):
+                os.makedirs(event.snapshot_path, exist_ok=True)
+                torch.save(
+                    self.train_params,
+                    os.path.join(event.snapshot_path, "model.pt"),
+                )
+                with open(os.path.join(event.snapshot_path, "config.yaml"), "w") as fh:
+                    yaml.dump(self.model.cfg, fh)
+
             else:
                 raise AssertionError(f"Unknown command: {event}")
             await self.loop.run_in_executor(None, self.shared.reply.put, event.id)
