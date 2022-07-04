@@ -60,6 +60,9 @@ def parse_args():
 
     parser.add_argument("--save-dir", type=str, metavar="PATH")
 
+    parser.add_argument("--progress", type=bool)
+    parser.add_argument("--no-progress", dest="progress", action="store_false")
+
     return parser.parse_args()
 
 
@@ -115,7 +118,7 @@ def main():
 
     for step in range(args.steps):
         start = time.time()
-        logs = self_play.play_many_games(rollout_config, progress=True)
+        logs = self_play.play_many_games(rollout_config, progress=args.progress)
         plies = sum(len(l.positions) for l in logs)
         end = time.time()
 

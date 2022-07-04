@@ -59,3 +59,22 @@ def test_pipeline(wandb):
 
         assert stats["step"] == 2
         assert "test_loss" in stats["metrics"]
+
+
+def test_alphazero():
+    subprocess.check_call(
+        [
+            sys.executable,
+            os.path.join(SCRIPTS, "alpha_zero.py"),
+            "--layers=1",
+            "--d_model=64",
+            "--device=cpu",
+            "--rollouts-per-step=5",
+            "--rollout-simulations=5",
+            "--rollout-workers=2",
+            "--train-positions=128",
+            "--batch=64",
+            "--steps=2",
+            "--no-progress",
+        ]
+    )
