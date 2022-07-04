@@ -1,5 +1,6 @@
 from attrs import define, field
 import torch
+from typing import Optional
 
 
 @define
@@ -22,6 +23,11 @@ class Config:
 
     train_dtype: torch.dtype = torch.float32
     serve_dtype: torch.dtype = torch.float16
+
+    save_path: Optional[str] = None
+    save_freq: int = 10
+
+    train_steps: int = 10
 
     def __attrs_post_init__(self):
         if self.device == "cpu":

@@ -1,6 +1,7 @@
 import argparse
 import time
 import typing as T  # noqa
+import os.path
 
 import torch
 from torch import multiprocessing
@@ -59,8 +60,9 @@ def parse_args():
     parser.add_argument("--rollout-simulations", type=int, default=25)
 
     parser.add_argument("--save-dir", type=str, metavar="PATH")
+    parser.add_argument("--save-freq", type=int, metavar="STEPS", default=10)
 
-    parser.add_argument("--progress", type=bool)
+    parser.add_argument("--progress", type=bool, default=True)
     parser.add_argument("--no-progress", dest="progress", action="store_false")
 
     return parser.parse_args()
@@ -99,9 +101,11 @@ def main():
         train_batch=args.batch,
         train_positions=args.train_positions,
         lr=args.lr,
+        save_path=args.save_dir,
+        save_freq=args.save_freq,
+        train_steps=args.steps,
     )
 
-    # run self-play to get a batch of games
     srv = model_process.create_server(model=train_model, config=config)
     srv.start()
 
@@ -116,7 +120,7 @@ def main():
         ),
     )
 
-    for step in range(args.steps):
+    for step in range(config.train_steps):
         start = time.time()
         logs = self_play.play_many_games(rollout_config, progress=args.progress)
         plies = sum(len(l.positions) for l in logs)
@@ -133,8 +137,12 @@ def main():
         batch["positions"] = batch["positions"].to(torch.long)
         srv.train_step({k: v.share_memory_() for (k, v) in batch.items()})
 
-    if args.save_dir:
-        srv.save_model(args.save_dir)
+        if config.save_path and (
+            step % config.save_freq == 0 or step == config.train_steps - 1
+        ):
+            save_dir = os.path.join(config.save_path, f"step_{step:06d}")
+            print(f"Saving snapshot to {save_dir}...")
+            srv.save_model(save_dir)
 
     srv.stop()
 
