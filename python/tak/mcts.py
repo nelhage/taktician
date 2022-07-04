@@ -24,7 +24,7 @@ class Config:
     time_limit: float = 1.0
     simulation_limit: int = 0
 
-    C: float = 0.7
+    C: float = 4
     cutoff_prob: float = 1e-6
 
 
