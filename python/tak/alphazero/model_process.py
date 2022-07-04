@@ -19,6 +19,7 @@ from tak.model import batches, losses
 from attrs import field, define
 
 from .. import Config
+from . import data
 
 
 @define(kw_only=True)
@@ -140,48 +141,27 @@ class ModelServerProcess:
 
         self.train_mode()
 
-        if self.config.device.startswith("cuda"):
-            maybe_pin = lambda t: t.pin_memory()
-        else:
-            maybe_pin = lambda t: t
-
         loss_fn = losses.PolicyValue()
+        ds = data.ReplayBufferDataset(
+            replay_buffer=self.replay_buffer,
+            batch_size=self.config.train_batch,
+            device=self.config.device,
+        )
 
-        full_replay_buffer = {
-            k: maybe_pin(torch.cat([d[k] for d in self.replay_buffer]))
-            for k in batch
-            if k not in ["positions", "mask"]
-        }
-        npos = sum(b["positions"].size(0) for b in self.replay_buffer)
-        maxwidth = max(b["positions"].size(1) for b in self.replay_buffer)
-        positions = maybe_pin(torch.zeros((npos, maxwidth), dtype=torch.long))
-        mask = maybe_pin(torch.zeros((npos, maxwidth), dtype=torch.bool))
-
-        full_replay_buffer["positions"] = positions
-        full_replay_buffer["mask"] = mask
-
-        n = 0
-        for b in self.replay_buffer:
-            shape = b["positions"].shape
-            positions[n : n + shape[0], : shape[1]] = b["positions"]
-            mask[n : n + shape[0], : shape[1]] = b["mask"]
-            n += shape[0]
-
-        perm = torch.randperm(len(next(iter(full_replay_buffer.values()))))
+        it = iter(ds)
         for i in range(0, self.config.train_positions, self.config.train_batch):
-            batch_perm = perm[i : i + self.config.train_batch]
-            batch = batches.PositionValuePolicy(
-                {
-                    k: v[batch_perm].to(self.config.device)
-                    for (k, v) in full_replay_buffer.items()
-                }
-            )
+            try:
+                batch = next(it)
+            except StopIteration:
+                it = iter(ds)
+                batch = next(it)
+
             self.opt.zero_grad()
             out = self.model(batch.inputs, *batch.extra_inputs)
             loss, metrics = loss_fn.loss_and_metrics(batch, out)
             loss.backward()
-            print(f"train_loss={loss:0.2f}")
             self.opt.step()
+
         self.serve_mode()
 
     async def command_loop(self):

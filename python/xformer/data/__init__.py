@@ -87,13 +87,3 @@ class Dataset:
                     for (k, v) in shuffled.items()
                 }
             )
-
-
-@define
-class EpochIterator:
-    shuffled: dict[str, torch.Tensor]
-    batch_class: type
-    i: int = 0
-
-    def __next__(self):
-        pass
