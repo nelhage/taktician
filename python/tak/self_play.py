@@ -31,10 +31,11 @@ class Transcript:
     @property
     def logits(self):
         logits = torch.zeros((len(self.moves), encoding.MAX_MOVE_ID))
+        np_view = logits.numpy()
         size = self.positions[0].size
         for i in range(logits.size(0)):
             for (j, mid) in enumerate(self.moves[i]):
-                logits[i, encoding.encode_move(size, mid)] = float(self.probs[i][j])
+                np_view[i, encoding.encode_move(size, mid)] = self.probs[i][j]
         return logits
 
     @property
@@ -81,7 +82,6 @@ def play_one_game(engine, size=3):
 class SelfPlayConfig:
     engine_factory: Callable
     size: int
-    games: int
     workers: int
 
 
@@ -108,8 +108,8 @@ class BuildRemoteMCTS:
 class WorkerJob:
     config: SelfPlayConfig
 
-    sema: multiprocessing.Semaphore
-    queue: multiprocessing.Queue
+    cmd: multiprocessing.Queue
+    games: multiprocessing.Queue
     shutdown: multiprocessing.Event
 
 
@@ -117,64 +117,96 @@ def run_job(job: WorkerJob, id: int):
     engine = job.config.engine_factory()
 
     while True:
-        if not job.sema.acquire(block=False):
+        id = job.cmd.get(block=True)
+        if id is None:
             break
         log = play_one_game(engine, job.config.size)
-        job.queue.put(log)
+        job.games.put(log)
 
 
 def entrypoint(job: WorkerJob, id: int):
     torch.manual_seed(secrets.randbits(64))
     try:
         run_job(job, id)
-        job.queue.close()
-        job.queue.join_thread()
+        job.games.close()
+        job.games.join_thread()
         job.shutdown.wait()
     except Exception as ex:
         print(f"[{id}] Process crashed: {ex}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
 
 
-def play_many_games(config: SelfPlayConfig, progress: bool = False) -> list[Transcript]:
-    job = WorkerJob(
-        config=config,
-        sema=multiprocessing.Semaphore(value=config.games),
-        queue=multiprocessing.Queue(maxsize=config.workers),
-        shutdown=multiprocessing.Event(),
-    )
+@define
+class MultiprocessSelfPlayEngine:
+    config: SelfPlayConfig
 
-    processes = [
-        multiprocessing.Process(
-            target=entrypoint, args=(job, i), name=f"selfplay-worker-{i}"
+    job: WorkerJob = field(init=False)
+    next_id: int = field(default=0, init=False)
+    processes: list[multiprocessing.Process] = field(factory=list, init=False)
+
+    def __attrs_post_init__(self):
+        self.job = WorkerJob(
+            config=self.config,
+            cmd=multiprocessing.Queue(maxsize=2 * self.config.workers),
+            games=multiprocessing.Queue(maxsize=self.config.workers),
+            shutdown=multiprocessing.Event(),
         )
-        for i in range(config.workers)
-    ]
-    for p in processes:
-        p.start()
+        self.processes = [
+            multiprocessing.Process(
+                target=entrypoint, args=(self.job, i), name=f"selfplay-worker-{i}"
+            )
+            for i in range(self.config.workers)
+        ]
+        for p in self.processes:
+            p.start()
 
-    logs = []
+    def play_many(self, games: int, progress: bool = False) -> list[Transcript]:
+        logs = []
+        todo = games
+        try:
+            with tqdm.tqdm(total=games, disable=not progress) as pbar:
+                while len(logs) < games:
+                    while todo > 0:
+                        try:
+                            self.job.cmd.put(self.next_id, block=False)
+                            self.next_id += 1
+                            todo -= 1
+                        except queue.Full:
+                            break
+
+                    try:
+                        log = self.job.games.get(block=True, timeout=1)
+                        logs.append(log)
+                        pbar.update()
+                    except queue.Empty:
+                        for p in self.processes:
+                            if p.exitcode not in [0, None]:
+                                raise RuntimeError("Process crashed!")
+        except Exception:
+            for p in self.processes:
+                p.kill()
+            raise
+
+        return logs
+
+    def stop(self):
+        for _ in range(self.config.workers):
+            self.job.cmd.put(None, block=False)
+
+        self.job.shutdown.set()
+        for p in self.processes:
+            p.join()
+
+
+def play_many_games(
+    config: SelfPlayConfig, games: int, progress: bool = False
+) -> list[Transcript]:
+    engine = MultiprocessSelfPlayEngine(config=config)
+
     try:
-        with tqdm.tqdm(total=config.games, disable=not progress) as pbar:
-            while len(logs) < config.games:
-                try:
-                    log = job.queue.get(block=True, timeout=1)
-                    logs.append(log)
-                    pbar.update()
-                except queue.Empty:
-                    for p in processes:
-                        if p.exitcode not in [0, None]:
-                            raise RuntimeError("Process crashed!")
-    except Exception:
-        for p in processes:
-            p.kill()
-        raise
-
-    job.shutdown.set()
-
-    for p in processes:
-        p.join()
-
-    return logs
+        return engine.play_many(games, progress=progress)
+    finally:
+        engine.stop()
 
 
 def encode_games(logs: list[Transcript]):

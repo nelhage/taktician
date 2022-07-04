@@ -109,20 +109,23 @@ def main():
     srv = model_process.create_server(model=train_model, config=config)
     srv.start()
 
-    rollout_config = self_play.SelfPlayConfig(
-        size=config.size,
-        games=config.rollouts_per_step,
-        workers=config.rollout_workers,
-        engine_factory=self_play.BuildRemoteMCTS(
-            host="localhost",
-            port=config.server_port,
-            simulations=config.rollout_simulations,
-        ),
+    rollout_engine = self_play.MultiprocessSelfPlayEngine(
+        config=self_play.SelfPlayConfig(
+            size=config.size,
+            workers=config.rollout_workers,
+            engine_factory=self_play.BuildRemoteMCTS(
+                host="localhost",
+                port=config.server_port,
+                simulations=config.rollout_simulations,
+            ),
+        )
     )
 
     for step in range(config.train_steps):
         start = time.time()
-        logs = self_play.play_many_games(rollout_config, progress=args.progress)
+        logs = rollout_engine.play_many(
+            config.rollouts_per_step, progress=args.progress
+        )
         plies = sum(len(l.positions) for l in logs)
         end = time.time()
 
@@ -144,6 +147,7 @@ def main():
             print(f"Saving snapshot to {save_dir}...")
             srv.save_model(save_dir)
 
+    rollout_engine.stop()
     srv.stop()
 
 

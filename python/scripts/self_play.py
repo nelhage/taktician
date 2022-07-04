@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import sys
 import traceback
@@ -59,7 +60,6 @@ def main(argv):
 
     config = self_play.SelfPlayConfig(
         size=args.size,
-        games=args.games,
         workers=args.threads,
         engine_factory=self_play.BuildRemoteMCTS(
             host=args.host,
@@ -70,7 +70,7 @@ def main(argv):
 
     start = time.time()
 
-    logs = self_play.play_many_games(config, progress=True)
+    logs = self_play.play_many_games(config, args.games, progress=True)
 
     end = time.time()
 
