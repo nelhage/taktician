@@ -130,9 +130,9 @@ def main():
         end = time.time()
 
         print(
-            f"generated games={config.rollouts_per_step}"
+            f"step={step} games={config.rollouts_per_step}"
             f" plies={plies}"
-            f" in {end-start:0.2f}s"
+            f" rollout_time={end-start:0.2f}s"
             f" ply/s={plies/(end-start):.1f}s"
         )
 
