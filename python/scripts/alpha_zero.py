@@ -41,11 +41,6 @@ def parse_args():
         "--device", type=str, choices=("cpu", "cuda"), default="cuda", help="device"
     )
 
-    parser.add_argument("--job-name", type=str, default=None, help="job name for wandb")
-    parser.add_argument("--group", type=str, default=None, help="wandb group name")
-    parser.add_argument("--wandb", action="store_true", default=False)
-    parser.add_argument("--no-wandb", action="store_false", dest="wandb")
-
     parser.add_argument("--lr", type=float, default=5e-4, help="learning rate")
 
     parser.add_argument("--steps", type=int, default=10)
@@ -64,6 +59,10 @@ def parse_args():
 
     parser.add_argument("--progress", type=bool, default=True)
     parser.add_argument("--no-progress", dest="progress", action="store_false")
+
+    parser.add_argument("--job-name", type=str, default=None, help="job name for wandb")
+    parser.add_argument("--wandb", action="store_true", default=False)
+    parser.add_argument("--no-wandb", action="store_false", dest="wandb")
 
     return parser.parse_args()
 
@@ -104,6 +103,8 @@ def main():
         save_path=args.save_dir,
         save_freq=args.save_freq,
         train_steps=args.steps,
+        wandb=args.wandb,
+        job_name=args.job_name,
     )
 
     srv = model_process.create_server(model=train_model, config=config)
@@ -126,15 +127,7 @@ def main():
         logs = rollout_engine.play_many(
             config.rollouts_per_step, progress=args.progress
         )
-        plies = sum(len(l.positions) for l in logs)
         end = time.time()
-
-        print(
-            f"step={step} games={config.rollouts_per_step}"
-            f" plies={plies}"
-            f" rollout_time={end-start:0.2f}s"
-            f" ply/s={plies/(end-start):.1f}s"
-        )
 
         batch = self_play.encode_games(logs)
         batch["positions"] = batch["positions"].to(torch.long)

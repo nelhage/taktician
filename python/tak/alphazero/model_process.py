@@ -1,4 +1,5 @@
 import typing as T  # noqa
+import time
 import os
 import itertools
 
@@ -9,6 +10,8 @@ from torch import multiprocessing
 import grpc
 import asyncio
 
+import wandb
+
 import xformer
 import yaml
 
@@ -17,6 +20,7 @@ import tak.model.server
 from tak.model import batches, losses
 
 from attrs import field, define
+import attrs
 
 from .. import Config
 from . import data
@@ -115,6 +119,8 @@ class ModelServerProcess:
     config: Config
     shared: ModelServerShared
 
+    wandb: T.Optional["wandb.Run"] = field(default=None, init=False)
+
     ready: asyncio.Event = field(factory=asyncio.Event)
 
     loop: asyncio.BaseEventLoop = field(init=False)
@@ -123,6 +129,10 @@ class ModelServerProcess:
     replay_buffer: list[dict[str, torch.Tensor]] = field(init=False, factory=list)
     train_params: dict[str, torch.Tensor] = field(init=False)
     opt: torch.optim.AdamW = field(init=False)
+
+    step: int = field(default=0, init=False)
+    train_epoch: int = field(default=0, init=False)
+    last_step: float = field(init=False)
 
     def run(self):
         asyncio.run(self.run_async())
@@ -135,11 +145,17 @@ class ModelServerProcess:
         self.model.to(self.config.train_dtype).load_state_dict(self.train_params)
 
     def train_step(self, batch):
+        now = time.monotonic()
+        rollout_time = now - self.last_step
+        self.last_step = now
+
         self.replay_buffer.append(batch)
         if len(self.replay_buffer) > self.config.replay_buffer_steps:
             self.replay_buffer = self.replay_buffer[1:]
 
         self.train_mode()
+
+        self.step += 1
 
         loss_fn = losses.PolicyValue()
         ds = data.ReplayBufferDataset(
@@ -148,9 +164,28 @@ class ModelServerProcess:
             device=self.config.device,
         )
 
+        unique = len(
+            set(
+                tuple(p[m].tolist())
+                for (p, m) in zip(batch["positions"], batch["mask"])
+            )
+        )
+        plies = len(batch["positions"])
+        stats = {
+            "rollout_plies": plies,
+            "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
+            "rollout_unique_plies": unique,
+            "train_step": self.step,
+            "rollout_time": rollout_time,
+        }
+
+        self.train_epoch += 1
+        train_start = time.monotonic()
+
         it = iter(ds)
         for i in range(0, self.config.train_positions, self.config.train_batch):
             try:
+                self.train_epoch += 1
                 batch = next(it)
             except StopIteration:
                 it = iter(ds)
@@ -162,10 +197,30 @@ class ModelServerProcess:
             loss.backward()
             self.opt.step()
 
+            if self.wandb is not None:
+                self.wandb.log(
+                    {"train_loss": loss.item(), "train_epoch": self.train_epoch}
+                    | stats
+                    | metrics
+                )
+
+        train_time = time.monotonic() - train_start
+        print(
+            f"step={self.step}"
+            f" games={self.config.rollouts_per_step}"
+            f" plies={plies}"
+            f" unique={unique}"
+            f" rollout_time={rollout_time:0.2f}s"
+            f" train_time={train_time:0.2f}s"
+            f" ply/s={plies/(rollout_time):.1f}s"
+            f" last_loss={loss.item():0.2f}"
+        )
+
         self.serve_mode()
 
     async def command_loop(self):
         while True:
+            self.last_step = time.monotonic()
             event = await self.loop.run_in_executor(None, self.shared.cmd.get)
             if isinstance(event, WaitForStartup):
                 await self.ready.wait()
@@ -188,6 +243,11 @@ class ModelServerProcess:
             await self.loop.run_in_executor(None, self.shared.reply.put, event.id)
 
     async def run_async(self):
+        if self.config.wandb:
+            self.wandb = wandb.init(
+                project=self.config.project, name=self.config.job_name
+            )
+            wandb.config.update(attrs.asdict(self.config))
         self.loop = asyncio.get_event_loop()
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)

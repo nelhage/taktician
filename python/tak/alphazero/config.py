@@ -29,6 +29,10 @@ class Config:
 
     train_steps: int = 10
 
+    wandb: bool = False
+    job_name: Optional[str] = None
+    project: str = "taktician-alphazero"
+
     def __attrs_post_init__(self):
         if self.device == "cpu":
             self.serve_dtype = torch.float32
