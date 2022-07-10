@@ -17,8 +17,6 @@ import numpy as np
 
 import time
 
-RESIGNATION_THRESHOLD = 0.95
-
 
 @define
 class Transcript:
@@ -45,16 +43,16 @@ class Transcript:
         return [1.0 if p.to_move() == self.result else -1.0 for p in self.positions]
 
 
-def play_one_game(engine, size=3):
-    p = tak.Position.from_config(tak.Config(size=size))
+def play_one_game(cfg, engine):
+    p = tak.Position.from_config(tak.Config(size=cfg.size))
 
     log = Transcript()
 
     tree = mcts.Node(position=p, move=None)
 
     while True:
-        if abs(tree.v_zero) >= RESIGNATION_THRESHOLD:
-            if tree.v_zero >= RESIGNATION_THRESHOLD:
+        if abs(tree.v_zero) >= cfg.resignation_threshold:
+            if tree.v_zero >= cfg.resignation_threshold:
                 log.result = tree.position.to_move()
             else:
                 log.result = tree.position.to_move().flip()
@@ -83,6 +81,8 @@ class SelfPlayConfig:
     engine_factory: Callable
     size: int
     workers: int
+
+    resignation_threshold: float = 0.95
 
 
 @define
@@ -120,7 +120,7 @@ def run_job(job: WorkerJob, id: int):
         id = job.cmd.get(block=True)
         if id is None:
             break
-        log = play_one_game(engine, job.config.size)
+        log = play_one_game(job.config, engine)
         job.games.put(log)
 
 
