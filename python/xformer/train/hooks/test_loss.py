@@ -8,6 +8,8 @@ from ..run import Dataset, Hook, Run, Stats
 
 @define
 class TestLoss(Hook):
+    __test__ = False
+
     dataset: Dataset
     frequency: int
 
