@@ -24,6 +24,9 @@ class Config:
     time_limit: float = 1.0
     simulation_limit: int = 0
 
+    root_noise_alpha: T.Optional[float] = None
+    root_noise_mix: T.Optional[float] = 0.25
+
     C: float = 4
     cutoff_prob: float = 1e-6
 
@@ -190,6 +193,13 @@ class MCTS:
 
         child_probs = raw_probs[valid]
         child_probs /= child_probs.sum()
+        if node.position.ply == 0 and self.config.root_noise_alpha is not None:
+            noise = torch.distributions.Dirichlet(
+                torch.full_like(child_probs, fill_value=self.config.root_noise_alpha)
+            ).sample()
+            mix = self.config.root_noise_mix
+            child_probs = mix * noise + (1 - mix) * child_probs
+
         node.child_probs = child_probs
 
     def update(self, path: list[Node]):

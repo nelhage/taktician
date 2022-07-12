@@ -12,6 +12,9 @@ class Config:
 
     size: int = 3
 
+    dirichlet_alpha: Optional[float] = 1.0
+    dirichlet_weight: float = 0.25
+
     rollout_workers: int = 50
     rollout_simulations: int = 25
 
