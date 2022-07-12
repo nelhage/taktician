@@ -131,6 +131,7 @@ class ModelServerProcess:
     opt: torch.optim.AdamW = field(init=False)
 
     step: int = field(default=0, init=False)
+    train_positions: int = field(default=0, init=False)
     train_epoch: int = field(default=0, init=False)
     last_step: float = field(init=False)
 
@@ -197,9 +198,15 @@ class ModelServerProcess:
             loss.backward()
             self.opt.step()
 
+            self.train_positions += batch.size(0)
+
             if self.wandb is not None:
                 self.wandb.log(
-                    {"train_loss": loss.item(), "train_epoch": self.train_epoch}
+                    {
+                        "train_loss": loss.item(),
+                        "train_epoch": self.train_epoch,
+                        "positions": self.train_positions,
+                    }
                     | stats
                     | metrics
                 )
