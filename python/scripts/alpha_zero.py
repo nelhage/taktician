@@ -16,7 +16,7 @@ from xformer.train import hooks, lr_schedules
 from tak.model import batches, heads, losses
 
 import tak.model.server
-from tak import self_play
+from tak import self_play, mcts
 from tak.alphazero import model_process
 from tak import alphazero
 
@@ -117,7 +117,11 @@ def main():
             engine_factory=self_play.BuildRemoteMCTS(
                 host="localhost",
                 port=config.server_port,
-                simulations=config.rollout_simulations,
+                config=mcts.Config(
+                    simulation_limit=config.rollout_simulations,
+                    root_noise_alpha=config.dirichlet_alpha,
+                    root_noise_mix=config.dirichlet_weight,
+                ),
             ),
         )
     )

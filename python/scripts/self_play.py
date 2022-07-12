@@ -64,7 +64,9 @@ def main(argv):
         engine_factory=self_play.BuildRemoteMCTS(
             host=args.host,
             port=args.port,
-            simulations=args.simulations,
+            config=mcts.Config(
+                simulation_limit=args.simulations,
+            ),
         ),
     )
 

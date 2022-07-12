@@ -22,8 +22,8 @@ def test_mcts():
         config=mcts.Config(
             time_limit=0,
             simulation_limit=5,
-            network=wrapper.ModelWrapper(model),
-        )
+        ),
+        network=wrapper.ModelWrapper(model),
     )
 
     print(engine.get_move(game.Position.from_config(game.Config(size=3))))

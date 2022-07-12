@@ -19,8 +19,6 @@ class PolicyAndAction(T.Protocol):
 
 @dataclass
 class Config:
-    network: PolicyAndAction
-
     time_limit: float = 1.0
     simulation_limit: int = 0
 
@@ -99,8 +97,9 @@ Key = T.TypeVar("Key")
 
 
 class MCTS:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, network: PolicyAndAction):
         self.config = config
+        self.network = network
 
     def analyze(self, p: game.Position) -> Node:
         tree = Node(position=p, move=None)
@@ -171,7 +170,7 @@ class MCTS:
                 node.v_zero = 0
             return
 
-        raw_probs, node.v_zero = self.config.network.evaluate(node.position)
+        raw_probs, node.v_zero = self.network.evaluate(node.position)
 
         child_probs = []
         node.children = []

@@ -87,7 +87,7 @@ class SelfPlayConfig:
 
 @define
 class BuildRemoteMCTS:
-    simulations: int
+    config: mcts.Config
 
     host: str
     port: int = 5001
@@ -95,13 +95,7 @@ class BuildRemoteMCTS:
     def __call__(self):
         network = grpc.GRPCNetwork(host=self.host, port=self.port)
 
-        return mcts.MCTS(
-            mcts.Config(
-                network=network,
-                simulation_limit=self.simulations,
-                time_limit=0,
-            )
-        )
+        return mcts.MCTS(self.config, network)
 
 
 @define
