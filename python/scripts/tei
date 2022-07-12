@@ -23,8 +23,9 @@ class Server:
     pos: tak.Position
     size: int
 
-    def __init__(self, config: mcts.Config):
+    def __init__(self, config: mcts.Config, network: mcts.PolicyAndAction):
         self.config = config
+        self.network = network
 
     def parse_position(self, words):
         pos = None
@@ -66,7 +67,7 @@ class Server:
         elif cmd == "teinewgame":
             size = int(words[0])
             self.size = size
-            self.engine = mcts.MCTS(self.config)
+            self.engine = mcts.MCTS(self.config, self.network)
         elif cmd == "position":
             self.pos = self.parse_position(words)
         elif cmd == "go":
@@ -141,7 +142,7 @@ def main():
     else:
         network = grpc.GRPCNetwork(host=args.host, port=args.port)
 
-    config = mcts.Config(network=network)
+    config = mcts.Config()
 
     if args.C is not None:
         config.C = args.C
@@ -150,7 +151,7 @@ def main():
     if args.simulation_limit is not None:
         config.simulation_limit = args.simulation_limit
 
-    srv = Server(config)
+    srv = Server(config, network)
     while True:
         line = sys.stdin.readline()
         if args.debug:
