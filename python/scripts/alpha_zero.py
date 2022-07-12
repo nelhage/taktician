@@ -2,6 +2,7 @@ import argparse
 import time
 import typing as T  # noqa
 import os.path
+import yaml
 
 import torch
 from torch import multiprocessing
@@ -19,6 +20,7 @@ import tak.model.server
 from tak import self_play, mcts
 from tak.alphazero import model_process
 from tak import alphazero
+from xformer import yaml_ext  # noqa
 
 
 def parse_args():
@@ -106,6 +108,12 @@ def main():
         wandb=args.wandb,
         job_name=args.job_name,
     )
+
+    if config.save_path:
+        config_path = os.path.join(config.save_path, "run.yaml")
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w") as fh:
+            yaml.dump(config, fh)
 
     srv = model_process.create_server(model=train_model, config=config)
     srv.start()

@@ -3,7 +3,7 @@ import torch
 from typing import Optional
 
 
-@define
+@define(slots=False)
 class Config:
     device: str = "cuda"
     server_port: int = 5001
