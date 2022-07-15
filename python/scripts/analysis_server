@@ -36,13 +36,24 @@ async def main(argv):
     parser.add_argument(
         "--fp16",
         action="store_true",
-        default=False,
+        default=None,
         help="Run model in float16",
+    )
+    parser.add_argument(
+        "--no-fp16",
+        action="store_false",
+        dest="fp16",
+    )
+    parser.add_argument(
+        "--no-script",
+        action="store_false",
+        dest="script",
+        default=True,
     )
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",
+        default="cuda" if torch.cuda.is_available() else "cpu",
     )
     parser.add_argument(
         "--host",
@@ -62,9 +73,13 @@ async def main(argv):
     args = parser.parse_args(argv)
 
     model = loading.load_model(args.model, args.device)
-    if args.fp16:
+    fp16 = args.fp16
+    if fp16 is None:
+        fp16 == args.device == "cuda"
+    if fp16:
         model = model.to(torch.float16)
-    model = torch.jit.script(model)
+    if args.script:
+        model = torch.jit.script(model)
 
     server = grpc.aio.server()
     server.add_insecure_port(f"{args.host}:{args.port}")
