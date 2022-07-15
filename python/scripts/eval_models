@@ -29,6 +29,8 @@ def main():
     parser.add_argument("--games", type=int, default=1)
     parser.add_argument("--threads", type=int, default=os.cpu_count())
 
+    parser.add_argument("--out", type=str, help="Write PTNs to path")
+
     parser.add_argument("--debug", type=int, default=0)
 
     parser.add_argument("--device", type=str, default="cpu")
@@ -81,18 +83,22 @@ def main():
         if args.c2:
             p2_cmd += [f"--c={args.c2}"]
 
-        cmdline = [
-            "taktician",
-            "selfplay",
-            f"-size={args.size}",
-            f"-games={args.games}",
-            f"-threads={str(args.threads)}",
-            f"-debug={args.debug}",
-            "-p1",
-            shlex.join(p1_cmd),
-            "-p2",
-            shlex.join(p2_cmd),
-        ] + ([f"-openings={args.openings}"] if args.openings else [])
+        cmdline = (
+            [
+                "taktician",
+                "selfplay",
+                f"-size={args.size}",
+                f"-games={args.games}",
+                f"-threads={str(args.threads)}",
+                f"-debug={args.debug}",
+                "-p1",
+                shlex.join(p1_cmd),
+                "-p2",
+                shlex.join(p2_cmd),
+            ]
+            + ([f"-openings={args.openings}"] if args.openings else [])
+            + (["--out", args.out] if args.out else [])
+        )
 
         print(f"+ {shlex.join(cmdline)}")
         subprocess.check_call(cmdline)
