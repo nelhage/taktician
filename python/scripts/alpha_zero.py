@@ -69,6 +69,14 @@ def parse_args():
     return parser.parse_args()
 
 
+def check_and_clear_save_request(save_root) -> bool:
+    flagpath = os.path.join(save_root, "SAVE_NOW")
+    if os.path.exists(flagpath):
+        os.unlink(flagpath)
+        return True
+    return False
+
+
 def main():
     multiprocessing.set_start_method("spawn")
 
@@ -147,7 +155,9 @@ def main():
         srv.train_step({k: v.share_memory_() for (k, v) in batch.items()})
 
         if config.save_path and (
-            step % config.save_freq == 0 or step == config.train_steps - 1
+            step % config.save_freq == 0
+            or step == config.train_steps - 1
+            or check_and_clear_save_request(config.save_path)
         ):
             save_dir = os.path.join(config.save_path, f"step_{step:06d}")
             print(f"Saving snapshot to {save_dir}...")
