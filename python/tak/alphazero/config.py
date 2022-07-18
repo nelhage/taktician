@@ -1,4 +1,5 @@
 from attrs import define, field
+from tak import mcts
 import torch
 from typing import Optional
 
@@ -12,12 +13,18 @@ class Config:
 
     size: int = 3
 
-    dirichlet_alpha: Optional[float] = 1.0
-    dirichlet_weight: float = 0.25
+    rollout_config: mcts.Config = field(
+        factory=lambda: mcts.Config(
+            simulation_limit=25,
+            root_noise_alpha=1.0,
+            root_noise_mix=0.25,
+        )
+    )
+
+    rollout_resignation_threshold: float = 0.95
+    rollout_ply_limit: int = 100
 
     rollout_workers: int = 50
-    rollout_simulations: int = 25
-
     rollouts_per_step: int = 100
     replay_buffer_steps: int = 4
 

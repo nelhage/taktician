@@ -174,8 +174,9 @@ class ModelServerProcess:
         plies = len(batch["positions"])
         stats = {
             "rollout_plies": plies,
-            "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
+            "rollout_games": self.config.rollouts_per_step,
             "rollout_unique_plies": unique,
+            "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
             "train_step": self.step,
             "rollout_time": rollout_time,
         }
@@ -198,7 +199,7 @@ class ModelServerProcess:
             loss.backward()
             self.opt.step()
 
-            self.train_positions += batch.size(0)
+            self.train_positions += batch.inputs.size(0)
 
             if self.wandb is not None:
                 self.wandb.log(
@@ -286,3 +287,5 @@ class ModelServerProcess:
                 task.result()
         finally:
             await self.server.stop(None)
+            if self.wandb:
+                self.wandb.finish()

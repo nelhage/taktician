@@ -51,6 +51,10 @@ def play_one_game(cfg, engine):
     tree = mcts.Node(position=p, move=None)
 
     while True:
+        if p.ply > cfg.ply_limit:
+            log.result = 0.0
+            break
+
         if abs(tree.v_zero) >= cfg.resignation_threshold:
             if tree.v_zero >= cfg.resignation_threshold:
                 log.result = tree.position.to_move()
@@ -83,6 +87,7 @@ class SelfPlayConfig:
     workers: int
 
     resignation_threshold: float = 0.95
+    ply_limit: int = 100
 
 
 @define

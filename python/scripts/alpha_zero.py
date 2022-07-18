@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument("--save-dir", type=str, metavar="PATH")
     parser.add_argument("--save-freq", type=int, metavar="STEPS", default=10)
 
-    parser.add_argument("--progress", type=bool, default=True)
+    parser.add_argument("--progress", default=True, action="store_true")
     parser.add_argument("--no-progress", dest="progress", action="store_false")
 
     parser.add_argument("--job-name", type=str, default=None, help="job name for wandb")
@@ -96,8 +96,9 @@ def main():
         server_port=5001,
         size=args.size,
         rollout_workers=args.rollout_workers,
-        rollout_simulations=args.rollout_simulations,
         rollouts_per_step=args.rollouts_per_step,
+        rollout_resignation_threshold=0.99,
+        rollout_ply_limit=20,
         replay_buffer_steps=args.replay_buffer_steps,
         train_batch=args.batch,
         train_positions=args.train_positions,
@@ -108,6 +109,8 @@ def main():
         wandb=args.wandb,
         job_name=args.job_name,
     )
+    config.rollout_config.simulation_limit = args.rollout_simulations
+    config.rollout_config.time_limit = 0
 
     if config.save_path:
         config_path = os.path.join(config.save_path, "run.yaml")
@@ -122,14 +125,12 @@ def main():
         config=self_play.SelfPlayConfig(
             size=config.size,
             workers=config.rollout_workers,
+            resignation_threshold=config.rollout_resignation_threshold,
+            ply_limit=config.rollout_ply_limit,
             engine_factory=self_play.BuildRemoteMCTS(
                 host="localhost",
                 port=config.server_port,
-                config=mcts.Config(
-                    simulation_limit=config.rollout_simulations,
-                    root_noise_alpha=config.dirichlet_alpha,
-                    root_noise_mix=config.dirichlet_weight,
-                ),
+                config=config.rollout_config,
             ),
         )
     )
