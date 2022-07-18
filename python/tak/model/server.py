@@ -3,6 +3,7 @@ import logging
 from tak.proto import analysis_pb2_grpc
 from tak.proto import analysis_pb2
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -22,8 +23,8 @@ class QueueRequest:
     position: torch.Tensor
 
     ready: asyncio.Event = field(factory=asyncio.Event)
-    probs: T.Optional[torch.Tensor] = None
-    value: T.Optional[torch.Tensor] = None
+    probs: T.Optional[np.ndarray] = None
+    value: T.Optional[float] = None
 
 
 @define
@@ -63,8 +64,16 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
                     positions[i, : len(b.position)] = b.position
                     mask[i, len(b.position) :].fill_(1)
                 out = self.model(positions.to(self.device), mask.to(self.device))
-                probs = torch.softmax(out["moves"], dim=-1).cpu()
-                return (probs, out["values"].cpu())
+                probs = (
+                    torch.softmax(out["moves"], dim=-1)
+                    .to(device="cpu", dtype=torch.float32)
+                    .numpy()
+                )
+                values = out["values"].to(device="cpu", dtype=torch.float32).numpy()
+                return (
+                    probs,
+                    values,
+                )
 
             start = time.perf_counter()
             (probs, values) = await loop.run_in_executor(None, run_model, batch)
@@ -72,7 +81,7 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
             logging.info(f"did batch len={len(batch)} dur={1000*(end-start):0.1f}ms")
             for (i, b) in enumerate(batch):
                 b.probs = probs[i]
-                b.value = values[i].item()
+                b.value = values[i]
                 b.ready.set()
 
     async def Evaluate(self, request, context):
@@ -83,5 +92,5 @@ class Server(analysis_pb2_grpc.AnalysisServicer):
         await req.ready.wait()
 
         return analysis_pb2.EvaluateResponse(
-            move_probs_bytes=req.probs.float().numpy().tobytes(), value=req.value
+            move_probs_bytes=req.probs.tobytes(), value=req.value
         )
