@@ -159,6 +159,15 @@ def main():
             save_dir = os.path.join(config.save_path, f"step_{step:06d}")
             print(f"Saving snapshot to {save_dir}...")
             srv.save_model(save_dir)
+            latest_link = os.path.join(config.save_path, "latest")
+            try:
+                os.unlink(latest_link)
+            except FileNotFoundError:
+                pass
+            os.symlink(
+                os.path.basename(save_dir),
+                latest_link,
+            )
 
     rollout_engine.stop()
     srv.stop()

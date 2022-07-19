@@ -24,7 +24,7 @@ from attrs import field, define
 import attrs
 
 from .. import Config
-from . import data
+from . import data, stats
 
 
 @define(kw_only=True)
@@ -125,7 +125,7 @@ class ModelServerProcess:
 
     wandb: T.Optional["wandb.Run"] = field(default=None, init=False)
 
-    ready: asyncio.Event = field(factory=asyncio.Event)
+    ready: asyncio.Event = field(factory=asyncio.Event, init=False)
 
     loop: asyncio.BaseEventLoop = field(init=False)
     server: grpc.aio.Server = field(init=False)
@@ -134,9 +134,8 @@ class ModelServerProcess:
     train_params: dict[str, torch.Tensor] = field(init=False)
     opt: torch.optim.AdamW = field(init=False)
 
-    step: int = field(default=0, init=False)
-    train_positions: int = field(default=0, init=False)
-    train_epoch: int = field(default=0, init=False)
+    elapsed: stats.Elapsed = field(factory=stats.Elapsed, init=False)
+
     last_step: float = field(init=False)
 
     def run(self):
@@ -160,7 +159,7 @@ class ModelServerProcess:
 
         self.train_mode()
 
-        self.step += 1
+        self.elapsed.step += 1
 
         loss_fn = losses.PolicyValue()
         ds = data.ReplayBufferDataset(
@@ -181,17 +180,17 @@ class ModelServerProcess:
             "rollout_games": self.config.rollouts_per_step,
             "rollout_unique_plies": unique,
             "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
-            "train_step": self.step,
+            "train_step": self.elapsed.step,
             "rollout_time": rollout_time,
         }
 
-        self.train_epoch += 1
+        self.elapsed.epoch += 1
         train_start = time.monotonic()
 
         it = iter(ds)
         for i in range(0, self.config.train_positions, self.config.train_batch):
             try:
-                self.train_epoch += 1
+                self.elapsed.epoch += 1
                 batch = next(it)
             except StopIteration:
                 it = iter(ds)
@@ -203,14 +202,14 @@ class ModelServerProcess:
             loss.backward()
             self.opt.step()
 
-            self.train_positions += batch.inputs.size(0)
+            self.elapsed.positions += batch.inputs.size(0)
 
             if self.wandb is not None:
                 self.wandb.log(
                     {
                         "train_loss": loss.item(),
-                        "train_epoch": self.train_epoch,
-                        "positions": self.train_positions,
+                        "train_epoch": self.elapsed.epoch,
+                        "positions": self.elapsed.positions,
                     }
                     | stats
                     | metrics
@@ -218,7 +217,7 @@ class ModelServerProcess:
 
         train_time = time.monotonic() - train_start
         print(
-            f"step={self.step}"
+            f"step={self.elapsed.step}"
             f" games={self.config.rollouts_per_step}"
             f" plies={plies}"
             f" unique={unique}"
@@ -247,8 +246,18 @@ class ModelServerProcess:
                     self.train_params,
                     os.path.join(event.snapshot_path, "model.pt"),
                 )
+                torch.save(
+                    self.opt.state_dict(),
+                    os.path.join(event.snapshot_path, "opt.pt"),
+                )
+                torch.save(
+                    self.replay_buffer,
+                    os.path.join(event.snapshot_path, "replay_buffer.pt"),
+                )
                 with open(os.path.join(event.snapshot_path, "config.yaml"), "w") as fh:
                     yaml.dump(self.model.cfg, fh)
+                with open(os.path.join(event.snapshot_path, "elapsed.yaml"), "w") as fh:
+                    yaml.dump(self.elapsed, fh)
 
             else:
                 raise AssertionError(f"Unknown command: {event}")
