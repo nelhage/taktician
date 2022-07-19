@@ -7,7 +7,7 @@ from typing import Optional
 @define(slots=False)
 class Config:
     device: str = "cuda"
-    server_port: int = 5001
+    server_port: int = 5432
 
     lr: float = 1e-3
 
