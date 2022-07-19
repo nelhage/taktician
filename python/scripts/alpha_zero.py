@@ -83,9 +83,9 @@ def main():
     args = parse_args()
 
     if args.load_model:
-        train_model = loading.load_model(args.load_model, device=args.device)
+        model_cfg = loading.load_config(args.load_model)
     else:
-        cfg = xformer.Config(
+        model_cfg = xformer.Config(
             n_layer=args.layers,
             d_model=args.d_model or 128 * args.layers,
             d_head=args.d_head,
@@ -95,14 +95,13 @@ def main():
             output_head=heads.PolicyValue,
         )
         if args.pe is not None:
-            cfg.positional_encoding = args.pe
-        train_model = model.Transformer(cfg, dtype=torch.float32, device=args.device)
-        train_model.init_weights()
+            model_cfg.positional_encoding = args.pe
 
     config = alphazero.Config(
         device=args.device,
         server_port=5001,
         size=args.size,
+        load_model=args.load_model,
         rollout_workers=args.rollout_workers,
         rollouts_per_step=args.rollouts_per_step,
         rollout_resignation_threshold=0.99,
@@ -126,7 +125,7 @@ def main():
         with open(config_path, "w") as fh:
             yaml.dump(config, fh)
 
-    srv = model_process.create_server(model=train_model, config=config)
+    srv = model_process.create_server(config=config, model_config=model_cfg)
     srv.start()
 
     rollout_engine = self_play.MultiprocessSelfPlayEngine(
@@ -144,11 +143,9 @@ def main():
     )
 
     for step in range(config.train_steps):
-        start = time.time()
         logs = rollout_engine.play_many(
             config.rollouts_per_step, progress=args.progress
         )
-        end = time.time()
 
         batch = self_play.encode_games(logs)
         batch["positions"] = batch["positions"].to(torch.long)

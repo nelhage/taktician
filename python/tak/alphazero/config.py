@@ -9,6 +9,8 @@ class Config:
     device: str = "cuda"
     server_port: int = 5432
 
+    load_model: Optional[str] = None
+
     lr: float = 1e-3
 
     size: int = 3

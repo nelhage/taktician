@@ -1,17 +1,26 @@
 import os.path
 
 import torch
+from torch import nn
 import yaml
 
 from .model import Transformer
 
 
-def load_model(save_dir, device="cpu"):
+def load_config(save_dir):
     with open(os.path.join(save_dir, "config.yaml")) as fh:
-        config = yaml.unsafe_load(fh)
-    state = torch.load(os.path.join(save_dir, "model.pt"), map_location=device)
-    model = Transformer(config, device=device)
+        return yaml.unsafe_load(fh)
+
+
+def load_snapshot(model: nn.Module, save_dir: str):
+    state = torch.load(os.path.join(save_dir, "model.pt"), map_location="cpu")
     model.load_state_dict(state)
+
+
+def load_model(save_dir, device="cpu"):
+    config = load_config(save_dir)
+    model = Transformer(config, device=device)
+    load_snapshot(model, save_dir)
     return model
 
 

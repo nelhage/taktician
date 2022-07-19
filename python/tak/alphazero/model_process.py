@@ -13,6 +13,7 @@ import asyncio
 import wandb
 
 import xformer
+from xformer import loading
 import yaml
 
 from tak.proto import analysis_pb2_grpc
@@ -57,8 +58,8 @@ class ModelServerShared:
 
 @define
 class ModelServerHandle:
-    model: xformer.Transformer
     config: Config
+    model_config: xformer.Config
     process: multiprocessing.Process = field(init=False)
     shared: ModelServerShared = field(factory=ModelServerShared, init=False)
 
@@ -70,7 +71,10 @@ class ModelServerHandle:
     def _run_in_spawn(self):
         print(f"Starting model process pid={os.getpid()}")
         worker = ModelServerProcess(
-            model=self.model,
+            model=xformer.Transformer(
+                self.model_config,
+                device=self.config.device,
+            ),
             config=self.config,
             shared=self.shared,
         )
@@ -104,12 +108,12 @@ class ModelServerHandle:
 
 
 def create_server(
-    model: xformer.Transformer,
     config: Config,
+    model_config: xformer.Config,
 ) -> ModelServerHandle:
     return ModelServerHandle(
-        model=model,
         config=config,
+        model_config=model_config,
     )
 
 
@@ -227,8 +231,8 @@ class ModelServerProcess:
         self.serve_mode()
 
     async def command_loop(self):
+        self.last_step = time.monotonic()
         while True:
-            self.last_step = time.monotonic()
             event = await self.loop.run_in_executor(None, self.shared.cmd.get)
             if isinstance(event, WaitForStartup):
                 await self.ready.wait()
@@ -257,6 +261,11 @@ class ModelServerProcess:
             )
             wandb.config.update(attrs.asdict(self.config))
         self.loop = asyncio.get_event_loop()
+
+        if self.config.load_model:
+            loading.load_snapshot(self.model, self.config.load_model)
+        else:
+            self.model.init_weights()
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
 
