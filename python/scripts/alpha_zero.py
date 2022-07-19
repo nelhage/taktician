@@ -69,14 +69,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def check_and_clear_save_request(save_root) -> bool:
-    flagpath = os.path.join(save_root, "SAVE_NOW")
-    if os.path.exists(flagpath):
-        os.unlink(flagpath)
-        return True
-    return False
-
-
 def main():
     multiprocessing.set_start_method("spawn")
 
@@ -84,6 +76,9 @@ def main():
 
     if args.load_model:
         model_cfg = loading.load_config(args.load_model)
+        with open(os.path.join(args.load_model, "../run.yaml"), "r") as fh:
+            config = yaml.unsafe_load(fh)
+        config.load_model = args.load_model
     else:
         model_cfg = xformer.Config(
             n_layer=args.layers,
@@ -97,27 +92,26 @@ def main():
         if args.pe is not None:
             model_cfg.positional_encoding = args.pe
 
-    config = alphazero.Config(
-        device=args.device,
-        server_port=5001,
-        size=args.size,
-        load_model=args.load_model,
-        rollout_workers=args.rollout_workers,
-        rollouts_per_step=args.rollouts_per_step,
-        rollout_resignation_threshold=0.99,
-        rollout_ply_limit=20,
-        replay_buffer_steps=args.replay_buffer_steps,
-        train_batch=args.batch,
-        train_positions=args.train_positions,
-        lr=args.lr,
-        save_path=args.save_dir,
-        save_freq=args.save_freq,
-        train_steps=args.steps,
-        wandb=args.wandb,
-        job_name=args.job_name,
-    )
-    config.rollout_config.simulation_limit = args.rollout_simulations
-    config.rollout_config.time_limit = 0
+        config = alphazero.Config(
+            device=args.device,
+            server_port=5001,
+            size=args.size,
+            rollout_workers=args.rollout_workers,
+            rollouts_per_step=args.rollouts_per_step,
+            rollout_resignation_threshold=0.99,
+            rollout_ply_limit=20,
+            replay_buffer_steps=args.replay_buffer_steps,
+            train_batch=args.batch,
+            train_positions=args.train_positions,
+            lr=args.lr,
+            save_path=args.save_dir,
+            save_freq=args.save_freq,
+            train_steps=args.steps,
+            wandb=args.wandb,
+            job_name=args.job_name,
+        )
+        config.rollout_config.simulation_limit = args.rollout_simulations
+        config.rollout_config.time_limit = 0
 
     if config.save_path:
         config_path = os.path.join(config.save_path, "run.yaml")

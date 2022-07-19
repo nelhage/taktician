@@ -4,8 +4,12 @@ import subprocess
 import sys
 import tempfile
 
+from tak import alphazero
+
 import pytest
+import yaml
 import torch
+import xformer.yaml_ext  # noqa
 
 HERE = os.path.realpath(os.path.dirname(__file__))
 SCRIPTS = os.path.realpath(os.path.join(HERE, "../scripts/"))
@@ -81,7 +85,26 @@ def test_alphazero():
                 f"--save-freq=1",
             ]
         )
+        run_path = os.path.join(tmp, "run.yaml")
+        with open(run_path, "r") as fh:
+            config = yaml.unsafe_load(fh)
+        assert isinstance(config, alphazero.Config)
+        config.train_steps = 4
+        config.save_freq = 5
+        with open(run_path, "w") as fh:
+            yaml.dump(config, fh)
+
         latest = os.path.join(tmp, "latest")
         assert os.path.exists(latest)
         assert os.path.islink(latest)
         assert os.readlink(latest) == "step_000002"
+        subprocess.check_call(
+            [
+                sys.executable,
+                os.path.join(SCRIPTS, "alpha_zero.py"),
+                "--no-progress",
+                f"--save-dir={tmp}",
+                f"--load-model={tmp}/latest",
+            ]
+        )
+        assert os.readlink(latest) == "step_000004"

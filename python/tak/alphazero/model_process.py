@@ -147,6 +147,16 @@ class ModelServerProcess:
     def train_mode(self):
         self.model.to(self.config.train_dtype).load_state_dict(self.train_params)
 
+    def check_and_clear_save_request(self) -> bool:
+        save_root = self.config.save_path
+        if not save_root:
+            return False
+        flagpath = os.path.join(save_root, "SAVE_NOW")
+        if os.path.exists(flagpath):
+            os.unlink(flagpath)
+            return True
+        return False
+
     def train_step(self, batch):
         now = time.monotonic()
         rollout_time = now - self.last_step
@@ -228,7 +238,7 @@ class ModelServerProcess:
 
         if self.config.save_path and (
             self.elapsed.step % self.config.save_freq == 0
-            or self.elapsed.step == self.config.config.train_steps - 1
+            or self.elapsed.step == self.config.train_steps
             or self.check_and_clear_save_request()
         ):
             save_dir = os.path.join(
@@ -304,7 +314,7 @@ class ModelServerProcess:
                 os.path.join(self.config.load_model, "replay_buffer.pt"),
             )
             with open(os.path.join(self.config.load_model, "elapsed.yaml"), "r") as fh:
-                self.elapsed = yaml.load(fh)
+                self.elapsed = yaml.unsafe_load(fh)
 
         else:
             self.model.init_weights()
