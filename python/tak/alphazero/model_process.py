@@ -46,8 +46,9 @@ class TrainStep(Command):
 
 
 @define
-class SaveSnapshot(Command):
-    snapshot_path: str
+class Reply:
+    id: int
+    reply: T.Any
 
 
 @define
@@ -90,7 +91,8 @@ class ModelServerHandle:
                     raise RuntimeError(f"Child died unexpected!")
             else:
                 break
-        assert got == cmd.id, "Got a reply to the wrong command!"
+        assert got.id == cmd.id, "Got a reply to the wrong command!"
+        return got.reply
 
     def start(self):
         self.process.start()
@@ -101,10 +103,7 @@ class ModelServerHandle:
         self.process.join()
 
     def train_step(self, batch):
-        self.send(TrainStep(batch=batch))
-
-    def save_model(self, path):
-        self.send(SaveSnapshot(snapshot_path=path))
+        return self.send(TrainStep(batch=batch))
 
 
 def create_server(
@@ -227,12 +226,50 @@ class ModelServerProcess:
             f" last_loss={loss.item():0.2f}"
         )
 
+        if self.config.save_path and (
+            self.elapsed.step % self.config.save_freq == 0
+            or self.elapsed.step == self.config.config.train_steps - 1
+            or self.check_and_clear_save_request()
+        ):
+            save_dir = os.path.join(
+                self.config.save_path, f"step_{self.elapsed.step:06d}"
+            )
+            print(f"Saving snapshot to {save_dir}...")
+            self.save_snapshot(save_dir)
+            latest_link = os.path.join(self.config.save_path, "latest")
+            try:
+                os.unlink(latest_link)
+            except FileNotFoundError:
+                pass
+            os.symlink(
+                os.path.basename(save_dir),
+                latest_link,
+            )
+
         self.serve_mode()
+
+    def save_snapshot(self, snapshot_path):
+        os.makedirs(snapshot_path, exist_ok=True)
+        loading.save_model(self.model, snapshot_path)
+        torch.save(
+            self.opt.state_dict(),
+            os.path.join(snapshot_path, "opt.pt"),
+        )
+        torch.save(
+            self.replay_buffer,
+            os.path.join(snapshot_path, "replay_buffer.pt"),
+        )
+        with open(os.path.join(snapshot_path, "elapsed.yaml"), "w") as fh:
+            yaml.dump(self.elapsed, fh)
+
+    def should_exit(self):
+        return self.elapsed.step >= self.config.train_steps
 
     async def command_loop(self):
         self.last_step = time.monotonic()
         while True:
             event = await self.loop.run_in_executor(None, self.shared.cmd.get)
+            reply = None
             if isinstance(event, WaitForStartup):
                 await self.ready.wait()
             elif isinstance(event, Shutdown):
@@ -240,28 +277,12 @@ class ModelServerProcess:
                 return
             elif isinstance(event, TrainStep):
                 self.train_step(event.batch)
-            elif isinstance(event, SaveSnapshot):
-                os.makedirs(event.snapshot_path, exist_ok=True)
-                torch.save(
-                    self.train_params,
-                    os.path.join(event.snapshot_path, "model.pt"),
-                )
-                torch.save(
-                    self.opt.state_dict(),
-                    os.path.join(event.snapshot_path, "opt.pt"),
-                )
-                torch.save(
-                    self.replay_buffer,
-                    os.path.join(event.snapshot_path, "replay_buffer.pt"),
-                )
-                with open(os.path.join(event.snapshot_path, "config.yaml"), "w") as fh:
-                    yaml.dump(self.model.cfg, fh)
-                with open(os.path.join(event.snapshot_path, "elapsed.yaml"), "w") as fh:
-                    yaml.dump(self.elapsed, fh)
-
+                reply = self.should_exit()
             else:
                 raise AssertionError(f"Unknown command: {event}")
-            await self.loop.run_in_executor(None, self.shared.reply.put, event.id)
+            await self.loop.run_in_executor(
+                None, self.shared.reply.put, Reply(id=event.id, reply=reply)
+            )
 
     async def run_async(self):
         if self.config.wandb:
@@ -271,12 +292,22 @@ class ModelServerProcess:
             wandb.config.update(attrs.asdict(self.config))
         self.loop = asyncio.get_event_loop()
 
+        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
         if self.config.load_model:
             loading.load_snapshot(self.model, self.config.load_model)
+            self.opt.load_state_dict(
+                torch.load(
+                    os.path.join(self.config.load_model, "opt.pt"),
+                )
+            )
+            self.replay_buffer = torch.load(
+                os.path.join(self.config.load_model, "replay_buffer.pt"),
+            )
+            with open(os.path.join(self.config.load_model, "elapsed.yaml"), "r") as fh:
+                self.elapsed = yaml.load(fh)
+
         else:
             self.model.init_weights()
-
-        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
 
         self.serve_mode()
 

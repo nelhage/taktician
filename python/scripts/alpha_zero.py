@@ -142,32 +142,15 @@ def main():
         )
     )
 
-    for step in range(config.train_steps):
+    while True:
         logs = rollout_engine.play_many(
             config.rollouts_per_step, progress=args.progress
         )
 
         batch = self_play.encode_games(logs)
         batch["positions"] = batch["positions"].to(torch.long)
-        srv.train_step({k: v.share_memory_() for (k, v) in batch.items()})
-
-        if config.save_path and (
-            step % config.save_freq == 0
-            or step == config.train_steps - 1
-            or check_and_clear_save_request(config.save_path)
-        ):
-            save_dir = os.path.join(config.save_path, f"step_{step:06d}")
-            print(f"Saving snapshot to {save_dir}...")
-            srv.save_model(save_dir)
-            latest_link = os.path.join(config.save_path, "latest")
-            try:
-                os.unlink(latest_link)
-            except FileNotFoundError:
-                pass
-            os.symlink(
-                os.path.basename(save_dir),
-                latest_link,
-            )
+        if srv.train_step({k: v.share_memory_() for (k, v) in batch.items()}):
+            break
 
     rollout_engine.stop()
     srv.stop()

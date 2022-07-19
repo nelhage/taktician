@@ -84,4 +84,4 @@ def test_alphazero():
         latest = os.path.join(tmp, "latest")
         assert os.path.exists(latest)
         assert os.path.islink(latest)
-        assert os.readlink(latest) == "step_000001"
+        assert os.readlink(latest) == "step_000002"
