@@ -1,6 +1,8 @@
 from attrs import define, field
 from tak import mcts
 import torch
+import secrets
+from functools import partial
 from typing import Optional
 
 
@@ -43,6 +45,7 @@ class Config:
 
     wandb: bool = False
     job_name: Optional[str] = None
+    job_id: str = field(factory=partial(secrets.token_hex, 8))
     project: str = "taktician-alphazero"
 
     def __attrs_post_init__(self):

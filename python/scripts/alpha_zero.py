@@ -113,12 +113,6 @@ def main():
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0
 
-    if config.run_dir:
-        config_path = os.path.join(config.run_dir, "run.yaml")
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(config_path, "w") as fh:
-            yaml.dump(config, fh)
-
     srv = model_process.create_server(config=config, model_config=model_cfg)
     srv.start()
 

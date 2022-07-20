@@ -36,6 +36,8 @@ def test_pipeline(wandb):
         assert isinstance(train, dict)
         assert train["moves"].size(0) == 18
 
+        env = {"WANDB_MODE": "offline", **os.environ}
+
         subprocess.check_call(
             [
                 sys.executable,
@@ -53,7 +55,7 @@ def test_pipeline(wandb):
             ]
             + (["--wandb"] if wandb else []),
             cwd=tmp,
-            env={"WANDB_MODE": "offline", **os.environ},
+            env=env,
         )
 
         assert os.listdir(os.path.join(tmp, "model")) == ["step_000002"]
@@ -65,7 +67,13 @@ def test_pipeline(wandb):
         assert "test_loss" in stats["metrics"]
 
 
-def test_alphazero():
+@pytest.mark.parametrize("wandb", [False, True])
+def test_alphazero(wandb):
+    if wandb and not os.environ.get("TEST_WANDB", "false").lower() == "true":
+        pytest.skip("Skipping WANDB (slow); set TEST_WANDB=true to test.")
+
+    env = {"WANDB_MODE": "offline", **os.environ}
+
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.check_call(
             [
@@ -84,6 +92,8 @@ def test_alphazero():
                 f"--run-dir={tmp}",
                 f"--save-freq=1",
             ]
+            + (["--wandb"] if wandb else []),
+            env=env,
         )
         run_path = os.path.join(tmp, "run.yaml")
         with open(run_path, "r") as fh:
@@ -105,6 +115,7 @@ def test_alphazero():
                 "--no-progress",
                 f"--run-dir={tmp}",
                 f"--load-model={tmp}/latest",
-            ]
+            ],
+            env=env,
         )
         assert os.readlink(latest) == "step_000004"

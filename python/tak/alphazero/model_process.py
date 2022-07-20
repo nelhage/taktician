@@ -321,14 +321,23 @@ class ModelServerProcess:
     async def run_async(self):
         if self.config.wandb:
             self.wandb = wandb.init(
-                project=self.config.project, name=self.config.job_name
+                project=self.config.project,
+                name=self.config.job_name,
+                id=self.config.job_id,
+                resume="allow",
             )
             wandb.config.update(attrs.asdict(self.config))
+
         self.loop = asyncio.get_event_loop()
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
 
         self.load_or_init_model()
+        if self.config.run_dir:
+            config_path = os.path.join(self.config.run_dir, "run.yaml")
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            with open(config_path, "w") as fh:
+                yaml.dump(self.config, fh)
 
         self.serve_mode()
 
