@@ -148,10 +148,10 @@ class ModelServerProcess:
         self.model.to(self.config.train_dtype).load_state_dict(self.train_params)
 
     def check_and_clear_save_request(self) -> bool:
-        save_root = self.config.save_path
-        if not save_root:
+        run_dir = self.config.run_dir
+        if not run_dir:
             return False
-        flagpath = os.path.join(save_root, "SAVE_NOW")
+        flagpath = os.path.join(run_dir, "SAVE_NOW")
         if os.path.exists(flagpath):
             os.unlink(flagpath)
             return True
@@ -236,17 +236,17 @@ class ModelServerProcess:
             f" last_loss={loss.item():0.2f}"
         )
 
-        if self.config.save_path and (
+        if self.config.run_dir and (
             self.elapsed.step % self.config.save_freq == 0
             or self.elapsed.step == self.config.train_steps
             or self.check_and_clear_save_request()
         ):
             save_dir = os.path.join(
-                self.config.save_path, f"step_{self.elapsed.step:06d}"
+                self.config.run_dir, f"step_{self.elapsed.step:06d}"
             )
             print(f"Saving snapshot to {save_dir}...")
             self.save_snapshot(save_dir)
-            latest_link = os.path.join(self.config.save_path, "latest")
+            latest_link = os.path.join(self.config.run_dir, "latest")
             try:
                 os.unlink(latest_link)
             except FileNotFoundError:
@@ -294,6 +294,30 @@ class ModelServerProcess:
                 None, self.shared.reply.put, Reply(id=event.id, reply=reply)
             )
 
+    def load_or_init_model(self):
+        if self.config.run_dir:
+            state_dir = os.path.join(self.config.run_dir, "latest")
+            if os.path.exists(state_dir):
+                loading.load_snapshot(self.model, state_dir)
+
+                self.opt.load_state_dict(
+                    torch.load(
+                        os.path.join(state_dir, "opt.pt"),
+                    )
+                )
+                self.replay_buffer = torch.load(
+                    os.path.join(state_dir, "replay_buffer.pt"),
+                )
+                with open(os.path.join(state_dir, "elapsed.yaml"), "r") as fh:
+                    self.elapsed = yaml.unsafe_load(fh)
+
+                return
+
+        if self.config.load_model:
+            loading.load_snapshot(self.model, self.config.load_model)
+        else:
+            self.model.init_weights()
+
     async def run_async(self):
         if self.config.wandb:
             self.wandb = wandb.init(
@@ -303,21 +327,8 @@ class ModelServerProcess:
         self.loop = asyncio.get_event_loop()
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
-        if self.config.load_model:
-            loading.load_snapshot(self.model, self.config.load_model)
-            self.opt.load_state_dict(
-                torch.load(
-                    os.path.join(self.config.load_model, "opt.pt"),
-                )
-            )
-            self.replay_buffer = torch.load(
-                os.path.join(self.config.load_model, "replay_buffer.pt"),
-            )
-            with open(os.path.join(self.config.load_model, "elapsed.yaml"), "r") as fh:
-                self.elapsed = yaml.unsafe_load(fh)
 
-        else:
-            self.model.init_weights()
+        self.load_or_init_model()
 
         self.serve_mode()
 

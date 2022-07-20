@@ -81,7 +81,7 @@ def test_alphazero():
                 "--batch=64",
                 "--steps=2",
                 "--no-progress",
-                f"--save-dir={tmp}",
+                f"--run-dir={tmp}",
                 f"--save-freq=1",
             ]
         )
@@ -103,7 +103,7 @@ def test_alphazero():
                 sys.executable,
                 os.path.join(SCRIPTS, "alpha_zero.py"),
                 "--no-progress",
-                f"--save-dir={tmp}",
+                f"--run-dir={tmp}",
                 f"--load-model={tmp}/latest",
             ]
         )

@@ -9,6 +9,7 @@ class Config:
     device: str = "cuda"
     server_port: int = 5432
 
+    run_dir: Optional[str] = None
     load_model: Optional[str] = None
 
     lr: float = 1e-3
@@ -36,7 +37,6 @@ class Config:
     train_dtype: torch.dtype = torch.float32
     serve_dtype: torch.dtype = torch.float16
 
-    save_path: Optional[str] = None
     save_freq: int = 10
 
     train_steps: int = 10

@@ -26,7 +26,6 @@ from xformer import yaml_ext  # noqa
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a Tak player using self-play")
 
-    parser.add_argument("--load-model", type=str, help="Initial model to load")
     parser.add_argument("--layers", type=int, default=2, help="Number of layers")
     parser.add_argument("--d_model", type=int, default=None, help="embedding dimension")
     parser.add_argument("--d_head", type=int, default=32, help="head dimension")
@@ -56,7 +55,7 @@ def parse_args():
     parser.add_argument("--rollout-workers", type=int, default=50)
     parser.add_argument("--rollout-simulations", type=int, default=25)
 
-    parser.add_argument("--save-dir", type=str, metavar="PATH")
+    parser.add_argument("--run-dir", type=str, metavar="PATH")
     parser.add_argument("--save-freq", type=int, metavar="STEPS", default=10)
 
     parser.add_argument("--progress", default=True, action="store_true")
@@ -65,6 +64,7 @@ def parse_args():
     parser.add_argument("--job-name", type=str, default=None, help="job name for wandb")
     parser.add_argument("--wandb", action="store_true", default=False)
     parser.add_argument("--no-wandb", action="store_false", dest="wandb")
+    parser.add_argument("--load-model", type=str, help="Initial model to load")
 
     return parser.parse_args()
 
@@ -74,11 +74,11 @@ def main():
 
     args = parse_args()
 
-    if args.load_model:
-        model_cfg = loading.load_config(args.load_model)
-        with open(os.path.join(args.load_model, "../run.yaml"), "r") as fh:
+    if args.run_dir and os.path.exists(os.path.join(args.run_dir, "latest")):
+        print("Run directory exists, resuming...")
+        model_cfg = loading.load_config(os.path.join(args.run_dir, "latest"))
+        with open(os.path.join(args.run_dir, "run.yaml"), "r") as fh:
             config = yaml.unsafe_load(fh)
-        config.load_model = args.load_model
     else:
         model_cfg = xformer.Config(
             n_layer=args.layers,
@@ -94,7 +94,8 @@ def main():
 
         config = alphazero.Config(
             device=args.device,
-            server_port=5001,
+            load_model=args.load_model,
+            run_dir=args.run_dir,
             size=args.size,
             rollout_workers=args.rollout_workers,
             rollouts_per_step=args.rollouts_per_step,
@@ -104,7 +105,6 @@ def main():
             train_batch=args.batch,
             train_positions=args.train_positions,
             lr=args.lr,
-            save_path=args.save_dir,
             save_freq=args.save_freq,
             train_steps=args.steps,
             wandb=args.wandb,
@@ -113,8 +113,8 @@ def main():
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0
 
-    if config.save_path:
-        config_path = os.path.join(config.save_path, "run.yaml")
+    if config.run_dir:
+        config_path = os.path.join(config.run_dir, "run.yaml")
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         with open(config_path, "w") as fh:
             yaml.dump(config, fh)
