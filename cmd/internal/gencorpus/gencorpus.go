@@ -135,7 +135,11 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 				continue
 			}
 			seen[pos.Hash()] = struct{}{}
-			positions <- pos
+			select {
+			case positions <- pos:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 
 		if c.stats {
@@ -148,14 +152,10 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 
 	results := make(chan entry)
 	grp.Go(func() error {
-		c.evaluate(positions, results)
+		c.evaluate(ctx, positions, results)
 		return nil
 	})
 	grp.Go(func() error {
-		defer func() {
-			for _ = range results {
-			}
-		}()
 		fh, err := os.Create(c.output)
 		if err != nil {
 			return fmt.Errorf("open %q: %w", c.output, err)
@@ -182,9 +182,9 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
-func (c *Command) evaluate(positions <-chan *tak.Position, results chan<- entry) {
+func (c *Command) evaluate(ctx context.Context, positions <-chan *tak.Position, results chan<- entry) {
 	defer close(results)
-	grp := errgroup.Group{}
+	grp, ctx := errgroup.WithContext(ctx)
 	for i := 0; i < c.threads; i++ {
 		grp.Go(func() error {
 			var analyze func(p *entry)
@@ -244,7 +244,11 @@ func (c *Command) evaluate(positions <-chan *tak.Position, results chan<- entry)
 				ent := entry{pos: p}
 				analyze(&ent)
 
-				results <- ent
+				select {
+				case results <- ent:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
 
 			}
 			return nil
@@ -308,6 +312,10 @@ func (c *Command) generateWorker(ctx context.Context, games chan<- *game, todo *
 				break
 			}
 		}
-		games <- &g
+		select {
+		case games <- &g:
+		case <-ctx.Done():
+			return
+		}
 	}
 }
