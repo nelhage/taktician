@@ -326,7 +326,7 @@ class ModelServerProcess:
                 id=self.config.job_id,
                 resume="allow",
             )
-            wandb.config.update(attrs.asdict(self.config))
+            wandb.config.update(attrs.asdict(self.config), allow_val_change=True)
 
         self.loop = asyncio.get_event_loop()
 
