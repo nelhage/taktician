@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import time
 import typing as T  # noqa
@@ -62,6 +63,9 @@ def parse_args():
     parser.add_argument("--no-progress", dest="progress", action="store_false")
 
     parser.add_argument("--job-name", type=str, default=None, help="job name for wandb")
+    parser.add_argument(
+        "--project", type=str, default="taktician-alphazero", help="project for wandb"
+    )
     parser.add_argument("--wandb", action="store_true", default=False)
     parser.add_argument("--no-wandb", action="store_false", dest="wandb")
     parser.add_argument("--load-model", type=str, help="Initial model to load")
@@ -108,6 +112,7 @@ def main():
             save_freq=args.save_freq,
             train_steps=args.steps,
             wandb=args.wandb,
+            project=args.project,
             job_name=args.job_name,
         )
         config.rollout_config.simulation_limit = args.rollout_simulations
