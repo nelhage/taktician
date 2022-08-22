@@ -19,7 +19,7 @@ from tak.model import batches, heads, losses
 
 import tak.model.server
 from tak import self_play, mcts
-from tak.alphazero import model_process
+from tak.alphazero import trainer
 from tak import alphazero
 from xformer import yaml_ext  # noqa
 
@@ -118,35 +118,10 @@ def main():
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0
 
-    srv = model_process.create_server(config=config, model_config=model_cfg)
-    srv.start()
+    model = xformer.Transformer(model_cfg, device=config.device)
 
-    rollout_engine = self_play.MultiprocessSelfPlayEngine(
-        config=self_play.SelfPlayConfig(
-            size=config.size,
-            workers=config.rollout_workers,
-            resignation_threshold=config.rollout_resignation_threshold,
-            ply_limit=config.rollout_ply_limit,
-            engine_factory=self_play.BuildRemoteMCTS(
-                host="localhost",
-                port=config.server_port,
-                config=config.rollout_config,
-            ),
-        )
-    )
-
-    while True:
-        logs = rollout_engine.play_many(
-            config.rollouts_per_step, progress=args.progress
-        )
-
-        batch = self_play.encode_games(logs)
-        batch["positions"] = batch["positions"].to(torch.long)
-        if srv.train_step({k: v.share_memory_() for (k, v) in batch.items()}):
-            break
-
-    rollout_engine.stop()
-    srv.stop()
+    train = trainer.TrainingRun(config=config, model=model)
+    train.run()
 
 
 if __name__ == "__main__":

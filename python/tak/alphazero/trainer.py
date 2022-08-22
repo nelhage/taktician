@@ -19,6 +19,7 @@ import yaml
 from tak.proto import analysis_pb2_grpc
 import tak.model.server
 from tak.model import batches, losses
+from tak import self_play
 
 from attrs import field, define
 import attrs
@@ -27,104 +28,12 @@ from .. import Config
 from . import data, stats
 
 
-@define(kw_only=True)
-class Command:
-    id: int = field(factory=itertools.count().__next__)
-
-
-class Shutdown(Command):
-    pass
-
-
-class WaitForStartup(Command):
-    pass
-
-
 @define
-class TrainStep(Command):
-    batch: dict[str, torch.Tensor]
-
-
-@define
-class Reply:
-    id: int
-    reply: T.Any
-
-
-@define
-class ModelServerShared:
-    cmd: multiprocessing.Queue = field(factory=multiprocessing.Queue, init=False)
-    reply: multiprocessing.Queue = field(factory=multiprocessing.Queue, init=False)
-
-
-@define
-class ModelServerHandle:
-    config: Config
-    model_config: xformer.Config
-    process: multiprocessing.Process = field(init=False)
-    shared: ModelServerShared = field(factory=ModelServerShared, init=False)
-
-    def __attrs_post_init__(self):
-        self.process = multiprocessing.Process(
-            target=self._run_in_spawn, name="analysis_server"
-        )
-
-    def _run_in_spawn(self):
-        print(f"Starting model process pid={os.getpid()}")
-        worker = ModelServerProcess(
-            model=xformer.Transformer(
-                self.model_config,
-                device=self.config.device,
-            ),
-            config=self.config,
-            shared=self.shared,
-        )
-        worker.run()
-
-    def send(self, cmd: Command):
-        self.shared.cmd.put(cmd)
-        while True:
-            try:
-                got = self.shared.reply.get(timeout=1)
-            except queue.Empty:
-                if not self.process.is_alive():
-                    raise RuntimeError(f"Child died unexpected!")
-            else:
-                break
-        assert got.id == cmd.id, "Got a reply to the wrong command!"
-        return got.reply
-
-    def start(self):
-        self.process.start()
-        self.send(WaitForStartup())
-
-    def stop(self):
-        self.shared.cmd.put(Shutdown())
-        self.process.join()
-
-    def train_step(self, batch):
-        return self.send(TrainStep(batch=batch))
-
-
-def create_server(
-    config: Config,
-    model_config: xformer.Config,
-) -> ModelServerHandle:
-    return ModelServerHandle(
-        config=config,
-        model_config=model_config,
-    )
-
-
-@define
-class ModelServerProcess:
+class TrainingRun:
     model: xformer.Transformer
     config: Config
-    shared: ModelServerShared
 
     wandb: T.Optional["wandb.Run"] = field(default=None, init=False)
-
-    ready: asyncio.Event = field(factory=asyncio.Event, init=False)
 
     loop: asyncio.BaseEventLoop = field(init=False)
     server: grpc.aio.Server = field(init=False)
@@ -135,7 +44,7 @@ class ModelServerProcess:
 
     elapsed: stats.Elapsed = field(factory=stats.Elapsed, init=False)
 
-    last_step: float = field(init=False)
+    step_start: float = field(init=False)
 
     def run(self):
         asyncio.run(self.run_async())
@@ -158,9 +67,7 @@ class ModelServerProcess:
         return False
 
     def train_step(self, batch):
-        now = time.monotonic()
-        rollout_time = now - self.last_step
-        self.last_step = now
+        rollout_time = time.monotonic() - self.step_start
 
         self.replay_buffer.append(batch)
         if len(self.replay_buffer) > self.config.replay_buffer_steps:
@@ -225,6 +132,7 @@ class ModelServerProcess:
                 )
 
         train_time = time.monotonic() - train_start
+        step_time = time.monotonic() - self.step_start
         print(
             f"step={self.elapsed.step}"
             f" games={self.config.rollouts_per_step}"
@@ -232,6 +140,7 @@ class ModelServerProcess:
             f" unique={unique}"
             f" rollout_time={rollout_time:0.2f}s"
             f" train_time={train_time:0.2f}s"
+            f" step_time={step_time:0.2f}s"
             f" ply/s={plies/(rollout_time):.1f}s"
             f" last_loss={loss.item():0.2f}"
         )
@@ -275,25 +184,6 @@ class ModelServerProcess:
     def should_exit(self):
         return self.elapsed.step >= self.config.train_steps
 
-    async def command_loop(self):
-        self.last_step = time.monotonic()
-        while True:
-            event = await self.loop.run_in_executor(None, self.shared.cmd.get)
-            reply = None
-            if isinstance(event, WaitForStartup):
-                await self.ready.wait()
-            elif isinstance(event, Shutdown):
-                await self.server.stop(2)
-                return
-            elif isinstance(event, TrainStep):
-                self.train_step(event.batch)
-                reply = self.should_exit()
-            else:
-                raise AssertionError(f"Unknown command: {event}")
-            await self.loop.run_in_executor(
-                None, self.shared.reply.put, Reply(id=event.id, reply=reply)
-            )
-
     def load_or_init_model(self):
         if self.config.run_dir:
             state_dir = os.path.join(self.config.run_dir, "latest")
@@ -318,6 +208,33 @@ class ModelServerProcess:
         else:
             self.model.init_weights()
 
+    async def train_loop(self):
+        rollout_engine = self_play.MultiprocessSelfPlayEngine(
+            config=self_play.SelfPlayConfig(
+                size=self.config.size,
+                workers=self.config.rollout_workers,
+                resignation_threshold=self.config.rollout_resignation_threshold,
+                ply_limit=self.config.rollout_ply_limit,
+                engine_factory=self_play.BuildRemoteMCTS(
+                    host="localhost",
+                    port=self.config.server_port,
+                    config=self.config.rollout_config,
+                ),
+            )
+        )
+
+        try:
+            while not self.should_exit():
+                self.step_start = time.monotonic()
+                logs = await self.loop.run_in_executor(
+                    None, rollout_engine.play_many, self.config.rollouts_per_step
+                )
+                batch = self_play.encode_games(logs)
+                batch["positions"] = batch["positions"].to(torch.long)
+                self.train_step(batch)
+        finally:
+            rollout_engine.stop()
+
     async def run_async(self):
         if self.config.wandb:
             self.wandb = wandb.init(
@@ -341,30 +258,32 @@ class ModelServerProcess:
 
         self.serve_mode()
 
+        os.environ["GRPC_ENABLE_FORK_SUPPORT"] = "0"
+
         self.server = grpc.aio.server()
         self.server.add_insecure_port(f"localhost:{self.config.server_port}")
 
         analysis = tak.model.server.Server(model=self.model, device=self.config.device)
 
         self.tasks.append(asyncio.create_task(analysis.worker_loop()))
-        self.tasks.append(asyncio.create_task(self.command_loop()))
 
         analysis_pb2_grpc.add_AnalysisServicer_to_server(
             analysis,
             self.server,
         )
         await self.server.start()
-        self.ready.set()
+        train_task = asyncio.create_task(self.train_loop())
+        self.tasks.append(train_task)
         try:
             done, pending = await asyncio.wait(
                 self.tasks + [self.server.wait_for_termination()],
                 return_when=asyncio.FIRST_COMPLETED,
             )
+            await self.server.stop(0)
             for task in pending:
                 task.cancel()
             for task in done:
                 task.result()
         finally:
-            await self.server.stop(None)
             if self.wandb:
                 self.wandb.finish()
