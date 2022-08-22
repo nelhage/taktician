@@ -6,7 +6,6 @@ import os.path
 import yaml
 
 import torch
-from torch import multiprocessing
 
 import grpc
 from tak.proto import analysis_pb2_grpc
@@ -74,8 +73,6 @@ def parse_args():
 
 
 def main():
-    multiprocessing.set_start_method("spawn")
-
     args = parse_args()
 
     if args.run_dir and os.path.exists(os.path.join(args.run_dir, "latest")):

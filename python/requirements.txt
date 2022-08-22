@@ -12,3 +12,4 @@ py-spy
 torch==1.12.*
 wandb
 tqdm
+shed
