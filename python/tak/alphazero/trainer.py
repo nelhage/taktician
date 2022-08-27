@@ -103,7 +103,6 @@ class TrainingRun:
             "rollout_games": self.config.rollouts_per_step,
             "rollout_unique_plies": unique,
             "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
-            "train_step": self.state.elapsed.step,
             "rollout_time": rollout_time,
         }
 
@@ -127,19 +126,24 @@ class TrainingRun:
 
             self.state.elapsed.positions += batch.inputs.size(0)
 
-            if self.state.wandb is not None:
-                self.state.wandb.log(
-                    {
-                        "train_loss": loss.item(),
-                        "train_epoch": self.state.elapsed.epoch,
-                        "positions": self.state.elapsed.positions,
-                    }
-                    | stats
-                    | metrics
-                )
+            if i == 0:
+                stats["train_loss.before"] = loss.item()
 
         train_time = time.monotonic() - train_start
         step_time = time.monotonic() - self.step_start
+        if self.state.wandb is not None:
+            self.state.wandb.log(
+                {
+                    "train_loss": loss.item(),
+                    "train_epoch": self.state.elapsed.epoch,
+                    "positions": self.state.elapsed.positions,
+                    "train_time": train_time,
+                    "step_time": step_time,
+                }
+                | stats
+                | metrics
+            )
+
         print(
             f"step={self.state.elapsed.step}"
             f" games={self.config.rollouts_per_step}"
