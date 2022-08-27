@@ -76,10 +76,9 @@ def main():
     args = parse_args()
 
     if args.run_dir and os.path.exists(os.path.join(args.run_dir, "latest")):
-        print("Run directory exists, resuming...")
-        model_cfg = loading.load_config(os.path.join(args.run_dir, "latest"))
         with open(os.path.join(args.run_dir, "run.yaml"), "r") as fh:
             config = yaml.unsafe_load(fh)
+
     else:
         model_cfg = xformer.Config(
             n_layer=args.layers,
@@ -94,6 +93,7 @@ def main():
             model_cfg.positional_encoding = args.pe
 
         config = alphazero.Config(
+            model=model_cfg,
             device=args.device,
             load_model=args.load_model,
             run_dir=args.run_dir,
@@ -115,7 +115,7 @@ def main():
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0
 
-    train = trainer.TrainingRun(model_config=model_cfg, config=config)
+    train = trainer.TrainingRun(config=config)
     train.run()
 
 

@@ -37,9 +37,38 @@ class TrainState:
     replay_buffer: list[dict[str, torch.Tensor]] = field(init=False, factory=list)
 
 
+def save_snapshot(state: TrainState, snapshot_path):
+    os.makedirs(snapshot_path, exist_ok=True)
+    loading.save_model(state.model, snapshot_path)
+    torch.save(
+        state.opt.state_dict(),
+        os.path.join(snapshot_path, "opt.pt"),
+    )
+    torch.save(
+        state.replay_buffer,
+        os.path.join(snapshot_path, "replay_buffer.pt"),
+    )
+    with open(os.path.join(snapshot_path, "elapsed.yaml"), "w") as fh:
+        yaml.dump(state.elapsed, fh)
+
+
+def load_state(state: TrainState, snapshot_path: str):
+    loading.load_snapshot(state.model, snapshot_path)
+
+    state.opt.load_state_dict(
+        torch.load(
+            os.path.join(snapshot_path, "opt.pt"),
+        )
+    )
+    state.replay_buffer = torch.load(
+        os.path.join(snapshot_path, "replay_buffer.pt"),
+    )
+    with open(os.path.join(snapshot_path, "elapsed.yaml"), "r") as fh:
+        state.elapsed = yaml.unsafe_load(fh)
+
+
 @define
 class TrainingRun:
-    model_config: xformer.Config
     config: Config
 
     state: TrainState = field(init=False)
@@ -165,7 +194,7 @@ class TrainingRun:
                 self.config.run_dir, f"step_{self.state.elapsed.step:06d}"
             )
             print(f"Saving snapshot to {save_dir}...")
-            self.save_snapshot(save_dir)
+            save_snapshot(self.state, save_dir)
             latest_link = os.path.join(self.config.run_dir, "latest")
             try:
                 os.unlink(latest_link)
@@ -178,20 +207,6 @@ class TrainingRun:
 
         self.serve_mode()
 
-    def save_snapshot(self, snapshot_path):
-        os.makedirs(snapshot_path, exist_ok=True)
-        loading.save_model(self.state.model, snapshot_path)
-        torch.save(
-            self.state.opt.state_dict(),
-            os.path.join(snapshot_path, "opt.pt"),
-        )
-        torch.save(
-            self.state.replay_buffer,
-            os.path.join(snapshot_path, "replay_buffer.pt"),
-        )
-        with open(os.path.join(snapshot_path, "elapsed.yaml"), "w") as fh:
-            yaml.dump(self.state.elapsed, fh)
-
     def should_exit(self):
         return self.state.elapsed.step >= self.config.train_steps
 
@@ -199,19 +214,7 @@ class TrainingRun:
         if self.config.run_dir:
             state_dir = os.path.join(self.config.run_dir, "latest")
             if os.path.exists(state_dir):
-                loading.load_snapshot(self.state.model, state_dir)
-
-                self.state.opt.load_state_dict(
-                    torch.load(
-                        os.path.join(state_dir, "opt.pt"),
-                    )
-                )
-                self.state.replay_buffer = torch.load(
-                    os.path.join(state_dir, "replay_buffer.pt"),
-                )
-                with open(os.path.join(state_dir, "elapsed.yaml"), "r") as fh:
-                    self.state.elapsed = yaml.unsafe_load(fh)
-
+                load_state(self.state, state_dir)
                 return
 
         if self.config.load_model:
@@ -247,7 +250,7 @@ class TrainingRun:
             rollout_engine.stop()
 
     async def run_async(self):
-        model = xformer.Transformer(self.model_config, device=self.config.device)
+        model = xformer.Transformer(self.config.model, device=self.config.device)
         self.state = TrainState(
             model=model,
             opt=torch.optim.AdamW(model.parameters(), lr=self.config.lr),

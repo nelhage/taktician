@@ -4,10 +4,13 @@ import torch
 import secrets
 from functools import partial
 from typing import Optional
+import xformer
 
 
 @define(slots=False)
 class Config:
+    model: xformer.Config
+
     device: str = "cuda"
     server_port: int = 5432
 
