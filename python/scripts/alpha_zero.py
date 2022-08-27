@@ -115,9 +115,7 @@ def main():
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0
 
-    model = xformer.Transformer(model_cfg, device=config.device)
-
-    train = trainer.TrainingRun(config=config, model=model)
+    train = trainer.TrainingRun(model_config=model_cfg, config=config)
     train.run()
 
 
