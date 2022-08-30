@@ -13,6 +13,7 @@ import asyncio
 
 import xformer
 from xformer import data, model, train, loading
+from xformer.data import Dataset
 from xformer.train import hooks, lr_schedules
 from tak.model import batches, heads, losses
 
@@ -58,6 +59,9 @@ def parse_args():
     parser.add_argument("--run-dir", type=str, metavar="PATH")
     parser.add_argument("--save-freq", type=int, metavar="STEPS", default=10)
 
+    parser.add_argument("--test-data", type=str, metavar="PATH")
+    parser.add_argument("--test-freq", type=int, metavar="STEPS", default=10)
+
     parser.add_argument("--progress", default=True, action="store_true")
     parser.add_argument("--no-progress", dest="progress", action="store_false")
 
@@ -101,6 +105,18 @@ def main():
                 )
             )
         run_hooks.append(hooks.SavingHook(freq=args.save_freq))
+        if args.test_data:
+            run_hooks.append(
+                hooks.TestLoss(
+                    dataset=Dataset(
+                        path=os.path.realpath(args.test_data),
+                        batch_size=args.batch,
+                        device=args.device,
+                        batch_class=batches.PositionValuePolicy,
+                    ),
+                    frequency=args.test_freq,
+                )
+            )
 
         config = alphazero.Config(
             model=model_cfg,

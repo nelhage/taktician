@@ -15,7 +15,6 @@ def default_hooks() -> list["Hook"]:
 
     return [
         hooks.TimingHook(),
-        hooks.WandB(),
     ]
 
 

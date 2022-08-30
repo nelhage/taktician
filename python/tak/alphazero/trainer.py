@@ -151,18 +151,6 @@ class TrainingRun:
         self.state.step_stats["train_loss"] = loss.item()
         self.state.step_stats.update(metrics)
 
-        print(
-            f"step={self.state.elapsed.step}"
-            f" games={self.config.rollouts_per_step}"
-            f" plies={plies}"
-            f" unique={unique}"
-            #            f" rollout_time={rollout_time:0.2f}s"
-            #            f" train_time={train_time:0.2f}s"
-            #            f" step_time={step_time:0.2f}s"
-            #            f" ply/s={plies/(rollout_time):.1f}s"
-            f" last_loss={loss.item():0.2f}"
-        )
-
         self.serve_mode()
 
     def should_exit(self):
@@ -195,6 +183,11 @@ class TrainingRun:
             )
         )
 
+        def fmt(v):
+            if isinstance(v, float):
+                return f"{v:.3f}"
+            return str(v)
+
         try:
             for hook in self.config.hooks:
                 hook.before_run(self.state, self.config)
@@ -219,6 +212,14 @@ class TrainingRun:
                     hook.after_step(self.state)
                 for hook in self.config.hooks:
                     hook.finalize(self.state)
+
+                print(
+                    f"step={self.state.elapsed.step} "
+                    + " ".join(
+                        f"{key}={fmt(value)}"
+                        for (key, value) in self.state.step_stats.items()
+                    )
+                )
 
             for hook in self.config.hooks:
                 hook.after_run(self.state)

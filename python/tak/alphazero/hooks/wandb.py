@@ -11,7 +11,7 @@ import wandb
 from typing import Optional
 
 
-@define
+@define(slots=False)
 class WandB(Hook):
     job_name: Optional[str] = None
     job_id: str = field(factory=partial(secrets.token_hex, 8))
