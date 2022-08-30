@@ -10,7 +10,6 @@ from torch import multiprocessing
 import grpc
 import asyncio
 
-import wandb
 
 import xformer
 from xformer import loading
@@ -28,13 +27,14 @@ from .. import Config
 from . import data, stats
 
 
-@define
+@define(slots=False)
 class TrainState:
     model: xformer.Transformer
-    wandb: T.Optional["wandb.Run"]
     opt: torch.optim.AdamW
     elapsed: stats.Elapsed = field(factory=stats.Elapsed, init=False)
     replay_buffer: list[dict[str, torch.Tensor]] = field(init=False, factory=list)
+
+    step_stats: dict = field(init=False, factory=dict)
 
 
 def save_snapshot(state: TrainState, snapshot_path):
@@ -67,6 +67,26 @@ def load_state(state: TrainState, snapshot_path: str):
         state.elapsed = yaml.unsafe_load(fh)
 
 
+class Hook:
+    def before_run(self, state: TrainState, config: Config):
+        pass
+
+    def after_run(self, state: TrainState):
+        pass
+
+    def before_rollout(self, state: TrainState):
+        pass
+
+    def before_train(self, state: TrainState):
+        pass
+
+    def after_step(self, state: TrainState):
+        pass
+
+    def finalize(self, state: TrainState):
+        pass
+
+
 @define
 class TrainingRun:
     config: Config
@@ -77,8 +97,6 @@ class TrainingRun:
     loop: asyncio.BaseEventLoop = field(init=False)
     server: grpc.aio.Server = field(init=False)
     tasks: list[asyncio.Task] = field(init=False, factory=list)
-
-    step_start: float = field(init=False)
 
     def run(self):
         asyncio.run(self.run_async())
@@ -103,8 +121,6 @@ class TrainingRun:
         return False
 
     def train_step(self, batch):
-        rollout_time = time.monotonic() - self.step_start
-
         self.state.replay_buffer.append(batch)
         if len(self.state.replay_buffer) > self.config.replay_buffer_steps:
             self.state.replay_buffer = self.state.replay_buffer[1:]
@@ -127,16 +143,16 @@ class TrainingRun:
             )
         )
         plies = len(batch["positions"])
-        stats = {
-            "rollout_plies": plies,
-            "rollout_games": self.config.rollouts_per_step,
-            "rollout_unique_plies": unique,
-            "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
-            "rollout_time": rollout_time,
-        }
+        self.state.step_stats.update(
+            {
+                "rollout_plies": plies,
+                "rollout_games": self.config.rollouts_per_step,
+                "rollout_unique_plies": unique,
+                "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
+            }
+        )
 
         self.state.elapsed.epoch += 1
-        train_start = time.monotonic()
 
         it = iter(ds)
         for i in range(0, self.config.train_positions, self.config.train_batch):
@@ -156,32 +172,19 @@ class TrainingRun:
             self.state.elapsed.positions += batch.inputs.size(0)
 
             if i == 0:
-                stats["train_loss.before"] = loss.item()
-
-        train_time = time.monotonic() - train_start
-        step_time = time.monotonic() - self.step_start
-        if self.state.wandb is not None:
-            self.state.wandb.log(
-                {
-                    "train_loss": loss.item(),
-                    "train_epoch": self.state.elapsed.epoch,
-                    "positions": self.state.elapsed.positions,
-                    "train_time": train_time,
-                    "step_time": step_time,
-                }
-                | stats
-                | metrics
-            )
+                self.state.step_stats["train_loss.before"] = loss.item()
+        self.state.step_stats["train_loss"] = loss.item()
+        self.state.step_stats.update(metrics)
 
         print(
             f"step={self.state.elapsed.step}"
             f" games={self.config.rollouts_per_step}"
             f" plies={plies}"
             f" unique={unique}"
-            f" rollout_time={rollout_time:0.2f}s"
-            f" train_time={train_time:0.2f}s"
-            f" step_time={step_time:0.2f}s"
-            f" ply/s={plies/(rollout_time):.1f}s"
+            #            f" rollout_time={rollout_time:0.2f}s"
+            #            f" train_time={train_time:0.2f}s"
+            #            f" step_time={step_time:0.2f}s"
+            #            f" ply/s={plies/(rollout_time):.1f}s"
             f" last_loss={loss.item():0.2f}"
         )
 
@@ -238,14 +241,33 @@ class TrainingRun:
         )
 
         try:
+            for hook in self.config.hooks:
+                hook.before_run(self.state, self.config)
+
             while not self.should_exit():
-                self.step_start = time.monotonic()
+                self.state.step_stats = {}
+
+                for hook in self.config.hooks:
+                    hook.before_rollout(self.state)
+
                 logs = await self.loop.run_in_executor(
                     None, rollout_engine.play_many, self.config.rollouts_per_step
                 )
                 batch = self_play.encode_games(logs)
                 batch["positions"] = batch["positions"].to(torch.long)
+
+                for hook in self.config.hooks:
+                    hook.before_train(self.state)
+
                 self.train_step(batch)
+                for hook in self.config.hooks:
+                    hook.after_step(self.state)
+                for hook in self.config.hooks:
+                    hook.finalize(self.state)
+
+            for hook in self.config.hooks:
+                hook.after_run(self.state)
+
         finally:
             rollout_engine.stop()
 
@@ -254,16 +276,7 @@ class TrainingRun:
         self.state = TrainState(
             model=model,
             opt=torch.optim.AdamW(model.parameters(), lr=self.config.lr),
-            wandb=None,
         )
-        if self.config.wandb:
-            self.state.wandb = wandb.init(
-                project=self.config.project,
-                name=self.config.job_name,
-                id=self.config.job_id,
-                resume="allow",
-            )
-            wandb.config.update(attrs.asdict(self.config), allow_val_change=True)
 
         self.loop = asyncio.get_event_loop()
 
@@ -295,16 +308,12 @@ class TrainingRun:
         await self.server.start()
         train_task = asyncio.create_task(self.train_loop())
         self.tasks.append(train_task)
-        try:
-            done, pending = await asyncio.wait(
-                self.tasks + [self.server.wait_for_termination()],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            await self.server.stop(0)
-            for task in pending:
-                task.cancel()
-            for task in done:
-                task.result()
-        finally:
-            if self.state.wandb:
-                self.state.wandb.finish()
+        done, pending = await asyncio.wait(
+            self.tasks + [self.server.wait_for_termination()],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        await self.server.stop(0)
+        for task in pending:
+            task.cancel()
+        for task in done:
+            task.result()

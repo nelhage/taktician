@@ -1,4 +1,5 @@
 from attrs import define, field
+from typing import Any
 
 
 @define(slots=False)

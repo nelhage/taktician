@@ -18,7 +18,7 @@ from tak.model import batches, heads, losses
 
 import tak.model.server
 from tak import self_play, mcts
-from tak.alphazero import trainer
+from tak.alphazero import trainer, hooks
 from tak import alphazero
 from xformer import yaml_ext  # noqa
 
@@ -92,6 +92,15 @@ def main():
         if args.pe is not None:
             model_cfg.positional_encoding = args.pe
 
+        run_hooks = alphazero.config.default_hooks()
+        if args.wandb:
+            run_hooks.append(
+                hooks.WandB(
+                    job_name=args.job_name,
+                    project=args.project,
+                )
+            )
+
         config = alphazero.Config(
             model=model_cfg,
             device=args.device,
@@ -108,9 +117,7 @@ def main():
             lr=args.lr,
             save_freq=args.save_freq,
             train_steps=args.steps,
-            wandb=args.wandb,
-            project=args.project,
-            job_name=args.job_name,
+            hooks=run_hooks,
         )
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0

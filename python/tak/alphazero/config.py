@@ -3,8 +3,20 @@ from tak import mcts
 import torch
 import secrets
 from functools import partial
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import xformer
+
+if TYPE_CHECKING:
+    from .trainer import Hook
+
+
+def default_hooks() -> list["Hook"]:
+    from . import hooks
+
+    return [
+        hooks.TimingHook(),
+        hooks.WandB(),
+    ]
 
 
 @define(slots=False)
@@ -46,10 +58,7 @@ class Config:
 
     train_steps: int = 10
 
-    wandb: bool = False
-    job_name: Optional[str] = None
-    job_id: str = field(factory=partial(secrets.token_hex, 8))
-    project: str = "taktician-alphazero"
+    hooks: list["Hook"] = field(factory=default_hooks)
 
     def __attrs_post_init__(self):
         if self.device == "cpu":
