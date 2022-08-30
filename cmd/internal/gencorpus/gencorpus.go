@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -50,7 +51,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.Int64Var(&c.seed, "seed", 0, "Random seed")
 	flags.IntVar(&c.threads, "threads", runtime.NumCPU(), "Number of threads")
 
-	flags.StringVar(&c.analysis, "analysis", "minimax", "Analyze to use: minimax,dfpn,none")
+	flags.StringVar(&c.analysis, "analysis", "minimax", "Analysis engine to run: minimax,dfpn,winning,none")
 	flags.DurationVar(&c.limit, "limit", 5*time.Second, "Minimax time limit when scoring")
 
 	flags.BoolVar(&c.stats, "stats", false, "compute and print stats")
@@ -76,9 +77,21 @@ func growslice[T any](sl []T, newlen int) []T {
 }
 
 type entry struct {
-	pos   *tak.Position
-	move  tak.Move
-	value float64
+	pos        *tak.Position
+	move       tak.Move
+	value      float64
+	otherMoves []tak.Move
+}
+
+func fmtMoves(moves []tak.Move) string {
+	var sb strings.Builder
+	for i, m := range moves {
+		if i != 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(ptn.FormatMove(m))
+	}
+	return sb.String()
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -169,6 +182,7 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 				ptn.FormatTPS(e.pos),
 				ptn.FormatMove(e.move),
 				fmt.Sprintf("%+f", e.value),
+				fmtMoves(e.otherMoves),
 			})
 		}
 		return nil
@@ -234,6 +248,39 @@ func (c *Command) evaluate(ctx context.Context, positions <-chan *tak.Position, 
 						e.value = 0.5
 					}
 				}
+			} else if c.analysis == "winning" {
+				weights := ai.DefaultWeights[c.size]
+				weights[ai.Terminal_Flats] = 0
+				weights[ai.Terminal_Plies] = 0
+				weights[ai.Terminal_OpponentReserves] = 0
+				weights[ai.Terminal_Reserves] = 0
+				mm := ai.NewMinimax(ai.MinimaxConfig{
+					Size:     c.size,
+					TableMem: 100 * 1 << 20,
+					Evaluate: ai.MakeEvaluator(c.size, &weights),
+				})
+
+				analyze = func(e *entry) {
+					ctx, cancel := context.WithTimeout(context.Background(), c.limit)
+					defer cancel()
+					_, val, _ := mm.Analyze(
+						ctx,
+						e.pos,
+					)
+					if val <= ai.WinThreshold {
+						return
+					}
+					pvs, _, _ := mm.AnalyzeAll(
+						context.Background(),
+						e.pos,
+					)
+					e.value = 1.0
+
+					e.move = pvs[0][0]
+					for _, pv := range pvs[1:] {
+						e.otherMoves = append(e.otherMoves, pv[0])
+					}
+				}
 			} else if c.analysis == "none" {
 				analyze = func(e *entry) {}
 			} else {
@@ -243,6 +290,9 @@ func (c *Command) evaluate(ctx context.Context, positions <-chan *tak.Position, 
 			for p := range positions {
 				ent := entry{pos: p}
 				analyze(&ent)
+				if c.analysis == "winning" && ent.value != 1.0 {
+					continue
+				}
 
 				select {
 				case results <- ent:

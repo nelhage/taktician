@@ -16,7 +16,7 @@ def parse_args():
         "--output",
         dest="output",
         help="output base",
-        metavar="SECONDS",
+        metavar="PATH",
     )
     parser.add_argument(
         "--test-frac",
@@ -41,6 +41,12 @@ def parse_args():
         "--no-analysis",
         action="store_false",
         dest="analysis",
+    )
+    parser.add_argument(
+        "--all-moves",
+        action="store_true",
+        help="Encode all moves",
+        dest="all_moves",
     )
     parser.add_argument(
         "corpus",
@@ -86,8 +92,20 @@ def main():
     if args.analysis:
         size = next(iter(positions)).size
         data["values"] = torch.tensor([float(row[2]) for row in records])
-        moves = map_with_len(lambda row: ptn.parse_move(row[1]), records)
-        data["moves"] = encoding.encode_moves_batch(size, moves)
+        if args.all_moves:
+            data["moves"] = torch.zeros(
+                (len(positions), encoding.MAX_MOVE_ID), dtype=torch.bool
+            )
+            for (i, row) in enumerate(records):
+                for mv in [row[1]] + row[3].split(","):
+                    if not mv:
+                        continue
+                    data["moves"][
+                        i, encoding.encode_move(size, ptn.parse_move(mv))
+                    ] = True
+        else:
+            moves = map_with_len(lambda row: ptn.parse_move(row[1]), records)
+            data["moves"] = encoding.encode_moves_batch(size, moves)
 
     if args.test_frac == 0:
         torch.save(data, output + ".pt")
