@@ -54,8 +54,6 @@ class Config:
     train_dtype: torch.dtype = torch.float32
     serve_dtype: torch.dtype = torch.float16
 
-    save_freq: int = 10
-
     train_steps: int = 10
 
     hooks: list["Hook"] = field(factory=default_hooks)

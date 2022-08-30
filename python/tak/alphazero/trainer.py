@@ -37,21 +37,6 @@ class TrainState:
     step_stats: dict = field(init=False, factory=dict)
 
 
-def save_snapshot(state: TrainState, snapshot_path):
-    os.makedirs(snapshot_path, exist_ok=True)
-    loading.save_model(state.model, snapshot_path)
-    torch.save(
-        state.opt.state_dict(),
-        os.path.join(snapshot_path, "opt.pt"),
-    )
-    torch.save(
-        state.replay_buffer,
-        os.path.join(snapshot_path, "replay_buffer.pt"),
-    )
-    with open(os.path.join(snapshot_path, "elapsed.yaml"), "w") as fh:
-        yaml.dump(state.elapsed, fh)
-
-
 def load_state(state: TrainState, snapshot_path: str):
     loading.load_snapshot(state.model, snapshot_path)
 
@@ -109,16 +94,6 @@ class TrainingRun:
 
     def train_mode(self):
         self.state.model.to(self.config.train_dtype).load_state_dict(self.train_params)
-
-    def check_and_clear_save_request(self) -> bool:
-        run_dir = self.config.run_dir
-        if not run_dir:
-            return False
-        flagpath = os.path.join(run_dir, "SAVE_NOW")
-        if os.path.exists(flagpath):
-            os.unlink(flagpath)
-            return True
-        return False
 
     def train_step(self, batch):
         self.state.replay_buffer.append(batch)
@@ -187,26 +162,6 @@ class TrainingRun:
             #            f" ply/s={plies/(rollout_time):.1f}s"
             f" last_loss={loss.item():0.2f}"
         )
-
-        if self.config.run_dir and (
-            self.state.elapsed.step % self.config.save_freq == 0
-            or self.state.elapsed.step == self.config.train_steps
-            or self.check_and_clear_save_request()
-        ):
-            save_dir = os.path.join(
-                self.config.run_dir, f"step_{self.state.elapsed.step:06d}"
-            )
-            print(f"Saving snapshot to {save_dir}...")
-            save_snapshot(self.state, save_dir)
-            latest_link = os.path.join(self.config.run_dir, "latest")
-            try:
-                os.unlink(latest_link)
-            except FileNotFoundError:
-                pass
-            os.symlink(
-                os.path.basename(save_dir),
-                latest_link,
-            )
 
         self.serve_mode()
 

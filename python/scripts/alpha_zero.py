@@ -100,6 +100,7 @@ def main():
                     project=args.project,
                 )
             )
+        run_hooks.append(hooks.SavingHook(freq=args.save_freq))
 
         config = alphazero.Config(
             model=model_cfg,
@@ -115,7 +116,6 @@ def main():
             train_batch=args.batch,
             train_positions=args.train_positions,
             lr=args.lr,
-            save_freq=args.save_freq,
             train_steps=args.steps,
             hooks=run_hooks,
         )
