@@ -48,6 +48,9 @@ class SavingHook(Hook):
         self.save_snapshot(state)
 
     def save_snapshot(self, state: TrainState):
+        if self.run_dir is None:
+            return
+
         save_dir = os.path.join(self.run_dir, f"step_{state.elapsed.step:06d}")
         print(f"Saving snapshot to {save_dir}...")
         save_snapshot(state, save_dir)
