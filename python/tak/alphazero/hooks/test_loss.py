@@ -26,8 +26,6 @@ class TestLoss(Hook):
         if state.elapsed.step > 1 and state.elapsed.step % self.frequency != 0:
             return
 
-        print("running test loss...")
-
         with torch.no_grad():
             losses = []
             metrics = defaultdict(float)
