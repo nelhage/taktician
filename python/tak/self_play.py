@@ -219,5 +219,5 @@ def encode_games(logs: list[Transcript]):
         mask=mask,
         moves=all_move_probs,
         values=torch.tensor(all_values),
-        results=torch.tensor(all_results),
+        results=torch.tensor(all_results, dtype=torch.float32),
     )

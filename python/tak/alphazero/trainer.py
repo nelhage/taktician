@@ -72,6 +72,34 @@ class Hook:
         pass
 
 
+def dedup_batch(batch):
+    N = batch["positions"].shape[0]
+    out = {k: torch.zeros_like(v) for (k, v) in batch.items()}
+    ids = {}
+    counts = torch.zeros(N)
+    next = 0
+
+    keys = [k for k in batch if k not in ["positions", "mask"]]
+
+    for i in range(N):
+        key = tuple(batch["positions"][i][batch["mask"][i]].tolist())
+        if key in ids:
+            idx = ids[key]
+        else:
+            idx = next
+            next += 1
+            ids[key] = idx
+            out["positions"][idx] = batch["positions"][i]
+            out["mask"][idx] = batch["mask"][i]
+        counts[idx] += 1
+        for k in keys:
+            out[k][idx] += batch[k][i]
+
+    for k in keys:
+        out[k] /= counts.reshape((-1,) + (1,) * (len(out[k].shape) - 1))
+    return {k: v[:next] for (k, v) in out.items()}
+
+
 @define
 class TrainingRun:
     config: Config
@@ -96,6 +124,10 @@ class TrainingRun:
         self.state.model.to(self.config.train_dtype).load_state_dict(self.train_params)
 
     def train_step(self, batch):
+        pre_dedup = len(batch["positions"])
+
+        batch = dedup_batch(batch)
+
         self.state.replay_buffer.append(batch)
         if len(self.state.replay_buffer) > self.config.replay_buffer_steps:
             self.state.replay_buffer = self.state.replay_buffer[1:]
@@ -111,18 +143,12 @@ class TrainingRun:
             device=self.config.device,
         )
 
-        unique = len(
-            set(
-                tuple(p[m].tolist())
-                for (p, m) in zip(batch["positions"], batch["mask"])
-            )
-        )
         plies = len(batch["positions"])
         self.state.step_stats.update(
             {
                 "rollout_plies": plies,
                 "rollout_games": self.config.rollouts_per_step,
-                "rollout_unique_plies": unique,
+                "rollout_total_plies": pre_dedup,
                 "replay_buffer_plies": len(ds.flat_replay_buffer["positions"]),
             }
         )
@@ -211,6 +237,7 @@ class TrainingRun:
                     hook.before_train(self.state)
 
                 self.train_step(batch)
+
                 for hook in self.config.hooks:
                     hook.after_step(self.state)
                 for hook in self.config.hooks:
