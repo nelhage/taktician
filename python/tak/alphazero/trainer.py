@@ -165,6 +165,9 @@ class TrainingRun:
 
         if self.config.load_model:
             loading.load_snapshot(self.state.model, self.config.load_model)
+            opt_path = os.path.join(self.config.load_model, "opt.pt")
+            if os.path.exists(opt_path):
+                self.state.opt.load_state_dict(torch.load(opt_path))
         else:
             self.state.model.init_weights()
 

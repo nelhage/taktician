@@ -79,7 +79,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    if args.run_dir and os.path.exists(os.path.join(args.run_dir, "latest")):
+    if args.run_dir and os.path.exists(os.path.join(args.run_dir, "run.yaml")):
         with open(os.path.join(args.run_dir, "run.yaml"), "r") as fh:
             config = yaml.unsafe_load(fh)
 
