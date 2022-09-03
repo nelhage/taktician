@@ -4,7 +4,8 @@ import torch
 from attrs import define
 
 from xformer.data import Dataset
-from tak.model import losses
+from tak.alphazero import losses
+from xformer.train import LossFunction
 from ..trainer import Hook, TrainState
 from functools import cached_property
 
@@ -15,6 +16,7 @@ class TestLoss(Hook):
 
     dataset: Dataset
     frequency: int
+    loss: LossFunction = losses.ReferenceAccuracy()
 
     name: str = "test"
 

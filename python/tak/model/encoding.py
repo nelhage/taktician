@@ -85,6 +85,63 @@ def encode(p: game.Position, include_sentinel: bool = True) -> list[int]:
     return data
 
 
+def decode(board: torch.Tensor) -> game.Position:
+    i = 0
+    if board[i] == Token.OUTPUT_SENTINEL:
+        i += 1
+
+    if board[i] == Token.WHITE_TO_PLAY:
+        to_play = pieces.Color.WHITE
+    else:
+        to_play = pieces.Color.BLACK
+    i += 1
+    for _ in range(2):
+        assert board[i].item() in Token.RESERVES
+        i += 1
+        assert board[i].item() in Token.CAPSTONES
+        i += 1
+
+    squares = []
+    this_sq = None
+
+    for sq in board[i:].numpy():
+        if sq == Token.MY_FLAT:
+            this_sq.append(pieces.Piece.cached(to_play, pieces.Kind.FLAT))
+        elif sq == Token.THEIR_FLAT:
+            this_sq.append(pieces.Piece.cached(to_play.flip(), pieces.Kind.FLAT))
+        else:
+            if this_sq is not None:
+                squares.append(this_sq)
+
+            if sq == Token.EMPTY:
+                this_sq = []
+            else:
+                kind = {
+                    Token.MY_CAPSTONE: pieces.Kind.CAPSTONE,
+                    Token.THEIR_CAPSTONE: pieces.Kind.CAPSTONE,
+                    Token.MY_STANDING: pieces.Kind.STANDING,
+                    Token.THEIR_STANDING: pieces.Kind.STANDING,
+                    Token.MY_TOP_FLAT: pieces.Kind.FLAT,
+                    Token.THEIR_TOP_FLAT: pieces.Kind.FLAT,
+                }[sq]
+                color = to_play
+                if sq in [
+                    Token.THEIR_CAPSTONE,
+                    Token.THEIR_STANDING,
+                    Token.THEIR_TOP_FLAT,
+                ]:
+                    color = color.flip()
+                this_sq = [pieces.Piece.cached(color, kind)]
+
+    if this_sq is not None:
+        squares.append(this_sq)
+    size = int(len(squares) ** (1 / 2))
+    assert size * size == len(squares), f"Got a bad number of squares: {len(squares)}"
+    return game.Position.from_squares(
+        game.Config(size=size), squares, 2 if to_play == pieces.Color.WHITE else 3
+    )
+
+
 def _encode_batch(
     inputs, encode_one, dtype=torch.float
 ) -> (torch.Tensor, torch.Tensor):
