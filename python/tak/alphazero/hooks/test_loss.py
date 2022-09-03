@@ -20,10 +20,6 @@ class TestLoss(Hook):
 
     name: str = "test"
 
-    @cached_property
-    def loss(self):
-        return losses.PolicyValue()
-
     def after_step(self, state: TrainState):
         if state.elapsed.step > 1 and state.elapsed.step % self.frequency != 0:
             return

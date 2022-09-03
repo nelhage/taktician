@@ -1,12 +1,10 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from functools import cached_property
 
 
 class ReferenceAccuracy:
-    def __init__(self):
-        self.xent = nn.CrossEntropyLoss(reduction="mean")
-
     def loss_and_metrics(self, batch, logits):
         v_logits = logits["values"]
         m_logits = logits["moves"]

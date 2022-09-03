@@ -1,5 +1,5 @@
+from attrs import define, field
 import torch
-from torch import nn
 from torch.nn import functional as F
 
 
@@ -14,12 +14,10 @@ class MaskedAR:
         )
 
 
+@define(slots=False)
 class PolicyValue:
     v_weight: float = 1.0
     policy_weight: float = 1.0
-
-    def __init__(self):
-        self.xent = nn.CrossEntropyLoss(reduction="mean")
 
     def loss_and_metrics(self, batch, logits):
         v_logits = logits["values"]
@@ -39,5 +37,6 @@ class PolicyValue:
                 metrics["acc@01"] = match.float().mean().item()
 
         return (
-            self.v_weight * v_error + self.policy_weight * self.xent(m_logits, moves)
+            self.v_weight * v_error
+            + self.policy_weight * F.cross_entropy(m_logits, moves)
         ), metrics
