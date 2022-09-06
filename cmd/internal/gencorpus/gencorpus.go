@@ -196,6 +196,47 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
+func (c *Command) analyzeWinning(mm *ai.MinimaxAI, e *entry) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.limit)
+	defer cancel()
+	pv, val, _ := mm.Analyze(
+		ctx,
+		e.pos,
+	)
+	if val <= ai.WinThreshold {
+		return
+	}
+
+	e.move = pv[0]
+
+	var buf [100]tak.Move
+	moves := e.pos.AllMoves(buf[:0])
+	var ch *tak.Position
+	var err error
+	for _, m := range moves {
+		ch, err = e.pos.MovePreallocated(m, ch)
+		if err != nil {
+			continue
+		}
+		if ok, winner := ch.GameOver(); ok {
+			if winner == e.pos.ToMove() {
+				e.otherMoves = append(e.otherMoves, m)
+			}
+			continue
+		}
+		_, val, _ = mm.Analyze(ctx, ch)
+		if val < -ai.WinThreshold {
+			e.otherMoves = append(e.otherMoves, m)
+		}
+
+		if ctx.Err() != nil {
+			return
+		}
+	}
+
+	e.value = 1.0
+}
+
 func (c *Command) evaluate(ctx context.Context, positions <-chan *tak.Position, results chan<- entry) {
 	defer close(results)
 	grp, ctx := errgroup.WithContext(ctx)
@@ -261,25 +302,7 @@ func (c *Command) evaluate(ctx context.Context, positions <-chan *tak.Position, 
 				})
 
 				analyze = func(e *entry) {
-					ctx, cancel := context.WithTimeout(context.Background(), c.limit)
-					defer cancel()
-					_, val, _ := mm.Analyze(
-						ctx,
-						e.pos,
-					)
-					if val <= ai.WinThreshold {
-						return
-					}
-					pvs, _, _ := mm.AnalyzeAll(
-						context.Background(),
-						e.pos,
-					)
-					e.value = 1.0
-
-					e.move = pvs[0][0]
-					for _, pv := range pvs[1:] {
-						e.otherMoves = append(e.otherMoves, pv[0])
-					}
+					c.analyzeWinning(mm, e)
 				}
 			} else if c.analysis == "none" {
 				analyze = func(e *entry) {}
