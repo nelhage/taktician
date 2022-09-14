@@ -41,8 +41,6 @@ class Node:
     value: float = 0
     simulations: int = 0
 
-    proven: bool = False
-
     child_probs: T.Optional[torch.Tensor] = None
     children: T.Optional[list["Node"]] = None
 
@@ -154,7 +152,7 @@ class MCTS:
         path = []
         while True:
             path.append(tree)
-            if tree.children is None or tree.proven:
+            if tree.children is None:
                 return path
 
             policy = tree.policy_probs(self.config.C)
@@ -162,16 +160,11 @@ class MCTS:
             tree = tree.children[child]
 
     def populate(self, node: Node):
-        if node.proven:
-            return
-
         winner, why = node.position.winner()
         if why is not None:
             if winner == node.position.to_move():
-                node.proven = True
                 node.v_zero = 1
             elif winner == node.position.to_move().flip():
-                node.proven = True
                 node.v_zero = -1
             else:
                 node.v_zero = 0
@@ -210,10 +203,6 @@ class MCTS:
 
     def update(self, path: list[Node]):
         value = path[-1].v_zero
-        if path[-1].proven and path[-1].v_zero == -1 and len(path) > 1:
-            path[-2].proven = True
-            path[-2].value = path[-2].simulations
-            path[-2].v_zero = 1
 
         for node in reversed(path):
             node.value += value
