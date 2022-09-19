@@ -49,6 +49,8 @@ def parse_args():
 
     parser.add_argument("--size", type=int, default=3)
 
+    parser.add_argument("-C", type=float, default=None)
+
     parser.add_argument("--rollouts-per-step", type=int, default=1000)
     parser.add_argument("--replay-buffer-steps", type=int, default=4)
     parser.add_argument("--train-positions", type=int, default=1024)
@@ -137,6 +139,8 @@ def main():
         )
         config.rollout_config.simulation_limit = args.rollout_simulations
         config.rollout_config.time_limit = 0
+        if args.C:
+            config.rollout_config.C = args.C
 
     train = trainer.TrainingRun(config=config)
     train.run()
