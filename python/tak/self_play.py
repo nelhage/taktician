@@ -144,14 +144,15 @@ class MultiprocessSelfPlayEngine:
     processes: list[multiprocessing.Process] = field(factory=list, init=False)
 
     def __attrs_post_init__(self):
+        mp = multiprocessing.get_context("spawn")
         self.job = WorkerJob(
             config=self.config,
-            cmd=multiprocessing.Queue(maxsize=2 * self.config.workers),
-            games=multiprocessing.Queue(maxsize=self.config.workers),
-            shutdown=multiprocessing.Event(),
+            cmd=mp.Queue(maxsize=2 * self.config.workers),
+            games=mp.Queue(maxsize=self.config.workers),
+            shutdown=mp.Event(),
         )
         self.processes = [
-            multiprocessing.Process(
+            mp.Process(
                 target=entrypoint, args=(self.job, i), name=f"selfplay-worker-{i}"
             )
             for i in range(self.config.workers)

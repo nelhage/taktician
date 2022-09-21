@@ -5,7 +5,6 @@ import itertools
 
 import torch
 import queue
-from torch import multiprocessing
 
 import grpc
 import asyncio
@@ -275,7 +274,6 @@ class TrainingRun:
 
         self.serve_mode()
 
-        multiprocessing.set_start_method("spawn")
         os.environ["GRPC_ENABLE_FORK_SUPPORT"] = "0"
 
         self.server = grpc.aio.server()
