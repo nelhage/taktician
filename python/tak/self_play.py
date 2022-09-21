@@ -44,38 +44,36 @@ class Transcript:
 
 
 def play_one_game(cfg, engine):
-    p = tak.Position.from_config(tak.Config(size=cfg.size))
+    position = tak.Position.from_config(tak.Config(size=cfg.size))
 
     log = Transcript()
 
-    tree = mcts.Node(position=p, move=None)
-
     while True:
-        if p.ply > cfg.ply_limit:
+        if position.ply > cfg.ply_limit:
             log.result = 0.0
             break
 
-        if abs(tree.v_zero) >= cfg.resignation_threshold:
-            if tree.v_zero >= cfg.resignation_threshold:
-                log.result = tree.position.to_move()
-            else:
-                log.result = tree.position.to_move().flip()
-            break
-
-        color, over = tree.position.winner()
+        color, over = position.winner()
         if over is not None:
             tree.result = color
             break
 
-        tree = engine.analyze_tree(tree)
+        tree = engine.analyze(position)
         probs = engine.tree_probs(tree)
 
-        log.positions.append(tree.position)
+        log.positions.append(position)
         log.moves.append([c.move for c in tree.children])
         log.probs.append(probs.numpy())
         log.values.append(tree.value / tree.simulations)
 
-        tree = tree.children[torch.multinomial(probs, 1).item()]
+        if abs(tree.v_zero) >= cfg.resignation_threshold:
+            if tree.v_zero >= cfg.resignation_threshold:
+                log.result = position.to_move()
+            else:
+                log.result = position.to_move().flip()
+            break
+
+        position = tree.children[torch.multinomial(probs, 1).item()].position
 
     return log
 

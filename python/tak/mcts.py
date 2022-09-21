@@ -121,7 +121,7 @@ class MCTS:
                 break
 
             path = self.descend(tree)
-            self.populate(path[-1])
+            self.populate(path[-1], path[-1] is tree)
             self.update(path)
 
         return tree
@@ -159,7 +159,7 @@ class MCTS:
             child = torch.multinomial(policy, 1).item()
             tree = tree.children[child]
 
-    def populate(self, node: Node):
+    def populate(self, node: Node, is_root: bool = False):
         winner, why = node.position.winner()
         if why is not None:
             if winner == node.position.to_move():
@@ -177,9 +177,12 @@ class MCTS:
 
         raw_probs = raw_probs[: encoding.n_moves_for_size(node.position.size)]
 
-        (indices,) = torch.nonzero(raw_probs >= self.config.cutoff_prob, as_tuple=True)
+        if is_root:
+            indices = np.arange(len(raw_probs))
+        else:
+            indices = torch.nonzero(raw_probs >= self.config.cutoff_prob)[:, 0].numpy()
         valid = []
-        for mid in indices.numpy():
+        for mid in indices:
             m = encoding.decode_move(node.position.size, mid)
 
             try:
@@ -192,7 +195,7 @@ class MCTS:
 
         child_probs = raw_probs[valid]
         child_probs /= child_probs.sum()
-        if node.position.ply == 0 and self.config.root_noise_alpha is not None:
+        if is_root and self.config.root_noise_alpha is not None:
             noise = torch.distributions.Dirichlet(
                 torch.full_like(child_probs, fill_value=self.config.root_noise_alpha)
             ).sample()
