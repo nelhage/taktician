@@ -177,10 +177,14 @@ class MCTS:
 
         raw_probs = raw_probs[: encoding.n_moves_for_size(node.position.size)]
 
-        if is_root:
-            indices = np.arange(len(raw_probs))
-        else:
-            indices = torch.nonzero(raw_probs >= self.config.cutoff_prob)[:, 0].numpy()
+        if is_root and self.config.root_noise_alpha is not None:
+            noise = torch.distributions.Dirichlet(
+                torch.full_like(raw_probs, fill_value=self.config.root_noise_alpha)
+            ).sample()
+            mix = self.config.root_noise_mix
+            raw_probs = mix * noise + (1 - mix) * raw_probs
+
+        indices = torch.nonzero(raw_probs >= self.config.cutoff_prob)[:, 0].numpy()
         valid = []
         for mid in indices:
             m = encoding.decode_move(node.position.size, mid)
@@ -195,12 +199,6 @@ class MCTS:
 
         child_probs = raw_probs[valid]
         child_probs /= child_probs.sum()
-        if is_root and self.config.root_noise_alpha is not None:
-            noise = torch.distributions.Dirichlet(
-                torch.full_like(child_probs, fill_value=self.config.root_noise_alpha)
-            ).sample()
-            mix = self.config.root_noise_mix
-            child_probs = mix * noise + (1 - mix) * child_probs
 
         node.child_probs = child_probs
 
