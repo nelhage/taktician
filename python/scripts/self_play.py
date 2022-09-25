@@ -50,6 +50,16 @@ def main(argv):
         default=1,
     )
     parser.add_argument(
+        "--noise-alpha",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--noise-weight",
+        type=float,
+        default=0.25,
+    )
+    parser.add_argument(
         "--threads",
         type=int,
         default=1,
@@ -66,6 +76,8 @@ def main(argv):
             port=args.port,
             config=mcts.Config(
                 simulation_limit=args.simulations,
+                root_noise_alpha=args.noise_alpha,
+                root_noise_mix=args.noise_weight,
             ),
         ),
     )
