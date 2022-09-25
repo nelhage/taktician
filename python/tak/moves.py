@@ -21,6 +21,7 @@ class MoveType(enum.Enum):
         assert self.is_slide()
         return DIRECTIONS[self]
 
+    @staticmethod
     def from_direction(dx, dy):
         return RDIRECTIONS[(dx, dy)]
 
