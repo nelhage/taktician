@@ -6,7 +6,7 @@ import traceback
 import tak
 from tak import mcts, self_play
 from tak.model import grpc
-from attrs import define, field
+import attrs
 import tqdm
 
 import queue
@@ -60,9 +60,19 @@ def main(argv):
         default=0.25,
     )
     parser.add_argument(
+        "--resign-threshold",
+        type=float,
+        default=0.99,
+    )
+    parser.add_argument(
         "--threads",
         type=int,
         default=1,
+    )
+    parser.add_argument(
+        "-C",
+        type=float,
+        default=4,
     )
     parser.add_argument("--write-games", type=str, metavar="FILE")
 
@@ -71,6 +81,7 @@ def main(argv):
     config = self_play.SelfPlayConfig(
         size=args.size,
         workers=args.threads,
+        resignation_threshold=args.resign_threshold,
         engine_factory=self_play.BuildRemoteMCTS(
             host=args.host,
             port=args.port,
@@ -78,6 +89,7 @@ def main(argv):
                 simulation_limit=args.simulations,
                 root_noise_alpha=args.noise_alpha,
                 root_noise_mix=args.noise_weight,
+                C=args.C,
             ),
         ),
     )
@@ -88,8 +100,16 @@ def main(argv):
 
     end = time.time()
 
+    stats = mcts.Stats()
+    for l in logs:
+        stats = stats.merge(l.stats)
+
     print(
-        f"done games={len(logs)} plies={sum(len(l.positions) for l in logs)} threads={args.threads} duration={end-start:.2f} games/s={args.games/(end-start):.1f}"
+        f"done games={len(logs)}"
+        f" plies={sum(len(l.positions) for l in logs)}"
+        f" threads={args.threads} duration={end-start:.2f}"
+        f" games/s={args.games/(end-start):.1f}"
+        " " + " ".join(f"{k}={v}" for (k, v) in attrs.asdict(stats).items())
     )
 
     if args.write_games:

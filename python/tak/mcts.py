@@ -1,7 +1,7 @@
 import math
 import time
 import typing as T
-from dataclasses import dataclass
+from attrs import define, fields
 
 from . import game, moves, ptn
 from .model import encoding
@@ -17,7 +17,7 @@ class PolicyAndAction(T.Protocol):
         ...
 
 
-@dataclass
+@define(slots=False)
 class Config:
     time_limit: float = 1.0
     simulation_limit: int = 0
@@ -29,10 +29,27 @@ class Config:
     cutoff_prob: float = 1e-6
 
 
+@define
+class Stats:
+    calls: int = 0
+    moves_considered: int = 0
+    moves_valid: int = 0
+    terminal: int = 0
+    populated: int = 0
+
+    def merge(self, other):
+        return type(self)(
+            **{
+                f.name: getattr(self, f.name) + getattr(other, f.name)
+                for f in fields(type(self))
+            }
+        )
+
+
 ALPHA_EPSILON = 1e-3
 
 
-@dataclass
+@define
 class Node:
     position: game.Position
     move: T.Optional[moves.Move]
@@ -40,6 +57,7 @@ class Node:
     v_zero: float = 0
     value: float = 0
     simulations: int = 0
+    result: float = 0.0
 
     child_probs: T.Optional[torch.Tensor] = None
     children: T.Optional[list["Node"]] = None
@@ -100,6 +118,7 @@ class MCTS:
     def __init__(self, config: Config, network: PolicyAndAction):
         self.config = config
         self.network = network
+        self.stats = Stats()
 
     def analyze(self, p: game.Position) -> Node:
         tree = Node(position=p, move=None)
@@ -107,6 +126,8 @@ class MCTS:
         return self.analyze_tree(tree)
 
     def analyze_tree(self, tree):
+        self.stats.calls += 1
+
         start = time.monotonic()
         if self.config.time_limit > 0:
             deadline = start + self.config.time_limit
@@ -162,6 +183,7 @@ class MCTS:
     def populate(self, node: Node, is_root: bool = False):
         winner, why = node.position.winner()
         if why is not None:
+            self.stats.terminal += 1
             if winner == node.position.to_move():
                 node.v_zero = 1
             elif winner == node.position.to_move().flip():
@@ -170,6 +192,7 @@ class MCTS:
                 node.v_zero = 0
             return
 
+        self.stats.populated += 1
         raw_probs, node.v_zero = self.network.evaluate(node.position)
 
         child_probs = []
@@ -185,6 +208,7 @@ class MCTS:
             raw_probs = mix * noise + (1 - mix) * raw_probs
 
         indices = torch.nonzero(raw_probs >= self.config.cutoff_prob)[:, 0].numpy()
+        self.stats.moves_considered += len(indices)
         valid = []
         for mid in indices:
             m = encoding.decode_move(node.position.size, mid)
@@ -196,6 +220,7 @@ class MCTS:
 
             valid.append(mid)
             node.children.append(Node(position=child, move=m))
+        self.stats.moves_valid += len(valid)
 
         child_probs = raw_probs[valid]
         child_probs /= child_probs.sum()

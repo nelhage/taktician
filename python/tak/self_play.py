@@ -25,6 +25,7 @@ class Transcript:
     probs: list[np.ndarray] = field(factory=list)
     values: list[float] = field(factory=list)
     result: Optional[tak.Color] = None
+    stats: mcts.Stats = field(factory=mcts.Stats)
 
     @property
     def logits(self):
@@ -75,6 +76,8 @@ def play_one_game(cfg, engine):
 
         position = tree.children[torch.multinomial(probs, 1).item()].position
 
+    log.stats = engine.stats
+    engine.stats = mcts.Stats()
     return log
 
 
