@@ -51,6 +51,7 @@ func (i *Iterator) Next() bool {
 			return false
 		}
 		if ok, _ := i.position.GameOver(); ok {
+			i.over = true
 			return true
 		}
 	}

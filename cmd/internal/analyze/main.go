@@ -133,6 +133,9 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		for it.Next() {
 			p := it.Position()
 			m := it.PeekMove()
+			if over, _ := p.GameOver(); over {
+				break
+			}
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
 				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(m))
