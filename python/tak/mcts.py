@@ -160,6 +160,7 @@ class MCTS:
             print(
                 f"  {ptn.format_move(child.move):>4}"
                 f" visit={child.simulations:>3d}"
+                f" v0={-child.v_zero:+5.2f}"
                 f" value={-child.value/child.simulations if child.simulations else child.v_zero:+5.2f}"
                 f" pi_theta[a]={tree.child_probs[i]:0.2f}"
                 f" pi[a]={prob:0.2f}"

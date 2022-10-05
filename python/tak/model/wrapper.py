@@ -65,7 +65,7 @@ class GraphedWrapper:
                 torch.tensor(encoded, dtype=torch.long)
             )
             self.static_mask[:, : len(encoded)].fill_(0)
-            self.static_mask[:, len(encoded) :].fill_(0)
+            self.static_mask[:, len(encoded) :].fill_(1)
             self.graph.replay()
             out = self.static_output
             return torch.softmax(out["moves"][0], dim=0).cpu(), out["values"][0].item()
