@@ -15,6 +15,9 @@ def main():
     parser.add_argument("--model1", required=True)
     parser.add_argument("--model2", required=True)
 
+    parser.add_argument("--argmax1", default=False, action="store_true")
+    parser.add_argument("--argmax2", default=False, action="store_true")
+
     parser.add_argument("--port1", default=50_001, type=int)
     parser.add_argument("--port2", default=50_002, type=int)
 
@@ -71,17 +74,25 @@ def main():
         if p1.poll() or p2.poll():
             raise ValueError("Server process crashed!")
 
-        tei_cmd = [os.path.join(SCRIPTS, "tei"), "--time-limit=0", "--host=localhost"]
+        tei_cmd = [
+            os.path.join(SCRIPTS, "tei"),
+            "--time-limit=0",
+            "--host=localhost",
+        ]
         p1_cmd = tei_cmd + [f"--port={args.port1}"]
         p2_cmd = tei_cmd + [f"--port={args.port2}"]
         if args.sims1:
             p1_cmd += [f"--simulation-limit={args.sims1}"]
         if args.c1:
             p1_cmd += [f"--c={args.c1}"]
+        if args.argmax1:
+            p1_cmd += ["--argmax"]
         if args.sims2:
             p2_cmd += [f"--simulation-limit={args.sims2}"]
         if args.c2:
             p2_cmd += [f"--c={args.c2}"]
+        if args.argmax2:
+            p2_cmd += ["--argmax"]
 
         cmdline = (
             [

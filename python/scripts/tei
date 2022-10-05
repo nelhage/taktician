@@ -22,10 +22,17 @@ class Server:
     engine: mcts.MCTS
     pos: tak.Position
     size: int
+    argmax: bool = False
 
-    def __init__(self, config: mcts.Config, network: mcts.PolicyAndAction):
+    def __init__(
+        self,
+        config: mcts.Config,
+        network: mcts.PolicyAndAction,
+        argmax: bool = False,
+    ):
         self.config = config
         self.network = network
+        self.argmax = argmax
 
     def parse_position(self, words):
         pos = None
@@ -52,7 +59,12 @@ class Server:
     def analyze(self, words):
         # todo: parse time controls I guess
         tree = self.engine.analyze(self.pos)
-        move = self.engine.select_root_move(tree)
+        if not self.argmax:
+            move = self.engine.select_root_move(tree)
+        else:
+            probs = tree.policy_probs(self.engine.config.C)
+            argmax = probs.argmax().item()
+            move = tree.children[argmax].move
         yield f"bestmove {ptn.format_move(move)}"
 
     def receive(self, line: str):
@@ -117,6 +129,11 @@ def parse_args():
         default=5001,
     )
     parser.add_argument(
+        "--argmax",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
         "--debug",
         "-d",
         dest="debug",
@@ -151,7 +168,7 @@ def main():
     if args.simulation_limit is not None:
         config.simulation_limit = args.simulation_limit
 
-    srv = Server(config, network)
+    srv = Server(config, network, argmax=args.argmax)
     while True:
         line = sys.stdin.readline()
         if args.debug:
