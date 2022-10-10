@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"path"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"text/tabwriter"
@@ -74,7 +75,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.debug, "debug", 0, "debug level")
 	flags.DurationVar(&c.limit, "limit", 0, "amount of time to search each move")
 	flags.StringVar(&c.timeControl, "tc", "", "Time control for each side (TIME[+INC])")
-	flags.IntVar(&c.threads, "threads", 4, "number of parallel threads")
+	flags.IntVar(&c.threads, "threads", runtime.NumCPU(), "number of parallel threads")
 	flags.StringVar(&c.out, "out", "", "directory to write ptns to")
 	flags.StringVar(&c.summary, "summary", "", "write summary JSON file")
 	flags.BoolVar(&c.verbose, "v", false, "verbose output")
