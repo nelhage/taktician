@@ -8,6 +8,7 @@ import queue
 
 import grpc
 import asyncio
+import threading
 
 
 import xformer
@@ -106,12 +107,7 @@ class TrainingRun:
     state: TrainState = field(init=False)
     train_params: dict[str, torch.Tensor] = field(init=False)
 
-    loop: asyncio.BaseEventLoop = field(init=False)
-    server: grpc.aio.Server = field(init=False)
-    tasks: list[asyncio.Task] = field(init=False, factory=list)
-
-    def run(self):
-        asyncio.run(self.run_async())
+    serve_thread: threading.Thread = field(init=False)
 
     def serve_mode(self):
         self.train_params = {
@@ -196,7 +192,7 @@ class TrainingRun:
         else:
             self.state.model.init_weights()
 
-    async def train_loop(self):
+    def train_loop(self):
         rollout_engine = self_play.MultiprocessSelfPlayEngine(
             config=self_play.SelfPlayConfig(
                 size=self.config.size,
@@ -226,9 +222,7 @@ class TrainingRun:
                 for hook in self.config.hooks:
                     hook.before_rollout(self.state)
 
-                logs = await self.loop.run_in_executor(
-                    None, rollout_engine.play_many, self.config.rollouts_per_step
-                )
+                logs = rollout_engine.play_many(self.config.rollouts_per_step)
                 batch = self_play.encode_games(logs)
                 batch["positions"] = batch["positions"].to(torch.long)
 
@@ -256,14 +250,12 @@ class TrainingRun:
         finally:
             rollout_engine.stop()
 
-    async def run_async(self):
+    def run(self):
         model = xformer.Transformer(self.config.model, device=self.config.device)
         self.state = TrainState(
             model=model,
             opt=torch.optim.AdamW(model.parameters(), lr=self.config.lr),
         )
-
-        self.loop = asyncio.get_event_loop()
 
         self.load_or_init_model()
         if self.config.run_dir:
@@ -276,28 +268,36 @@ class TrainingRun:
 
         os.environ["GRPC_ENABLE_FORK_SUPPORT"] = "0"
 
-        self.server = grpc.aio.server()
-        self.server.add_insecure_port(f"localhost:{self.config.server_port}")
+        ready = threading.Event()
 
-        analysis = tak.model.server.Server(
-            model=self.state.model, device=self.config.device
-        )
+        async def serve():
+            loop = asyncio.get_running_loop()
+            server = grpc.aio.server()
+            server.add_insecure_port(f"localhost:{self.config.server_port}")
+            analysis = tak.model.server.Server(
+                model=self.state.model, device=self.config.device
+            )
+            tasks = [asyncio.create_task(analysis.worker_loop())]
 
-        self.tasks.append(asyncio.create_task(analysis.worker_loop()))
+            analysis_pb2_grpc.add_AnalysisServicer_to_server(
+                analysis,
+                server,
+            )
 
-        analysis_pb2_grpc.add_AnalysisServicer_to_server(
-            analysis,
-            self.server,
+            await server.start()
+            await loop.run_in_executor(None, ready.set)
+            done, pending = await asyncio.wait(
+                tasks + [server.wait_for_termination()],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for task in pending:
+                task.cancel()
+            for task in done:
+                task.result()
+
+        self.serve_thread = threading.Thread(
+            target=asyncio.run, args=(serve(),), daemon=True
         )
-        await self.server.start()
-        train_task = asyncio.create_task(self.train_loop())
-        self.tasks.append(train_task)
-        done, pending = await asyncio.wait(
-            self.tasks + [self.server.wait_for_termination()],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        await self.server.stop(0)
-        for task in pending:
-            task.cancel()
-        for task in done:
-            task.result()
+        self.serve_thread.start()
+
+        self.train_loop()
