@@ -5,6 +5,7 @@ import subprocess
 import time
 import shlex
 
+
 SCRIPTS = os.path.dirname(__file__)
 ROOT = os.path.realpath(os.path.join(SCRIPTS, "../../"))
 
@@ -12,8 +13,13 @@ ROOT = os.path.realpath(os.path.join(SCRIPTS, "../../"))
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model1", required=True)
-    parser.add_argument("--model2", required=True)
+    p1grp = parser.add_mutually_exclusive_group(required=True)
+    p1grp.add_argument("--model1", type=str)
+    p1grp.add_argument("--tei1", type=str)
+
+    p2grp = parser.add_mutually_exclusive_group(required=True)
+    p2grp.add_argument("--model2", type=str)
+    p2grp.add_argument("--tei2", type=str)
 
     parser.add_argument("--argmax1", default=False, action="store_true")
     parser.add_argument("--argmax2", default=False, action="store_true")
@@ -48,30 +54,39 @@ def main():
     if args.fp16 or args.fp16 is None and args.device.startswith("cuda"):
         server_args += "--fp16"
 
-    p1 = subprocess.Popen(
-        server_args
-        + [
-            "--port",
-            str(args.port1),
-            args.model1,
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    p2 = subprocess.Popen(
-        server_args
-        + [
-            "--port",
-            str(args.port2),
-            args.model2,
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    procs = []
+
+    if args.model1:
+        procs.append(
+            subprocess.Popen(
+                server_args
+                + [
+                    "--port",
+                    str(args.port1),
+                    args.model1,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        )
+    if args.model2:
+        procs.append(
+            subprocess.Popen(
+                server_args
+                + [
+                    "--port",
+                    str(args.port2),
+                    args.model2,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        )
+
     try:
         print(f"Waiting on model servers...")
         time.sleep(2)
-        if p1.poll() or p2.poll():
+        if any(p.poll() for p in procs):
             raise ValueError("Server process crashed!")
 
         tei_cmd = [
@@ -79,20 +94,27 @@ def main():
             "--time-limit=0",
             "--host=localhost",
         ]
-        p1_cmd = tei_cmd + [f"--port={args.port1}"]
-        p2_cmd = tei_cmd + [f"--port={args.port2}"]
-        if args.sims1:
-            p1_cmd += [f"--simulation-limit={args.sims1}"]
-        if args.c1:
-            p1_cmd += [f"--c={args.c1}"]
-        if args.argmax1:
-            p1_cmd += ["--argmax"]
-        if args.sims2:
-            p2_cmd += [f"--simulation-limit={args.sims2}"]
-        if args.c2:
-            p2_cmd += [f"--c={args.c2}"]
-        if args.argmax2:
-            p2_cmd += ["--argmax"]
+        if args.model1:
+            p1_cmd = tei_cmd + [f"--port={args.port1}"]
+            if args.sims1:
+                p1_cmd += [f"--simulation-limit={args.sims1}"]
+            if args.c1:
+                p1_cmd += [f"--c={args.c1}"]
+            if args.argmax1:
+                p1_cmd += ["--argmax"]
+        else:
+            p1_cmd = shlex.split(args.tei1)
+
+        if args.model2:
+            p2_cmd = tei_cmd + [f"--port={args.port2}"]
+            if args.sims2:
+                p2_cmd += [f"--simulation-limit={args.sims2}"]
+            if args.c2:
+                p2_cmd += [f"--c={args.c2}"]
+            if args.argmax2:
+                p2_cmd += ["--argmax"]
+        else:
+            p2_cmd = shlex.split(args.tei2)
 
         cmdline = (
             [
@@ -114,8 +136,8 @@ def main():
         print(f"+ {shlex.join(cmdline)}")
         subprocess.check_call(cmdline)
     finally:
-        p1.kill()
-        p2.kill()
+        for p in procs:
+            p.kill()
 
 
 if __name__ == "__main__":
