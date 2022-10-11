@@ -16,8 +16,8 @@ class ReferenceAccuracy:
         probs = torch.softmax(m_logits, -1)
         accuracy = (probs * moves).sum(-1).mean()
 
-        argmax = probs.argmax(-1)
-        top1_acc = torch.index_select(moves, -1, argmax).mean()
+        argmax = m_logits.argmax(-1, keepdims=True)
+        top1_acc = torch.gather(moves, -1, argmax).mean()
 
         metrics = {
             "v_error": v_error.item(),
