@@ -13,12 +13,16 @@ class ReferenceAccuracy:
 
         moves = batch.moves
         moves = moves.to(m_logits.dtype)
-        probs = (torch.softmax(m_logits, -1) * moves).sum(-1)
-        accuracy = probs.mean()
+        probs = torch.softmax(m_logits, -1)
+        accuracy = (probs * moves).sum(-1).mean()
+
+        argmax = probs.argmax(-1)
+        top1_acc = torch.index_select(moves, -1, argmax).mean()
 
         metrics = {
             "v_error": v_error.item(),
             "accuracy": accuracy.item(),
+            "acc@01": top1_acc.item(),
         }
 
         return (v_error - accuracy), metrics
