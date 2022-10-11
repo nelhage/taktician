@@ -44,37 +44,63 @@ class Transcript:
         return [1.0 if p.to_move() == self.result else -1.0 for p in self.positions]
 
 
+def graft_children(engine: mcts.MCTS, tree: mcts.Node) -> mcts.Node:
+    if engine.config.root_noise_mix is None:
+        return tree
+
+    new_tree = mcts.Node(position=tree.position, move=tree.move)
+    engine.populate(new_tree, is_root=True)
+
+    if tree.children is None:
+        return new_tree
+
+    by_move = {n.move: n for n in tree.children}
+
+    new_tree.simulations = tree.simulations
+    new_tree.value = tree.value
+
+    for (i, ch) in enumerate(new_tree.children):
+        old_child = by_move.get(ch.move)
+        if old_child is None:
+            continue
+        new_tree.children[i] = old_child
+    return new_tree
+
+
 def play_one_game(cfg, engine):
-    position = tak.Position.from_config(tak.Config(size=cfg.size))
+    p = tak.Position.from_config(tak.Config(size=cfg.size))
 
     log = Transcript()
 
+    tree = mcts.Node(position=p, move=None)
+
     while True:
-        if position.ply > cfg.ply_limit:
+        if p.ply > cfg.ply_limit:
             log.result = 0.0
             break
 
-        color, over = position.winner()
+        if abs(tree.v_zero) >= cfg.resignation_threshold:
+            if tree.v_zero >= cfg.resignation_threshold:
+                log.result = tree.position.to_move()
+            else:
+                log.result = tree.position.to_move().flip()
+            break
+
+        color, over = tree.position.winner()
         if over is not None:
             tree.result = color
             break
 
-        tree = engine.analyze(position)
+        tree = graft_children(engine, tree)
+        tree = engine.analyze_tree(tree)
         probs = engine.tree_probs(tree)
 
-        log.positions.append(position)
+        log.positions.append(tree.position)
         log.moves.append([c.move for c in tree.children])
         log.probs.append(probs.numpy())
         log.values.append(tree.value / tree.simulations)
 
-        if abs(tree.v_zero) >= cfg.resignation_threshold:
-            if tree.v_zero >= cfg.resignation_threshold:
-                log.result = position.to_move()
-            else:
-                log.result = position.to_move().flip()
-            break
-
-        position = tree.children[torch.multinomial(probs, 1).item()].position
+        tree = tree.children[torch.multinomial(probs, 1).item()]
 
     log.stats = engine.stats
     engine.stats = mcts.Stats()
