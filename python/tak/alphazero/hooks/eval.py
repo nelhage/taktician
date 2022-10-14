@@ -58,33 +58,37 @@ class EvalHook(Hook):
                 print(f"WARN: model {model} failed to start on :{port}!")
                 return
 
-        with tempfile.TemporaryDirectory() as tmp:
-            summary_file = os.path.join(tmp, "summary.json")
-            p1_cmd = [
-                os.path.join(SCRIPTS_DIR, "tei"),
-                "--host=localhost",
-                f"--port={self.config.server_port}",
-            ] + self.tei_opts
-            selfplay_cmd = [
-                "taktician",
-                "selfplay",
-                "-size",
-                str(self.config.size),
-                "-games=1",
-                f"-summary={summary_file}",
-            ]
-            if self.openings is not None:
-                selfplay_cmd += ["-openings", self.openings]
-            selfplay_cmd += ["-p1", shlex.join(p1_cmd), "-p2", self.opponent]
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                summary_file = os.path.join(tmp, "summary.json")
+                p1_cmd = [
+                    os.path.join(SCRIPTS_DIR, "tei"),
+                    "--host=localhost",
+                    f"--port={self.config.server_port}",
+                ] + self.tei_opts
+                selfplay_cmd = [
+                    "taktician",
+                    "selfplay",
+                    "-size",
+                    str(self.config.size),
+                    "-games=1",
+                    f"-summary={summary_file}",
+                ]
+                if self.openings is not None:
+                    selfplay_cmd += ["-openings", self.openings]
+                selfplay_cmd += ["-p1", shlex.join(p1_cmd), "-p2", self.opponent]
 
-            try:
-                subprocess.check_call(selfplay_cmd)
-            except subprocess.CalledProcessError:
-                print("WARN: Unable to run evals!")
-                return
+                try:
+                    subprocess.check_call(selfplay_cmd)
+                except subprocess.CalledProcessError:
+                    print("WARN: Unable to run evals!")
+                    return
 
-            with open(summary_file, "r") as fh:
-                stats = json.load(fh)
+                with open(summary_file, "r") as fh:
+                    stats = json.load(fh)
+        finally:
+            if model_proc:
+                model_proc.kill()
 
         # stats
         p1 = stats["Stats"]["Players"][0]
