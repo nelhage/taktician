@@ -171,6 +171,8 @@ def main():
     srv = Server(config, network, argmax=args.argmax)
     while True:
         line = sys.stdin.readline()
+        if len(line) == 0:
+            raise EOFError
         if args.debug:
             print(f"[TEI] recv: {line!r}", file=sys.stderr)
         for cmd in srv.receive(line):
