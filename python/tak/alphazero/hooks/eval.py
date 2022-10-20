@@ -53,7 +53,7 @@ class EvalHook(Hook):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            time.sleep(1)
+            time.sleep(2)
             if model_proc.poll():
                 print(f"WARN: model {model} failed to start on :{port}!")
                 return
