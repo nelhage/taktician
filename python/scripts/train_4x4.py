@@ -34,6 +34,14 @@ def main():
     )
     run.hooks.append(
         hooks.EvalHook(
+            name="tako5",
+            opponent="taktician tei -depth=5",
+            frequency=2 * args.eval_freq,
+            openings=os.path.join(cli.ROOT, "data/4x4-openings"),
+        )
+    )
+    run.hooks.append(
+        hooks.EvalHook(
             name="step8k",
             opponent=shlex.join(
                 [
