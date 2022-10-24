@@ -72,6 +72,11 @@ class Hook:
         pass
 
 
+class Scheduler:
+    def value(self, state: TrainState) -> float:
+        ...
+
+
 def dedup_batch(batch):
     N = batch["positions"].shape[0]
     out = {k: torch.zeros_like(v) for (k, v) in batch.items()}
@@ -149,6 +154,11 @@ class TrainingRun:
         )
 
         self.state.elapsed.epoch += 1
+
+        if self.config.lr_schedule:
+            lr = self.config.lr_schedule.value(self.state)
+            for grp in self.state.opt.param_groups:
+                grp["lr"] = lr
 
         it = iter(ds)
         for i in range(0, self.config.train_positions, self.config.train_batch):

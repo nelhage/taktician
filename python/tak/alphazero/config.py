@@ -8,6 +8,7 @@ import xformer
 
 if TYPE_CHECKING:
     from .trainer import Hook
+    from .trainer import Scheduler
 
 
 def default_hooks() -> list["Hook"]:
@@ -29,6 +30,7 @@ class Config:
     load_model: Optional[str] = None
 
     lr: float = 1e-3
+    lr_schedule: Optional["Scheduler"]
 
     size: int = 3
 
