@@ -13,6 +13,7 @@ class PolicyValue(nn.Module):
             normalized_shape=(cfg.d_model,), dtype=dtype, device=device
         )
         self.v_proj = nn.Linear(cfg.d_model, 1, dtype=dtype, device=device)
+        self.v_proj.weight.data.zero_()
         self.move_proj = nn.Linear(
             cfg.d_model, encoding.MAX_MOVE_ID, dtype=dtype, device=device
         )
