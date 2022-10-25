@@ -30,7 +30,7 @@ class Config:
     load_model: Optional[str] = None
 
     lr: float = 1e-3
-    lr_schedule: Optional["Scheduler"]
+    lr_schedule: Optional["Scheduler"] = None
 
     size: int = 3
 
