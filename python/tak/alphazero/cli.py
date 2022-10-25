@@ -42,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--train-positions", type=int, default=1024)
 
     parser.add_argument("--rollout-workers", type=int, default=50)
+    parser.add_argument("--rollout-ply-limit", type=int, default=20)
     parser.add_argument("--rollout-simulations", type=int, default=25)
 
     parser.add_argument("--noise-alpha", type=float)
@@ -112,7 +113,7 @@ def build_train_run(args: argparse.Namespace) -> config.Config:
         rollout_workers=args.rollout_workers,
         rollouts_per_step=args.rollouts_per_step,
         rollout_resignation_threshold=0.99,
-        rollout_ply_limit=20,
+        rollout_ply_limit=args.rollout_ply_limit,
         replay_buffer_steps=args.replay_buffer_steps,
         train_batch=args.batch,
         train_positions=args.train_positions,

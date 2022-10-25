@@ -15,6 +15,7 @@ def main():
         test_freq=50,
         eval_freq=50,
         size=4,
+        rollout_ply_limit=40,
     )
 
     args = parser.parse_args()
