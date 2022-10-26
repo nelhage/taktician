@@ -16,7 +16,6 @@ class WandB(Hook):
     job_name: Optional[str] = None
     job_id: str = field(factory=partial(secrets.token_hex, 8))
     project: str = "taktician-alphazero"
-    watch_freq: int = 10
 
     def before_run(self, state: TrainState, config):
         state.wandb = wandb.init(
@@ -26,7 +25,6 @@ class WandB(Hook):
             resume="allow",
         )
         wandb.config.update(attrs.asdict(config), allow_val_change=True)
-        wandb.watch(state.model, log="all", log_freq=self.watch_freq)
 
     def finalize(self, state: TrainState):
         state.wandb.log(
