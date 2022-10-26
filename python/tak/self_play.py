@@ -26,6 +26,7 @@ class Transcript:
     values: list[float] = field(factory=list)
     result: Optional[tak.Color] = None
     stats: mcts.Stats = field(factory=mcts.Stats)
+    outcome: Optional[str] = None
 
     @property
     def logits(self):
@@ -77,6 +78,7 @@ def play_one_game(cfg, engine):
     while True:
         if p.ply > cfg.ply_limit:
             log.result = 0.0
+            log.outcome = "cutoff"
             break
 
         if abs(tree.v_zero) >= cfg.resignation_threshold:
@@ -84,11 +86,13 @@ def play_one_game(cfg, engine):
                 log.result = tree.position.to_move()
             else:
                 log.result = tree.position.to_move().flip()
+            log.outcome = "resigned"
             break
 
         color, over = tree.position.winner()
         if over is not None:
-            tree.result = color
+            log.result = color
+            log.outcome = "won"
             break
 
         tree = graft_children(engine, tree)

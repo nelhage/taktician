@@ -11,6 +11,7 @@ import tqdm
 
 import queue
 from torch import multiprocessing
+from collections import Counter
 
 import torch
 import numpy as np
@@ -65,6 +66,11 @@ def main(argv):
         default=0.99,
     )
     parser.add_argument(
+        "--ply-limit",
+        type=int,
+        default=20,
+    )
+    parser.add_argument(
         "--threads",
         type=int,
         default=1,
@@ -92,6 +98,7 @@ def main(argv):
                 C=args.C,
             ),
         ),
+        ply_limit=args.ply_limit,
     )
 
     start = time.time()
@@ -103,6 +110,7 @@ def main(argv):
     stats = mcts.Stats()
     for l in logs:
         stats = stats.merge(l.stats)
+    outcomes = Counter([l.outcome for l in logs])
 
     print(
         f"done games={len(logs)}"
@@ -111,6 +119,7 @@ def main(argv):
         f" games/s={args.games/(end-start):.1f}"
         " " + " ".join(f"{k}={v}" for (k, v) in attrs.asdict(stats).items())
     )
+    print(f"  outcomes " + " ".join(f"{k}={v}" for (k, v) in outcomes.most_common()))
 
     if args.write_games:
         torch.save(
