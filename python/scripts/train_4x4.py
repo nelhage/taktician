@@ -1,10 +1,15 @@
-from tak.alphazero import cli, hooks, trainer
+from tak.alphazero import cli, hooks, trainer, schedule
 import os.path
 import shlex
 
 
 def main():
     parser = cli.build_parser()
+    parser.add_argument(
+        "--warmup-steps",
+        type=int,
+        default=100,
+    )
     parser.set_defaults(
         rollouts_per_step=200,
         rollout_workers=50,
@@ -25,6 +30,11 @@ def main():
 
     run = cli.build_train_run(args)
 
+    if args.warmup_steps > 0:
+        run.lr_schedule = schedule.LinearWarmup(
+            warmup_steps=args.warmup_steps, final_value=run.lr
+        )
+
     run.hooks.append(
         hooks.EvalHook(
             name="tako3",
@@ -41,25 +51,25 @@ def main():
             openings=os.path.join(cli.ROOT, "data/4x4-openings"),
         )
     )
-    run.hooks.append(
-        hooks.EvalHook(
-            name="step8k",
-            opponent=shlex.join(
-                [
-                    os.path.join(cli.ROOT, "python/scripts/tei"),
-                    "--host",
-                    "localhost",
-                    "--port",
-                    "50005",
-                    "--simulation-limit=1",
-                    "--argmax",
-                ]
-            ),
-            model=(os.path.join(cli.ROOT, "data/size-4/step_008000/"), 50005),
-            frequency=args.eval_freq,
-            openings=os.path.join(cli.ROOT, "data/4x4-openings"),
-        )
-    )
+    # run.hooks.append(
+    #     hooks.EvalHook(
+    #         name="step8k",
+    #         opponent=shlex.join(
+    #             [
+    #                 os.path.join(cli.ROOT, "python/scripts/tei"),
+    #                 "--host",
+    #                 "localhost",
+    #                 "--port",
+    #                 "50005",
+    #                 "--simulation-limit=1",
+    #                 "--argmax",
+    #             ]
+    #         ),
+    #         model=(os.path.join(cli.ROOT, "data/size-4/step_008000/"), 50005),
+    #         frequency=args.eval_freq,
+    #         openings=os.path.join(cli.ROOT, "data/4x4-openings"),
+    #     )
+    # armup)
     trainer.TrainingRun(config=run).run()
 
 

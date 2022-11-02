@@ -157,6 +157,7 @@ class TrainingRun:
 
         if self.config.lr_schedule:
             lr = self.config.lr_schedule.value(self.state)
+            self.state.step_stats["lr"] = lr
             for grp in self.state.opt.param_groups:
                 grp["lr"] = lr
 
