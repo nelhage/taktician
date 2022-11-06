@@ -1,0 +1,24 @@
+#!/bin/bash
+set -eu
+
+root=$(dirname "$0")/../
+cd "$root"
+target=$1
+path=${2-'~/code/taktician'}
+
+
+exec rsync -Pax \
+     --exclude='__pycache__' \
+     --exclude='/python/notebooks/' \
+     --exclude='/python/build/' \
+     --exclude='/python/dist/' \
+     --exclude='/python/.pytest_cache/' \
+     --exclude='/python/*.so' \
+     --exclude='/.git' \
+     --exclude='/.direnv' \
+     --exclude='*.test' \
+     --exclude='/data' \
+     --exclude='wandb' \
+     --exclude='/.envrc' \
+     --exclude='python/tak.egg-info' \
+     . "$target:$path"

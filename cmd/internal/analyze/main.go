@@ -4,8 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
-	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -25,8 +23,6 @@ type Command struct {
 	quiet      bool
 	monteCarlo bool
 	prove      bool
-	cpuProfile string
-	memProfile string
 
 	/* Options to select which position(s) to analyze */
 	move      int
@@ -45,11 +41,14 @@ type Command struct {
 
 	/* MCTS options */
 	dumpTree string
+	c        float64
 
 	/* PN options */
 	maxNodes uint64
 	maxDepth int
 	pn2      bool
+	dfpn     bool
+	attacker string
 }
 
 func (*Command) Name() string     { return "analyze" }
@@ -70,9 +69,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.BoolVar(&c.quiet, "quiet", false, "don't print board diagrams")
 	flags.BoolVar(&c.monteCarlo, "mcts", false, "Use the MCTS evaluator")
 	flags.BoolVar(&c.prove, "prove", false, "Use the PN prover")
-
-	flags.StringVar(&c.cpuProfile, "cpuprofile", "", "write CPU profile")
-	flags.StringVar(&c.memProfile, "memprofile", "", "write memory profile")
+	flags.BoolVar(&c.dfpn, "dfpn", false, "Use the DFPN prover")
 
 	flags.IntVar(&c.move, "move", 0, "PTN move number to analyze")
 	flags.BoolVar(&c.all, "all", false, "analyze all positions in the PTN")
@@ -87,10 +84,12 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	c.mmopt.AddFlags(flags)
 
 	flags.StringVar(&c.dumpTree, "dump-tree", "", "dump search tree to PATH (MCTS and PN only)")
+	flags.Float64Var(&c.c, "mcts.c", 0.7, "MCTS explore/exploit tradeoff constant")
 
 	flags.Uint64Var(&c.maxNodes, "max-nodes", 0, "Maximum number of nodes to populate in the PN tree")
 	flags.IntVar(&c.maxDepth, "max-depth", 0, "Maximum depth to consider in PN search")
 	flags.BoolVar(&c.pn2, "pn2", false, "Use PN² search")
+	flags.StringVar(&c.attacker, "attacker", "", "Set the DFPN attacker")
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -108,26 +107,6 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		color = tak.Black
 	case c.move != 0:
 		color = tak.White
-	}
-
-	if c.cpuProfile != "" {
-		f, e := os.OpenFile(c.cpuProfile, os.O_WRONLY|os.O_CREATE, 0644)
-		if e != nil {
-			log.Fatalf("open cpu-profile: %s: %v", c.cpuProfile, e)
-		}
-		pprof.StartCPUProfile(f)
-		defer f.Close()
-		defer pprof.StopCPUProfile()
-	}
-	if c.memProfile != "" {
-		f, e := os.OpenFile(c.memProfile, os.O_WRONLY|os.O_CREATE, 0644)
-		if e != nil {
-			log.Fatalf("open memory profile: %s: %v", c.cpuProfile, e)
-		}
-		defer func() {
-			pprof.Lookup("allocs").WriteTo(f, 0)
-			f.Close()
-		}()
 	}
 
 	if !c.all {
@@ -154,6 +133,9 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 		for it.Next() {
 			p := it.Position()
 			m := it.PeekMove()
+			if over, _ := p.GameOver(); over {
+				break
+			}
 			switch {
 			case p.ToMove() == tak.White && color != tak.Black:
 				fmt.Printf("%d. %s\n", p.MoveNumber()/2+1, ptn.FormatMove(m))
@@ -193,6 +175,9 @@ func (c *Command) makeAI(p *tak.Position) *ai.MinimaxAI {
 func (c *Command) buildAnalysis(p *tak.Position) Analyzer {
 	if c.monteCarlo && c.prove {
 		log.Fatal("-mcts and -prove are incompatible!")
+	}
+	if c.dfpn {
+		return &dfpnAnalysis{cmd: c}
 	}
 	if c.prove {
 		return &pnAnalysis{

@@ -21,7 +21,8 @@ type Command struct {
 
 	rand *rand.Rand
 
-	placeOnly bool
+	placeOnly       bool
+	allowSymmetries bool
 }
 
 func (*Command) Name() string     { return "genopenings" }
@@ -37,6 +38,7 @@ func (c *Command) SetFlags(flags *flag.FlagSet) {
 	flags.IntVar(&c.n, "n", 100, "generate how many openings")
 	flags.Int64Var(&c.seed, "seed", 0, "Random seed")
 	flags.BoolVar(&c.placeOnly, "only-place", true, "Only generate moves that place flats")
+	flags.BoolVar(&c.allowSymmetries, "allow-symmetries", false, "Allow positions that are symmetries of each other")
 }
 
 func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -48,13 +50,22 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 generate:
 	for len(positions) < c.n {
 		pos := c.generate(init, c.depth)
-		syms, _ := symmetry.Symmetries(pos)
-		for _, sym := range syms {
-			if got, ok := seen[sym.P.Hash()]; ok {
-				if !got.Equal(sym.P) {
-					log.Fatalf("hash collision seen=%q new=%q", ptn.FormatTPS(got), ptn.FormatTPS(sym.P))
+		if c.allowSymmetries {
+			if got, ok := seen[pos.Hash()]; ok {
+				if !got.Equal(pos) {
+					log.Fatalf("hash collision seen=%q new=%q", ptn.FormatTPS(got), ptn.FormatTPS(pos))
 				}
 				continue generate
+			}
+		} else {
+			syms, _ := symmetry.Symmetries(pos)
+			for _, sym := range syms {
+				if got, ok := seen[sym.P.Hash()]; ok {
+					if !got.Equal(sym.P) {
+						log.Fatalf("hash collision seen=%q new=%q", ptn.FormatTPS(got), ptn.FormatTPS(sym.P))
+					}
+					continue generate
+				}
 			}
 		}
 		seen[pos.Hash()] = pos

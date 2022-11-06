@@ -1,6 +1,7 @@
-from distutils.core import setup
+from setuptools import setup
+from torch.utils import cpp_extension
 
-setup(name='tak',
-      version='0.1',
-      py_modules=['tak'],
-      )
+setup(
+  ext_modules=[cpp_extension.CppExtension('tak_ext', ['ext/tak.cpp'])],
+  cmdclass={'build_ext': cpp_extension.BuildExtension}
+)

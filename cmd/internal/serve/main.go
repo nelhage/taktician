@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/subcommands"
 	"github.com/nelhage/taktician/ai"
-	"github.com/nelhage/taktician/pb/tak/proto"
+	"github.com/nelhage/taktician/pb"
 	"github.com/nelhage/taktician/ptn"
 	"github.com/nelhage/taktician/symmetry"
 	"github.com/nelhage/taktician/tak"
@@ -42,6 +42,7 @@ type cache struct {
 }
 
 type server struct {
+	pb.UnimplementedTakticianServer
 	analyzeCache cache
 	istakCache   cache
 }

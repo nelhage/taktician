@@ -110,7 +110,7 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		cli.RenderBoard(nil, os.Stdout, p)
 	}
 
-	out := prover.Prove(ctx, p)
+	out, stats := prover.Prove(ctx, p)
 	var result string
 	switch out.Result {
 	case prove.EvalTrue:
@@ -131,11 +131,11 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		result,
 		move,
 		out.Duration,
-		out.Stats.Nodes,
+		stats.Nodes,
 		out.Proof,
 		out.Disproof,
 		out.Depth,
-		out.Stats.MaxDepth,
+		stats.MaxDepth,
 	)
 
 	if a.cmd.dumpTree != "" {
@@ -150,4 +150,62 @@ func (a *pnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
 		}
 		out.Close()
 	}
+}
+
+type dfpnAnalysis struct {
+	cmd *Command
+}
+
+func (a *dfpnAnalysis) Analyze(ctx context.Context, p *tak.Position) {
+	var attacker tak.Color
+	if a.cmd.attacker == "white" {
+		attacker = tak.White
+	} else if a.cmd.attacker == "black" {
+		attacker = tak.Black
+	} else if a.cmd.attacker == "" {
+		attacker = tak.NoColor
+	} else {
+		log.Fatalf("Cannot parse attacker: %q", a.cmd.attacker)
+	}
+	prover := prove.NewDFPN(&prove.DFPNConfig{
+		Debug:    a.cmd.mmopt.Debug,
+		TableMem: a.cmd.mmopt.TableMem,
+		Attacker: attacker,
+	})
+
+	if !a.cmd.quiet {
+		cli.RenderBoard(nil, os.Stdout, p)
+	}
+
+	out, stats := prover.Prove(p)
+	var result string
+	switch out.Result {
+	case prove.EvalTrue:
+		result = "WIN"
+	case prove.EvalFalse:
+		result = "DRAW|LOSE"
+	case prove.EvalUnknown:
+		result = "UNKNOWN"
+	}
+	fmt.Printf("PN search analysis:\n")
+	var move string
+	if out.Move.Type != 0 {
+		move = ptn.FormatMove(out.Move)
+	} else {
+		move = "(none)"
+	}
+	fmt.Printf(" value=%s move=%s duration=%s\n",
+		result,
+		move,
+		out.Duration,
+	)
+	fmt.Printf(" work=%d terminal=%d solved=%d repetition=%d hit=%d/%d (%0.2f%%)\n",
+		stats.Work,
+		stats.Terminal,
+		stats.Solved,
+		stats.Repetition,
+		stats.Hits,
+		stats.Hits+stats.Miss,
+		100*float64(stats.Hits)/float64(stats.Hits+stats.Miss),
+	)
 }

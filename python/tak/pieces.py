@@ -1,39 +1,47 @@
 import enum
-import attr
+
+from attrs import define
+
 
 class Color(enum.Enum):
-  WHITE = 0
-  BLACK = 1
+    WHITE = 0
+    BLACK = 1
 
-  def flip(self):
-    return Color(1-self.value)
+    def flip(self):
+        return Color(1 - self.value)
+
 
 class Kind(enum.Enum):
-  FLAT     = 0
-  STANDING = 1
-  CAPSTONE = 2
+    FLAT = 0
+    STANDING = 1
+    CAPSTONE = 2
 
-  def is_road(self):
-    return self == Kind.FLAT or self == Kind.CAPSTONE
+    def is_road(self):
+        return self == Kind.FLAT or self == Kind.CAPSTONE
 
-@attr.s(frozen=True, slots=True)
+
+_piece_cache = [[None for k in Kind] for c in Color]
+
+
+@define(frozen=True, slots=True)
 class Piece(object):
-  color = attr.ib(validator = attr.validators.instance_of(Color))
-  kind  = attr.ib(validator = attr.validators.instance_of(Kind))
+    color: Color
+    kind: Kind
 
-  def is_road(self):
-    return self.kind.is_road()
+    def is_road(self):
+        return self.kind.is_road()
 
-  @classmethod
-  def __call__(cls, color, kind):
-    return _piece_cache[color.value][kind.value]
+    @classmethod
+    def _init_cache(cls):
+        for c in Color:
+            for k in Kind:
+                _piece_cache[c.value][k.value] = cls(c, k)
 
-_piece_cache = [
-  [Piece(c, p) for p in Kind]
-  for c in Color
-]
+    @classmethod
+    def cached(self, color, kind):
+        return _piece_cache[color.value][kind.value]
 
-def Piece(color, kind):
-  return _piece_cache[color.value][kind.value]
 
-__all__ = ['Color', 'Kind', 'Piece']
+Piece._init_cache()
+
+__all__ = ["Color", "Kind", "Piece"]

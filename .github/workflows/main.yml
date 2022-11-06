@@ -31,3 +31,5 @@ jobs:
       - name: pytest
         run: |
           cd python && pytest
+        env:
+          TEST_WANDB: true

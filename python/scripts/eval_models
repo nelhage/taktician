@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+import argparse
+import os.path
+import subprocess
+import time
+import shlex
+
+
+SCRIPTS = os.path.dirname(__file__)
+ROOT = os.path.realpath(os.path.join(SCRIPTS, "../../"))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    p1grp = parser.add_mutually_exclusive_group(required=True)
+    p1grp.add_argument("--model1", type=str)
+    p1grp.add_argument("--tei1", type=str)
+
+    p2grp = parser.add_mutually_exclusive_group(required=True)
+    p2grp.add_argument("--model2", type=str)
+    p2grp.add_argument("--tei2", type=str)
+
+    parser.add_argument("--argmax1", default=False, action="store_true")
+    parser.add_argument("--argmax2", default=False, action="store_true")
+
+    parser.add_argument("--port1", default=50_001, type=int)
+    parser.add_argument("--port2", default=50_002, type=int)
+
+    parser.add_argument("--sims1", default=25, type=int)
+    parser.add_argument("--sims2", default=25, type=int)
+
+    parser.add_argument("--c1", default=None, type=float)
+    parser.add_argument("--c2", default=None, type=float)
+
+    parser.add_argument("--size", type=int, default=3)
+    parser.add_argument("--openings", type=str)
+    parser.add_argument("--games", type=int, default=1)
+    parser.add_argument("--threads", type=int, default=os.cpu_count())
+
+    parser.add_argument("--out", type=str, help="Write PTNs to path")
+
+    parser.add_argument("--debug", type=int, default=0)
+
+    parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--fp16", type=bool, default=None)
+
+    args = parser.parse_args()
+
+    server_args = [
+        os.path.join(SCRIPTS, "analysis_server"),
+        f"--device={args.device}",
+    ]
+    if args.fp16 or args.fp16 is None and args.device.startswith("cuda"):
+        server_args += "--fp16"
+
+    procs = []
+
+    if args.model1:
+        procs.append(
+            subprocess.Popen(
+                server_args
+                + [
+                    "--port",
+                    str(args.port1),
+                    args.model1,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        )
+    if args.model2:
+        procs.append(
+            subprocess.Popen(
+                server_args
+                + [
+                    "--port",
+                    str(args.port2),
+                    args.model2,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        )
+
+    try:
+        print(f"Waiting on model servers...")
+        time.sleep(2)
+        if any(p.poll() for p in procs):
+            raise ValueError("Server process crashed!")
+
+        tei_cmd = [
+            os.path.join(SCRIPTS, "tei"),
+            "--time-limit=0",
+            "--host=localhost",
+        ]
+        if args.model1:
+            p1_cmd = tei_cmd + [f"--port={args.port1}"]
+            if args.sims1:
+                p1_cmd += [f"--simulation-limit={args.sims1}"]
+            if args.c1:
+                p1_cmd += [f"--c={args.c1}"]
+            if args.argmax1:
+                p1_cmd += ["--argmax"]
+        else:
+            p1_cmd = shlex.split(args.tei1)
+
+        if args.model2:
+            p2_cmd = tei_cmd + [f"--port={args.port2}"]
+            if args.sims2:
+                p2_cmd += [f"--simulation-limit={args.sims2}"]
+            if args.c2:
+                p2_cmd += [f"--c={args.c2}"]
+            if args.argmax2:
+                p2_cmd += ["--argmax"]
+        else:
+            p2_cmd = shlex.split(args.tei2)
+
+        cmdline = (
+            [
+                "taktician",
+                "selfplay",
+                f"-size={args.size}",
+                f"-games={args.games}",
+                f"-threads={str(args.threads)}",
+                f"-debug={args.debug}",
+                "-p1",
+                shlex.join(p1_cmd),
+                "-p2",
+                shlex.join(p2_cmd),
+            ]
+            + ([f"-openings={args.openings}"] if args.openings else [])
+            + (["--out", args.out] if args.out else [])
+        )
+
+        print(f"+ {shlex.join(cmdline)}")
+        subprocess.check_call(cmdline)
+    finally:
+        for p in procs:
+            p.kill()
+
+
+if __name__ == "__main__":
+    main()
+
+
+# time taktician selfplay -games 4 -threads 24
+# -p1 "$(pwd)/python/scripts/tei --host=localhost --time-limit 0 --simulation-limit 25 --port=5001"
+# -p2 "$(pwd)/python/scripts/tei --host=localhost -c=4 --time-limit 0 --simulation-limit 25 --port=5002"
+# -size 3 -debug 0 -limit 10s -openings data/3x3-openings.3

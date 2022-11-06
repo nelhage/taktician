@@ -22,7 +22,6 @@ type MCTSConfig struct {
 	C     float64
 	Seed  int64
 
-	InitialVisits int
 	MMDepth       int
 	MaxRollout    int
 	EvalThreshold int64
@@ -154,21 +153,6 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 		ai.dumpTree(tree)
 	}
 
-	if tree.proven != 0 {
-		if len(tree.children) == 0 {
-			return ai.mm.GetMove(ctx, p)
-		}
-		best := tree.children[0]
-		for _, c := range tree.children {
-			if c.proven < best.proven {
-				best = c
-			}
-		}
-		if ai.cfg.Debug > 1 {
-			log.Printf("proven m=%s v=%d", ptn.FormatMove(best.move), -best.proven)
-		}
-		return best.move
-	}
 	best := tree.children[0]
 	i := 0
 	sort.Sort(bySims(tree.children))
@@ -194,6 +178,21 @@ func (ai *MonteCarloAI) GetMove(ctx context.Context, p *tak.Position) tak.Move {
 			}
 		}
 	}
+	if tree.proven != 0 {
+		if len(tree.children) == 0 {
+			return ai.mm.GetMove(ctx, p)
+		}
+		best := tree.children[0]
+		for _, c := range tree.children {
+			if c.proven < best.proven {
+				best = c
+			}
+		}
+		if ai.cfg.Debug > 1 {
+			log.Printf("proven m=%s v=%d", ptn.FormatMove(best.move), -best.proven)
+		}
+		return best.move
+	}
 	if ai.cfg.Debug > 0 {
 		log.Printf("[mcts] evaluated simulations=%d value=%d proven=%d", tree.simulations, tree.value, tree.proven)
 	}
@@ -214,14 +213,16 @@ func (mc *MonteCarloAI) printdbg(t *tree) {
 }
 
 func (mc *MonteCarloAI) populate(ctx context.Context, t *tree) {
-	_, v, _ := mc.mm.Analyze(ctx, t.position)
-	if v > ai.WinThreshold {
-		t.proven = 1
-		return
-	} else if v < -ai.WinThreshold {
-		t.proven = -1
-		return
-	}
+	/*
+		_, v, _ := mc.mm.Analyze(ctx, t.position)
+		if v > ai.WinThreshold {
+			t.proven = 1
+			return
+		} else if v < -ai.WinThreshold {
+			t.proven = -1
+			return
+		}
+	*/
 
 	moves := t.position.AllMoves(nil)
 	t.children = make([]*tree, 0, len(moves))
@@ -353,9 +354,6 @@ func NewMonteCarlo(cfg MCTSConfig) *MonteCarloAI {
 	}
 	if mc.cfg.Seed == 0 {
 		mc.cfg.Seed = time.Now().Unix()
-	}
-	if mc.cfg.InitialVisits == 0 {
-		mc.cfg.InitialVisits = 3
 	}
 	if mc.cfg.MMDepth == 0 {
 		mc.cfg.MMDepth = 3

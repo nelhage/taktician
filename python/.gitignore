@@ -1,10 +1,11 @@
-venv
 .cache/
 __pycache__
 *.egg-info/
 .coverage
 htmlcov/
-data/train
 .pytest_cache
 *.pyc
+*.so
 _feat
+/build
+/dist/

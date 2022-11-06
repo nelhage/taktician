@@ -341,7 +341,7 @@ func scoreGroups(c *bitboard.Constants, gs []uint64, ws *Weights, other uint64) 
 	return sc
 }
 
-func countThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
+func CountThreats(c *bitboard.Constants, p *tak.Position) (wp, wt, bp, bt int) {
 	analysis := p.Analysis()
 	empty := c.Mask &^ (p.White | p.Black)
 
@@ -416,7 +416,7 @@ func scoreThreats(c *bitboard.Constants, ws *Weights, p *tak.Position) int64 {
 		return 0
 	}
 
-	wp, wt, bp, bt := countThreats(c, p)
+	wp, wt, bp, bt := CountThreats(c, p)
 
 	if wp+wt > 0 && p.ToMove() == tak.White {
 		return ForcedWin
@@ -543,7 +543,7 @@ func ExplainScore(m *MinimaxAI, out io.Writer, p *tak.Position) {
 
 	fmt.Fprintf(tw, "liberties\t%d\t%d\n", wl, bl)
 
-	wp, wt, bp, bt := countThreats(&m.c, p)
+	wp, wt, bp, bt := CountThreats(&m.c, p)
 	fmt.Fprintf(tw, "potential\t%d\t%d\n", wp, bp)
 	fmt.Fprintf(tw, "threat\t%d\t%d\n", wt, bt)
 

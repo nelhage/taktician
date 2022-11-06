@@ -75,6 +75,29 @@ func (r *Result) Winner() tak.Color {
 	return tak.NoColor
 }
 
+func ResultFromGame(p *tak.Position) Result {
+	wd := p.WinDetails()
+	if !wd.Over {
+		panic("game is not over")
+	}
+	if wd.Winner == tak.NoColor {
+		return Result{Result: "1/2-1/2"}
+	}
+	var wintype string
+	if wd.Reason == tak.RoadWin {
+		wintype = "R"
+	} else if wd.Reason == tak.FlatsWin {
+		wintype = "F"
+	} else if wd.Reason == tak.Resignation {
+		wintype = "1"
+	}
+	if wd.Winner == tak.White {
+		return Result{Result: fmt.Sprintf("%s-0", wintype)}
+	} else {
+		return Result{Result: fmt.Sprintf("0-%s", wintype)}
+	}
+}
+
 type PTN struct {
 	Tags []Tag
 	Ops  []Op

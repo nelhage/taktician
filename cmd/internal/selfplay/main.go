@@ -2,6 +2,7 @@ package selfplay
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -252,22 +253,58 @@ func printSummary(st *Stats) {
 	log.Printf("p[one-sided]=%f", binomTest(a, b, 0.5))
 }
 
+func joinCmd(cmd []string) string {
+	var out bytes.Buffer
+	for i, w := range cmd {
+		if i != 0 {
+			out.WriteString(" ")
+		}
+		if strings.Index(w, "'") < 0 {
+			out.WriteString(w)
+		} else {
+			fmt.Fprintf(&out,
+				"'%s'",
+				strings.ReplaceAll(w, "'", "\\'"),
+			)
+		}
+	}
+	return out.String()
+}
+
 func writeGame(d string, r *Result) {
 	os.MkdirAll(d, 0755)
 	p := &ptn.PTN{}
+	var white, black []string
+	if r.spec.p1color == tak.White {
+		white, black = r.spec.c.P1, r.spec.c.P2
+	} else {
+		black, white = r.spec.c.P1, r.spec.c.P2
+	}
 	p.Tags = []ptn.Tag{
 		{Name: "Size", Value: fmt.Sprintf("%d", r.Position.Size())},
-		{Name: "Player1", Value: r.spec.p1color.String()},
+		{Name: "Player1", Value: joinCmd(white)},
+		{Name: "Player2", Value: joinCmd(black)},
 	}
+	var result ptn.Result
+	if over, _ := r.Position.GameOver(); over {
+		result = ptn.ResultFromGame(r.Position)
+		p.Tags = append(p.Tags, ptn.Tag{Name: "Result", Value: result.Result})
+	}
+
 	if r.Initial.MoveNumber() != 0 {
 		p.Tags = append(p.Tags, ptn.Tag{
 			Name: "TPS", Value: ptn.FormatTPS(r.Initial)})
 	}
+	var startPly = r.Initial.MoveNumber()
 	for i, m := range r.Moves {
-		if i%2 == 0 {
-			p.Ops = append(p.Ops, &ptn.MoveNumber{Number: i/2 + 1})
+		ply := startPly + i
+		if ply%2 == 0 || i == 0 {
+			p.Ops = append(p.Ops, &ptn.MoveNumber{Number: ply/2 + 1})
 		}
 		p.Ops = append(p.Ops, &ptn.Move{Move: m})
+	}
+	if result.Result != "" {
+		p.Ops = append(p.Ops, &result)
 	}
 	ptnPath := path.Join(d, fmt.Sprintf("%d-%d.ptn", r.spec.oi, r.spec.i))
 	ioutil.WriteFile(ptnPath, []byte(p.Render()), 0644)

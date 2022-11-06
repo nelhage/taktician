@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+import argparse
+import csv
+import os.path
+from itertools import islice
+
+import torch
+
+from tak import ptn
+from tak.model import encoding
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output",
+        dest="output",
+        help="output base",
+        metavar="PATH",
+    )
+    parser.add_argument(
+        "--test-frac",
+        dest="test_frac",
+        type=float,
+        default=0.05,
+    )
+    parser.add_argument(
+        "-n",
+        dest="n",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--analysis",
+        action="store_true",
+        dest="analysis",
+        default=True,
+        help="Encode analysis",
+    )
+    parser.add_argument(
+        "--no-analysis",
+        action="store_false",
+        dest="analysis",
+    )
+    parser.add_argument(
+        "--all-moves",
+        action="store_true",
+        help="Encode all moves",
+        dest="all_moves",
+    )
+    parser.add_argument(
+        "corpus",
+        help="Input corpus",
+    )
+
+    return parser.parse_args()
+
+
+class map_with_len:
+    def __init__(self, fn, iter):
+        self.fn = fn
+        self.iter = iter
+
+    def __len__(self):
+        return len(self.iter)
+
+    def __iter__(self):
+        return map(self.fn, self.iter)
+
+
+def main():
+    args = parse_args()
+
+    output = args.output
+    if output is None:
+        base, ext = os.path.splitext(args.corpus)
+        if ext != ".csv":
+            raise ValueError("can't autodetect an output path!")
+        output = base
+
+    with open(args.corpus) as fh:
+        reader = csv.reader(fh)
+        if args.n is not None:
+            reader = islice(reader, args.n)
+        records = list(reader)
+
+    data = {}
+
+    positions = map_with_len(lambda row: ptn.parse_tps(row[0]), records)
+    data["positions"], data["mask"] = encoding.encode_batch(positions)
+
+    if args.analysis:
+        size = next(iter(positions)).size
+        data["values"] = torch.tensor([float(row[2]) for row in records])
+        if args.all_moves:
+            data["moves"] = torch.zeros(
+                (len(positions), encoding.MAX_MOVE_ID), dtype=torch.bool
+            )
+            for (i, row) in enumerate(records):
+                for mv in [row[1]] + row[3].split(","):
+                    if not mv:
+                        continue
+                    data["moves"][
+                        i, encoding.encode_move(size, ptn.parse_move(mv))
+                    ] = True
+        else:
+            moves = map_with_len(lambda row: ptn.parse_move(row[1]), records)
+            data["moves"] = encoding.encode_moves_batch(size, moves)
+
+    if args.test_frac == 0:
+        torch.save(data, output + ".pt")
+    else:
+        n_test = int(args.test_frac * len(positions))
+        perm = torch.randperm(len(positions))
+
+        torch.save(
+            {k: v[perm[:n_test]] for (k, v) in data.items()}, output + "-test.pt"
+        )
+        torch.save(
+            {k: v[perm[n_test:]] for (k, v) in data.items()}, output + "-train.pt"
+        )
+
+
+if __name__ == "__main__":
+    main()
