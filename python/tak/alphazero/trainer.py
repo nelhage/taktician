@@ -298,7 +298,7 @@ class TrainingRun:
             await server.start()
             await loop.run_in_executor(None, ready.set)
             done, pending = await asyncio.wait(
-                tasks + [server.wait_for_termination()],
+                tasks + [asyncio.create_task(server.wait_for_termination())],
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for task in pending:
