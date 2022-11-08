@@ -6,6 +6,7 @@ import xformer
 from xformer import yaml_ext  # noqa
 from xformer import data
 from tak.model import batches, heads
+from . import schedule
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), "../../.."))
 
@@ -29,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--device", type=str, choices=("cpu", "cuda"), default="cuda", help="device"
     )
 
-    parser.add_argument("--lr", type=float, default=5e-4, help="learning rate")
+    parser.add_argument("--lr", type=float, default=1e-4, help="learning rate")
 
     parser.add_argument("--steps", type=int, default=10)
 
@@ -118,6 +119,9 @@ def build_train_run(args: argparse.Namespace) -> config.Config:
         train_batch=args.batch,
         train_positions=args.train_positions,
         lr=args.lr,
+        lr_schedule = schedule.LinearWarmup(
+            warmup_steps=100, final_value=args.lr
+        )
         train_steps=args.steps,
         hooks=run_hooks,
     )
