@@ -28,29 +28,35 @@ def main():
         args.run_dir = os.path.join(cli.ROOT, "data/alphazero." + args.job_name)
         print(f"Saving run to {args.run_dir}...")
 
-    run = cli.build_train_run(args)
+    if args.run_dir is not None and os.path.exists(
+        os.path.join(args.run_dir, "run.yaml")
+    ):
+        with open(os.path.join(args.run_dir, "run.yaml")) as fh:
+            run = yaml.unsafe_load(fh)
+    else:
+        run = cli.build_train_run(args)
 
-    if args.warmup_steps > 0:
-        run.lr_schedule = schedule.LinearWarmup(
-            warmup_steps=args.warmup_steps, final_value=run.lr
-        )
+        if args.warmup_steps > 0:
+            run.lr_schedule = schedule.LinearWarmup(
+                warmup_steps=args.warmup_steps, final_value=run.lr
+            )
 
-    run.hooks.append(
-        hooks.EvalHook(
-            name="tako3",
-            opponent="taktician tei -depth=3",
-            frequency=args.eval_freq,
-            openings=os.path.join(cli.ROOT, "data/4x4-openings"),
+        run.hooks.append(
+            hooks.EvalHook(
+                name="tako3",
+                opponent="taktician tei -depth=3",
+                frequency=args.eval_freq,
+                openings=os.path.join(cli.ROOT, "data/4x4-openings"),
+            )
         )
-    )
-    run.hooks.append(
-        hooks.EvalHook(
-            name="tako5",
-            opponent="taktician tei -depth=5",
-            frequency=2 * args.eval_freq,
-            openings=os.path.join(cli.ROOT, "data/4x4-openings"),
+        run.hooks.append(
+            hooks.EvalHook(
+                name="tako5",
+                opponent="taktician tei -depth=5",
+                frequency=2 * args.eval_freq,
+                openings=os.path.join(cli.ROOT, "data/4x4-openings"),
+            )
         )
-    )
     # run.hooks.append(
     #     hooks.EvalHook(
     #         name="step8k",
