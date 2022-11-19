@@ -73,13 +73,18 @@ class EvalHook(Hook):
                     str(self.config.size),
                     "-games=1",
                     f"-summary={summary_file}",
+                    f"-threads={os.cpu_count()//2}",
                 ]
                 if self.openings is not None:
                     selfplay_cmd += ["-openings", self.openings]
                 selfplay_cmd += ["-p1", shlex.join(p1_cmd), "-p2", self.opponent]
 
                 try:
-                    subprocess.check_call(selfplay_cmd)
+                    subprocess.check_call(
+                        selfplay_cmd,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
                 except subprocess.CalledProcessError:
                     print("WARN: Unable to run evals!")
                     return
