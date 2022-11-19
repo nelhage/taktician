@@ -119,9 +119,7 @@ def build_train_run(args: argparse.Namespace) -> config.Config:
         train_batch=args.batch,
         train_positions=args.train_positions,
         lr=args.lr,
-        lr_schedule = schedule.LinearWarmup(
-            warmup_steps=100, final_value=args.lr
-        )
+        lr_schedule=schedule.LinearWarmup(warmup_steps=100, final_value=args.lr),
         train_steps=args.steps,
         hooks=run_hooks,
     )
