@@ -21,6 +21,7 @@ def main():
         eval_freq=50,
         size=4,
         rollout_ply_limit=40,
+        noise_alpha=0.5,
     )
 
     args = parser.parse_args()
