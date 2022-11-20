@@ -10,6 +10,9 @@ import grpc
 import asyncio
 import threading
 
+import io
+import zstandard
+
 
 import xformer
 from xformer import loading
@@ -45,9 +48,16 @@ def load_state(state: TrainState, snapshot_path: str):
             os.path.join(snapshot_path, "opt.pt"),
         )
     )
-    state.replay_buffer = torch.load(
-        os.path.join(snapshot_path, "replay_buffer.pt"),
-    )
+    rbpath = os.path.join(snapshot_path, "replay_buffer.pt")
+    if os.path.exists(rbpath):
+        state.replay_buffer = torch.load(rbpath)
+    else:
+        with open(rbpath + ".zst", "rb") as fh:
+            cctx = zstandard.ZstdDecompressor()
+            zreader = cctx.stream_reader(fh)
+            data = zreader.read()
+            state.replay_buffer = torch.load(io.BytesIO(data))
+
     with open(os.path.join(snapshot_path, "elapsed.yaml"), "r") as fh:
         state.elapsed = yaml.unsafe_load(fh)
 

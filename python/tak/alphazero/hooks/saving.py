@@ -6,6 +6,7 @@ import os.path
 from xformer import loading
 import torch
 import yaml
+import zstandard
 
 
 def save_snapshot(state: TrainState, snapshot_path):
@@ -15,10 +16,11 @@ def save_snapshot(state: TrainState, snapshot_path):
         state.opt.state_dict(),
         os.path.join(snapshot_path, "opt.pt"),
     )
-    torch.save(
-        state.replay_buffer,
-        os.path.join(snapshot_path, "replay_buffer.pt"),
-    )
+    with open(os.path.join(snapshot_path, "replay_buffer.pt.zst"), "wb") as fh:
+        cctx = zstandard.ZstdCompressor()
+        writer = cctx.stream_writer(fh)
+        torch.save(state.replay_buffer, writer)
+
     with open(os.path.join(snapshot_path, "elapsed.yaml"), "w") as fh:
         yaml.dump(state.elapsed, fh)
 
