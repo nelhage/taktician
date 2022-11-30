@@ -45,7 +45,7 @@ def main():
         run.hooks.append(
             hooks.EvalHook(
                 name="tako3",
-                opponent="taktician tei -depth=3",
+                opponent="taktician tei -depth=3 -table-mem=-1",
                 frequency=args.eval_freq,
                 openings=os.path.join(cli.ROOT, "data/4x4-openings"),
             )
@@ -53,7 +53,7 @@ def main():
         run.hooks.append(
             hooks.EvalHook(
                 name="tako5",
-                opponent="taktician tei -depth=5",
+                opponent="taktician tei -depth=5 -table-mem=-1",
                 frequency=2 * args.eval_freq,
                 openings=os.path.join(cli.ROOT, "data/4x4-openings"),
             )
