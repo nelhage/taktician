@@ -77,7 +77,7 @@ def play_one_game(cfg, engine):
 
     while True:
         if p.ply > cfg.ply_limit:
-            log.result = 0.0
+            log.result = None
             log.outcome = "cutoff"
             break
 
