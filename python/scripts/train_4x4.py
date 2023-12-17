@@ -1,5 +1,6 @@
 from tak.alphazero import cli, hooks, trainer, schedule
 import os.path
+import yaml
 import shlex
 
 

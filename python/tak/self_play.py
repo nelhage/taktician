@@ -245,6 +245,7 @@ def encode_games(logs: list[Transcript]):
     all_values = [v for tr in logs for v in tr.values]
     all_move_probs = torch.cat([tr.logits for tr in logs])
     all_results = [r for tr in logs for r in tr.results]
+    all_plies = [p.ply for tr in logs for p in tr.positions]
     encoded, mask = encoding.encode_batch(all_positions)
     return dict(
         positions=encoded,
@@ -252,4 +253,5 @@ def encode_games(logs: list[Transcript]):
         moves=all_move_probs,
         values=torch.tensor(all_values),
         results=torch.tensor(all_results, dtype=torch.float32),
+        plies=torch.tensor(all_plies, dtype=torch.int),
     )

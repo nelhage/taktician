@@ -111,6 +111,8 @@ def dedup_batch(batch):
             out[k][idx] += batch[k][i]
 
     for k in keys:
+        if not out[k].dtype.is_floating_point:
+            out[k] = out[k].float()
         out[k] /= counts.reshape((-1,) + (1,) * (len(out[k].shape) - 1))
     return {k: v[:next] for (k, v) in out.items()}
 

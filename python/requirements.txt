@@ -15,3 +15,7 @@ wandb
 tqdm
 shed
 zstandard==0.19.0
+plotly
+pandas
+jupyterlab==3.5.*
+jupyter==1.0.*
