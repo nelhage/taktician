@@ -54,7 +54,7 @@ func (e *Engine) Run(ctx context.Context) error {
 			fmt.Fprintln(e.out, "id author Nelson Elhage")
 			fmt.Fprintln(e.out, "teiok")
 		case "quit":
-			break
+			return nil
 		case "teinewgame":
 			e.mm = nil
 			e.pos = nil
