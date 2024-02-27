@@ -87,6 +87,13 @@ func (c *Command) Execute(ctx context.Context, flag *flag.FlagSet, _ ...interfac
 	if c.accept != "" || c.takbot != "" || c.observe != "" {
 		c.once = true
 	}
+	if c.pass == "" {
+		c.pass = os.Getenv("TAKTICIAN_PLAYTAK_PASSWORD")
+	}
+	if c.pass == "" {
+		log.Printf("Fatal: Must specify -pass= or $TAKTICIAN_PLAYTAK_PASSWORD")
+		return subcommands.ExitFailure
+	}
 	var fpaRuleset FPARule
 	if c.fpa != "" {
 		c.friendly = true
